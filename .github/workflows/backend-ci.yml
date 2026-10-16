@@ -1,0 +1,79 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend-ci.yml", ".pre-commit-config.yaml"]
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/backend-ci.yml", ".pre-commit-config.yaml"]
+
+# A new push to the same PR cancels the previous, now useless, run.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres        # throwaway CI-only database, not a real secret
+          POSTGRES_DB: skincare_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/skincare_test
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/skincare_test
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies (fails if uv.lock is out of date)
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run mypy
+
+      - name: Architecture rules
+        run: uv run lint-imports
+
+      - name: Migrations apply to an empty database
+        run: uv run alembic upgrade head
+
+      - name: Models and migrations are in sync
+        run: uv run alembic check
+
+      - name: Migrations can be rolled back and re-applied
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
+      - name: Tests
+        run: uv run pytest

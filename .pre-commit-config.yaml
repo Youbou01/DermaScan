@@ -1,0 +1,43 @@
+# Runs automatically on `git commit`. Install once with:  cd backend && uv run pre-commit install
+# Run on everything manually:                             cd backend && uv run pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0   # kept fresh by Dependabot / `pre-commit autoupdate`
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: detect-private-key
+
+  # Local hooks run through uv, so the tool versions are exactly the ones in backend/uv.lock
+  # (the same ones CI uses). `pass_filenames: false`: each tool checks the whole backend.
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff (lint + autofix)
+        entry: uv run --directory backend ruff check --fix .
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.(py|toml)$
+      - id: ruff-format
+        name: ruff (format)
+        entry: uv run --directory backend ruff format .
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.py$
+      - id: mypy
+        name: mypy (strict types)
+        entry: uv run --directory backend mypy
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.(py|toml)$
+      - id: import-linter
+        name: import-linter (architecture rules)
+        entry: uv run --directory backend lint-imports
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.(py|toml)$

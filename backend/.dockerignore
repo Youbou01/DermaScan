@@ -1,0 +1,15 @@
+# Keep the build context small and never ship secrets.
+.venv/
+.env
+.env.*
+!.env.example
+.git/
+**/__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+tests/
+scripts/
+docker-compose.yml
+Dockerfile

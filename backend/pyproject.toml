@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.143.2",
     "pydantic-settings>=2.16.0",
     "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -25,9 +26,11 @@ dev = [
     "httpx>=0.28.1",
     "import-linter>=2.15",
     "mypy>=2.4.0",
+    "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.17.1",
+    "testcontainers[postgres]>=4.15.0",
 ]
 
 # ---------------------------------------------------------------- Alembic

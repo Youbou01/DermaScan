@@ -13,6 +13,7 @@ uv sync                          # creates .venv, installs everything from uv.lo
 cp .env.example .env             # then edit: replace CHANGE_ME (twice) with a password
 docker compose up -d db          # starts PostgreSQL 18 on localhost:5432
 uv run alembic upgrade head      # creates all tables
+uv run pre-commit install        # runs the quality checks on every commit
 uv run uvicorn app.main:create_app --factory --reload
 ```
 Open http://localhost:8000/docs. `GET /health/ready` should return `{"status":"ok"}`.
@@ -21,7 +22,8 @@ Open http://localhost:8000/docs. `GET /health/ready` should return `{"status":"o
 | Task | Command |
 |---|---|
 | Run the API | `uv run uvicorn app.main:create_app --factory --reload` |
-| Tests | `uv run pytest` |
+| Tests (fast, no database) | `uv run pytest tests/unit` |
+| All tests (needs Docker running) | `uv run pytest` |
 | Lint + format | `uv run ruff check . --fix && uv run ruff format .` |
 | Type check | `uv run mypy` |
 | Architecture rules | `uv run lint-imports` |
@@ -29,6 +31,9 @@ Open http://localhost:8000/docs. `GET /health/ready` should return `{"status":"o
 | Never use | `pip install` (it bypasses `uv.lock`) |
 
 Before every push, these four must pass: `pytest`, `ruff check`, `mypy`, `lint-imports`.
+pre-commit runs the last three for you on every commit, and CI re-runs everything on each pull request.
+Workflow, commit style and the definition of done are in [`../CONTRIBUTING.md`](../CONTRIBUTING.md);
+the reasons behind our choices are in [`../docs/adr/`](../docs/adr/README.md).
 
 ## Database migrations (Alembic)
 ```bash
@@ -41,12 +46,32 @@ uv run alembic check             # fails if models and migrations are out of syn
 Rules: one migration per model change, committed with the model change. Never edit a migration that is already on `main`; add a new one.
 A new module with models must be imported in `migrations/env.py`.
 
+## Tests
+- `tests/unit/`: no database, run in about a second.
+- `tests/integration/`: real PostgreSQL. By default a throwaway container is started with
+  testcontainers (Docker must be running). Set `TEST_DATABASE_URL` (database name must contain `test`)
+  to use an existing database instead; CI does this.
+- The schema is built by the real Alembic migrations; every test runs in a transaction that is rolled back.
+- Fixtures: `db_session` (rolled-back session) and `client` (HTTP client on the real app) in `tests/integration/conftest.py`.
+  Build data with the helpers in `tests/factories.py`: `session.add(make_product(score=80))`.
+
+## Docker (optional)
+`docker compose up -d db` is enough for day-to-day work (run the API from PyCharm or `uv run`).
+To run the whole stack in containers (database, migrations, API on http://localhost:8000):
+`docker compose --profile app up --build`.
+
+## Errors and logging
+- Raise subclasses of `AppError` (`app/core/errors.py`); the API turns them into RFC 9457 `application/problem+json`.
+- Every response has an `X-Request-ID` header, and every log line of that request carries it.
+- Logs are JSON outside `APP_ENV=local`. Use `structlog.get_logger(__name__)` and pass data as keywords:
+  `logger.info("product_imported", barcode=barcode)`. Never log secrets or whole request bodies.
+
 ## Layout
 ```
 src/app/
   main.py            app factory
-  core/              config, DB plumbing, shared enums (cross-cutting only)
-  api/               deps + router aggregation (no business logic)
+  core/              config, logging, errors, middleware, DB plumbing, shared enums (cross-cutting only)
+  api/               deps, error handlers, router aggregation (no business logic)
   modules/
     ingredients/     ingredient dictionary, aliases, parsing/normalization
     scoring/         pure scoring algorithm (no tables)
