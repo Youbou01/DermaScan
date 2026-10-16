@@ -1,0 +1,120 @@
+[project]
+name = "skincare-backend"
+version = "0.1.0"
+description = "Skin care product analysis API"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.20.0",
+    "asyncpg>=0.32.0",
+    "fastapi>=0.143.2",
+    "pydantic-settings>=2.16.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.1",
+]
+
+# ---------------------------------------------------------------- Alembic
+[tool.alembic]
+script_location = "%(here)s/migrations"
+prepend_sys_path = ["."]
+# 20260101_1530_<rev>_<slug>.py: files sort chronologically in the IDE
+file_template = "%%(year)d%%(month).2d%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s"
+
+[[tool.alembic.post_write_hooks]]
+name = "ruff-fix"
+type = "module"
+module = "ruff"
+options = "check --fix --quiet REVISION_SCRIPT_FILENAME"
+
+[[tool.alembic.post_write_hooks]]
+name = "ruff-format"
+type = "module"
+module = "ruff"
+options = "format --quiet REVISION_SCRIPT_FILENAME"
+
+# ------------------------------------------------------------------- Ruff
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import sorting
+    "N",        # naming
+    "UP",       # modern syntax
+    "B",        # bugbear (likely bugs)
+    "ANN",      # type hints on every function signature
+    "ASYNC",    # async pitfalls
+    "S",        # security
+    "DTZ",      # no naive datetimes
+    "C4", "SIM", "PT", "RUF", "T20",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN"]           # asserts and untyped fixtures are fine in tests
+"migrations/versions/*" = ["E501"]      # generated code
+
+# ------------------------------------------------------------------- Mypy
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+explicit_package_bases = true
+files = ["src", "tests", "migrations"]
+
+# ----------------------------------------------------------------- Pytest
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+# ---------------------------------------------------------- Import Linter
+# Architecture rules, checked by `uv run lint-imports` (pre-commit + CI).
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Layers: main > api > modules > core (imports only point downward)"
+type = "layers"
+layers = ["app.main", "app.api", "app.modules", "app.core"]
+
+[[tool.importlinter.contracts]]
+name = "Modules: ingestion > catalog > ingredients | scoring (no cycles, no sideways imports)"
+type = "layers"
+containers = ["app.modules"]
+layers = ["ingestion", "catalog", "ingredients | scoring"]
+
+# Each module's internals (models, repository) are private: only the module itself
+# may import them. Everyone else goes through the module's public interface.
+# When you add a repository.py (or a new module), add it to the matching contract.
+[[tool.importlinter.contracts]]
+name = "ingredients internals are private"
+type = "protected"
+protected_modules = ["app.modules.ingredients.models"]
+allowed_importers = ["app.modules.ingredients"]
+
+[[tool.importlinter.contracts]]
+name = "catalog internals are private"
+type = "protected"
+protected_modules = ["app.modules.catalog.models"]
+allowed_importers = ["app.modules.catalog"]

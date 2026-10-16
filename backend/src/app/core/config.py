@@ -1,0 +1,30 @@
+"""Application settings.
+
+Every secret and every environment-dependent value comes from environment
+variables (or a local, git-ignored `.env` file). Missing or malformed values
+fail fast at startup instead of at the first request.
+"""
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        # .env also holds POSTGRES_* values that only docker compose reads.
+        extra="ignore",
+    )
+
+    app_env: Literal["local", "test", "staging", "production"] = "local"
+    database_url: PostgresDsn
+    db_echo: bool = False
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
