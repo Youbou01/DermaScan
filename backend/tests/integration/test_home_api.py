@@ -305,3 +305,19 @@ async def test_product_card_shape(client: httpx.AsyncClient, db_session: AsyncSe
     assert card["category_slug"] == "moisturizer"
     assert card["score"] == 80
     assert card["score_band"] == "low"
+
+
+async def test_openapi_home_sections_are_discriminated_by_type(client: httpx.AsyncClient) -> None:
+    spec = (await client.get("/openapi.json")).json()
+    schemas = spec["components"]["schemas"]
+
+    assert "CategoryGridSectionOut" in schemas
+    assert "ProductShelfSectionOut" in schemas
+    assert schemas["CategoryGridSectionOut"]["properties"]["type"]["const"] == "category_grid"
+    assert set(schemas["ProductShelfSectionOut"]["properties"]["type"]["enum"]) == {
+        "top_rated",
+        "recently_added",
+    }
+
+    feed_items = schemas["HomeFeedOut"]["properties"]["sections"]["items"]
+    assert feed_items.get("discriminator", {}).get("propertyName") == "type"

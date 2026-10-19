@@ -2,10 +2,13 @@
 changing a field name or type is a breaking API change (mention it in the PR)."""
 
 import uuid
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import RiskLevel
+
+HomeSectionType = Literal["category_grid", "top_rated", "recently_added"]
 
 
 class CategoryOut(BaseModel):
@@ -69,14 +72,34 @@ class ProductCardOut(BaseModel):
     category_slug: str | None
 
 
-class HomeSectionOut(BaseModel):
+class CategoryGridSectionOut(BaseModel):
+    """Home section whose items are top-level categories (no pagination)."""
+
     model_config = ConfigDict(frozen=True)
 
-    id: str = Field(description="Stable section id, e.g. 'top_rated'.")
-    type: str = Field(description="Section kind for the client layout.")
+    id: Literal["categories"] = "categories"
+    type: Literal["category_grid"] = "category_grid"
     title: str = Field(description="Localized section title.")
-    items: list[CategoryOut | ProductCardOut]
+    items: list[CategoryOut]
+    next_cursor: None = Field(description="Always null: the category grid is not paginated.")
+
+
+class ProductShelfSectionOut(BaseModel):
+    """Home section whose items are light product cards (keyset-paginated)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: Literal["top_rated", "recently_added"]
+    type: Literal["top_rated", "recently_added"]
+    title: str = Field(description="Localized section title.")
+    items: list[ProductCardOut]
     next_cursor: str | None = Field(description="Opaque cursor for the next page, or null.")
+
+
+HomeSectionOut = Annotated[
+    CategoryGridSectionOut | ProductShelfSectionOut,
+    Field(discriminator="type"),
+]
 
 
 class HomeFeedOut(BaseModel):
