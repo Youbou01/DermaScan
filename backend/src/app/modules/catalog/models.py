@@ -76,6 +76,13 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             text("created_at DESC"),
             text("id DESC"),
         ),
+        # Keyset pagination (D7). created_at is already covered by ix_product_created_at_desc_id.
+        Index(
+            "ix_product_score_id_keyset",
+            text("score DESC"),
+            text("id DESC"),
+            postgresql_where=text("score IS NOT NULL"),
+        ),
     )
 
     barcode: Mapped[str] = mapped_column(String(13), unique=True)
