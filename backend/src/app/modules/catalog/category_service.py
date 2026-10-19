@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.i18n import DEFAULT_LOCALE
+from app.core.i18n import pick_translation
 from app.modules.catalog.category_repository import CategoryRepository
 from app.modules.catalog.models import Category, CategoryTranslation
 from app.modules.catalog.schemas import CategoryNodeOut
@@ -73,7 +73,7 @@ class CategoryService:
 
 def _localized_name(translations: Iterable[CategoryTranslation], locale: str, fallback: str) -> str:
     names = {translation.locale: translation.name for translation in translations}
-    return names.get(locale) or names.get(DEFAULT_LOCALE) or fallback
+    return pick_translation(names, locale) or fallback
 
 
 def _flatten(
