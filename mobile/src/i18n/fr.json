@@ -1,0 +1,25 @@
+{
+  "risk": {
+    "low": "Risque faible",
+    "moderate": "Risque modéré",
+    "high": "Risque élevé",
+    "unknown": "Inconnu"
+  },
+  "categories": {
+    "face-care": "Soin du visage",
+    "cleanser": "Nettoyant",
+    "toner": "Tonique",
+    "serum": "Sérum",
+    "moisturizer": "Hydratant",
+    "face-mask": "Masque",
+    "exfoliant": "Exfoliant",
+    "eye-care": "Contour des yeux",
+    "sun-care": "Protection solaire",
+    "sunscreen": "Écran solaire",
+    "after-sun": "Après-soleil",
+    "body-care": "Soin du corps",
+    "body-lotion": "Lait corps",
+    "body-wash": "Gel douche",
+    "lip-care": "Soin des lèvres"
+  }
+}
