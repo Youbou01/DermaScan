@@ -2,14 +2,18 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.core.enums import RiskLevel
+
+__all__ = [
+    "SCORING_VERSION",
+    "IngredientPositionInput",
+    "RiskLevel",
+    "ScoreBand",
+    "ScoreOutput",
+    "calculate_score",
+]
+
 SCORING_VERSION: int = 1
-
-
-class RiskLevel(StrEnum):
-    LOW = "low"
-    MODERATE = "moderate"
-    HIGH = "high"
-    UNKNOWN = "unknown"
 
 
 class ScoreBand(StrEnum):
@@ -26,6 +30,7 @@ BASE_POINTS: dict[RiskLevel, float] = {
     RiskLevel.LOW: 100.0,
     RiskLevel.MODERATE: 55.0,
     RiskLevel.HIGH: 10.0,
+    RiskLevel.UNKNOWN: 0.0,
 }
 
 
