@@ -1,0 +1,38 @@
+{
+  "categories": [
+    {
+      "slug": "face-care",
+      "names": {"en": "Face care", "fr": "Soin du visage"},
+      "children": [
+        {"slug": "cleanser", "names": {"en": "Cleanser", "fr": "Nettoyant"}},
+        {"slug": "toner", "names": {"en": "Toner", "fr": "Tonique"}},
+        {"slug": "serum", "names": {"en": "Serum", "fr": "Sérum"}},
+        {"slug": "moisturizer", "names": {"en": "Moisturizer", "fr": "Hydratant"}},
+        {"slug": "face-mask", "names": {"en": "Face mask", "fr": "Masque"}},
+        {"slug": "exfoliant", "names": {"en": "Exfoliant", "fr": "Exfoliant"}},
+        {"slug": "eye-care", "names": {"en": "Eye care", "fr": "Contour des yeux"}}
+      ]
+    },
+    {
+      "slug": "sun-care",
+      "names": {"en": "Sun care", "fr": "Protection solaire"},
+      "children": [
+        {"slug": "sunscreen", "names": {"en": "Sunscreen", "fr": "Écran solaire"}},
+        {"slug": "after-sun", "names": {"en": "After-sun", "fr": "Après-soleil"}}
+      ]
+    },
+    {
+      "slug": "body-care",
+      "names": {"en": "Body care", "fr": "Soin du corps"},
+      "children": [
+        {"slug": "body-lotion", "names": {"en": "Body lotion", "fr": "Lait corps"}},
+        {"slug": "body-wash", "names": {"en": "Body wash", "fr": "Gel douche"}}
+      ]
+    },
+    {
+      "slug": "lip-care",
+      "names": {"en": "Lip care", "fr": "Soin des lèvres"},
+      "children": []
+    }
+  ]
+}

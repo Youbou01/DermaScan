@@ -1,5 +1,10 @@
-"""Locale resolution. Supported languages are listed in ONE place: we'll add "ar" here when
-Arabic content exists (and nowhere else)."""
+"""Locale resolution and translation fallback.
+
+Supported languages are listed in ONE place: add "ar" to `SUPPORTED_LOCALES` when
+Arabic content exists (and nowhere else).
+"""
+
+from collections.abc import Mapping
 
 DEFAULT_LOCALE = "en"
 SUPPORTED_LOCALES: tuple[str, ...] = ("en", "fr")
@@ -35,3 +40,17 @@ def resolve_locale(accept_language: str | None) -> str:
         if language in SUPPORTED_LOCALES:
             return language
     return DEFAULT_LOCALE
+
+
+def pick_translation[T](translations: Mapping[str, T], locale: str) -> T | None:
+    """Return text for `locale`, else English, else any available value, else None.
+
+    Pure helper for category names, ingredient rationales, and similar locale maps.
+    """
+    if locale in translations:
+        return translations[locale]
+    if DEFAULT_LOCALE in translations:
+        return translations[DEFAULT_LOCALE]
+    for value in translations.values():
+        return value
+    return None
