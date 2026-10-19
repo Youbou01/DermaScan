@@ -8,12 +8,9 @@ from fastapi import APIRouter, Depends
 from app.core.dependencies import LocaleDep, SessionDep
 from app.core.errors import ProblemDetails
 from app.modules.catalog.schemas import ProductDetail
-from app.modules.catalog.search_router import router as search_router
 from app.modules.catalog.service import CatalogService
 
 router = APIRouter()
-# Must come before "/{product_id}", otherwise "search" is parsed as an id.
-router.include_router(search_router)
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     404: {"model": ProblemDetails, "description": "No such product."},
