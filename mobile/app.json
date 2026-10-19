@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Skincare",
+    "slug": "skincare",
+    "scheme": "skincare",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "supportsTablet": false
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
