@@ -30,9 +30,15 @@ def _parse_node(raw: dict[str, Any]) -> CategorySeedNode:
     return CategorySeedNode(slug=raw["slug"], names=names, children=children)
 
 
-async def seed_categories(session: AsyncSession, path: Path = DATA_FILE) -> int:
-    """Upsert the tree from the versioned JSON file. Safe to run twice. Returns touched count."""
+async def seed_categories(
+    session: AsyncSession, path: Path = DATA_FILE, *, commit: bool = True
+) -> int:
+    """Upsert the tree from the versioned JSON file. Safe to run twice. Returns touched count.
+
+    Pass `commit=False` when the caller owns the transaction (e.g. integration tests).
+    """
     service = CategoryService(session)
     touched = await service.upsert_tree(load_category_seed(path))
-    await session.commit()
+    if commit:
+        await session.commit()
     return touched

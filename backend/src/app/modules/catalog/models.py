@@ -64,6 +64,18 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         # Makes imports idempotent: re-running an import updates instead of duplicating.
         UniqueConstraint("source", "source_id", name="uq_product_source_source_id"),
+        # Home-feed shelves (migration a1b2c3d4e5f6). Keep in sync with Alembic.
+        Index(
+            "ix_product_score_desc_id",
+            text("score DESC"),
+            "id",
+            postgresql_where=text("score IS NOT NULL AND score_band <> 'unknown'"),
+        ),
+        Index(
+            "ix_product_created_at_desc_id",
+            text("created_at DESC"),
+            text("id DESC"),
+        ),
     )
 
     barcode: Mapped[str] = mapped_column(String(13), unique=True)
