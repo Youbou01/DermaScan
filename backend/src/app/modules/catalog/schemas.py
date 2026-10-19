@@ -15,6 +15,16 @@ class CategoryOut(BaseModel):
     name: str = Field(description="Display name in the response language (English fallback).")
 
 
+class CategoryNodeOut(BaseModel):
+    """A category in the browse tree (top-level or child)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    slug: str = Field(description="Stable key shared with the mobile app and seed files.")
+    name: str = Field(description="Display name in the response language (English fallback).")
+    children: list[CategoryNodeOut] = Field(default_factory=list)
+
+
 class ProductIngredientOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 
