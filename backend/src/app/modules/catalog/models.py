@@ -1,14 +1,17 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     CheckConstraint,
     Float,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
@@ -158,3 +161,17 @@ class ProductIngredient(Base):
     )
 
     product: Mapped[Product] = relationship(back_populates="ingredients", lazy="raise")
+
+
+class BarcodeMiss(Base):
+    """Demand list: valid barcodes that were scanned but are not in the catalog."""
+
+    __tablename__ = "barcode_miss"
+    __table_args__ = (
+        CheckConstraint("barcode ~ '^[0-9]{13}$'", name="barcode_gtin13"),
+        CheckConstraint("count >= 1", name="count_positive"),
+    )
+
+    barcode: Mapped[str] = mapped_column(String(13), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    last_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
