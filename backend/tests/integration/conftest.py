@@ -23,8 +23,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.api.deps import get_session
 from app.core.config import Settings
+from app.core.dependencies import get_session
 from app.main import create_app
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -84,6 +84,11 @@ async def client(
     app = create_app(settings)
 
     async def use_test_session() -> AsyncIterator[AsyncSession]:
+        # A real request starts with a fresh session: nothing cached in its identity map.
+        # Without this, objects the test created would be reused as they are (e.g. a
+        # collection in insertion order instead of the query's ORDER BY) and the endpoint
+        # would be tested against a situation that never happens in production.
+        db_session.expunge_all()
         yield db_session
 
     app.dependency_overrides[get_session] = use_test_session

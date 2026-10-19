@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
+from app.modules.catalog import catalog_router
+
 router = APIRouter()
 
-# Module routers are mounted here as they are built, e.g.:
-# router.include_router(catalog_router, prefix="/products", tags=["products"])
+router.include_router(catalog_router, prefix="/products", tags=["products"])

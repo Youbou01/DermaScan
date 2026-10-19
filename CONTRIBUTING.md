@@ -43,9 +43,14 @@ Do **not** bypass hooks with `--no-verify`: CI runs the same checks and will fai
 ## Adding an endpoint (the usual path)
 1. Put logic in the module's `service.py`; SQL in its `repository.py`; request/response models in `schemas.py`.
 2. Raise module exceptions (subclasses of `app/core/errors.py`) such as `ProductNotFoundError`.
-3. Expose it in the module's `router.py`, declare error responses with `responses={404: {"model": ProblemDetails}}`, and mount the router in `app/api/v1/router.py`.
+3. Expose it in the module's `router.py` (use `SessionDep` / `LocaleDep` from `app/core/dependencies.py`), declare error responses with `responses={404: {"model": ProblemDetails}}`, export the router from the module's `__init__.py` as `<module>_router`, and mount it in `app/api/v1/router.py`.
 4. Test it through the `client` fixture (`tests/integration/`) and test the logic without a database (`tests/unit/`).
 5. Another module needs your data? Export a service function + DTO from your module's `__init__.py`. Never import its models.
+
+## Trying the API with data
+`uv run python scripts/seed_demo.py` inserts a few demo ingredients and products (safe to run twice), e.g.
+barcode `6190000000019`: `GET http://localhost:8000/api/v1/products/by-barcode/6190000000019`.
+It is a stop-gap: the real seed loader and importer replace it.
 
 ## GitHub settings to enable once (repository owner)
 Settings → Branches → rule for `main`: require a pull request, require 1 approval, require the
