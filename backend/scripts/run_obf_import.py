@@ -42,7 +42,10 @@ async def main() -> None:
                     continue
                 try:
                     row = json.loads(line)
-                    success = await import_product_record(db, row, ingredient_service)
+                    # Use a savepoint so a single failed row rolls back cleanly
+                    async with db.begin_nested():
+                        success = await import_product_record(db, row, ingredient_service)
+
                     if success:
                         imported_count += 1
                         if imported_count % 100 == 0:
