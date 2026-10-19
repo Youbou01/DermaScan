@@ -42,8 +42,11 @@ async def get_or_create_brand_id(db: AsyncSession, brand_name: str) -> uuid.UUID
     if row:
         return cast(uuid.UUID, row[0])
 
+    new_id = uuid.uuid4()
     ins = await db.execute(
-        text("INSERT INTO brand (name) VALUES (:name) RETURNING id").bindparams(name=clean_name)
+        text("INSERT INTO brand (id, name) VALUES (:id, :name) RETURNING id").bindparams(
+            id=new_id, name=clean_name
+        )
     )
     brand_id = cast(uuid.UUID, ins.scalar_one())
     await db.flush()
@@ -132,22 +135,24 @@ async def import_product_record(
     version_val = score_output.scoring_version
 
     if not prod_row:
+        new_prod_id = uuid.uuid4()
         ins_prod = await db.execute(
             text(
                 """
                 INSERT INTO product (
-                    barcode, name, brand_id, primary_category_id,
+                    id, barcode, name, brand_id, primary_category_id,
                     image_url, raw_ingredients_text, source, source_id,
                     score, score_band, score_coverage, scoring_version
                 )
                 VALUES (
-                    :barcode, :name, :brand_id, :primary_category_id,
+                    :id, :barcode, :name, :brand_id, :primary_category_id,
                     :image_url, :raw_ingredients_text, :source, :source_id,
                     :score, :score_band, :score_coverage, :scoring_version
                 )
                 RETURNING id
                 """
             ).bindparams(
+                id=new_prod_id,
                 barcode=gtin13_barcode,
                 name=name,
                 brand_id=brand_id,
