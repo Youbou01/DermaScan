@@ -5,6 +5,11 @@ from enum import StrEnum
 from app.core.enums import RiskLevel
 
 __all__ = [
+    "GOOD_MIN_COVERAGE",
+    "GOOD_MIN_SCORE",
+    "HIGH_RISK_SCORE_CAP",
+    "MIN_COVERAGE_THRESHOLD",
+    "MODERATE_MIN_SCORE",
     "SCORING_VERSION",
     "IngredientPositionInput",
     "RiskLevel",
@@ -13,7 +18,10 @@ __all__ = [
     "calculate_score",
 ]
 
-SCORING_VERSION: int = 1
+# Bump whenever ANY number or rule below changes: the recompute job (scripts/recompute_scores.py)
+# finds products with `scoring_version < SCORING_VERSION` and rescores them.
+# The decisions behind these numbers are recorded in docs/adr/0004 (amendment of 2026-10-19).
+SCORING_VERSION: int = 2
 
 
 class ScoreBand(StrEnum):
@@ -23,8 +31,16 @@ class ScoreBand(StrEnum):
     INSUFFICIENT_DATA = "insufficient_data"
 
 
-MIN_COVERAGE_THRESHOLD: float = 0.50
+# Share of ingredients we must recognize before we publish a score at all.
+MIN_COVERAGE_THRESHOLD: float = 0.70
+# Share of ingredients we must recognize before a product may be called "good".
+# Unknown ingredients are left out of the average, so without this a product that is half
+# unknown could score 100: "unknown looks safe", which ADR-0004 forbids.
+GOOD_MIN_COVERAGE: float = 0.80
+
 HIGH_RISK_SCORE_CAP: int = 49
+GOOD_MIN_SCORE: int = 75
+MODERATE_MIN_SCORE: int = 40
 
 BASE_POINTS: dict[RiskLevel, float] = {
     RiskLevel.LOW: 100.0,
@@ -80,11 +96,16 @@ def calculate_score(items: Sequence[IngredientPositionInput]) -> ScoreOutput:
     if has_high_risk:
         raw_score = min(raw_score, HIGH_RISK_SCORE_CAP)
 
+    # Cap the score itself (not only the band) so the number and the band never disagree,
+    # e.g. no "90, moderate" on screen.
+    if coverage < GOOD_MIN_COVERAGE:
+        raw_score = min(raw_score, GOOD_MIN_SCORE - 1)
+
     final_score = max(0, min(100, int(raw_score)))
 
-    if final_score >= 75 and not has_high_risk:
+    if final_score >= GOOD_MIN_SCORE and not has_high_risk:
         band = ScoreBand.GOOD
-    elif final_score >= 40:
+    elif final_score >= MODERATE_MIN_SCORE:
         band = ScoreBand.MODERATE
     else:
         band = ScoreBand.POOR
