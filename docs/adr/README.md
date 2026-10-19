@@ -16,6 +16,7 @@ Write one when a choice is hard to reverse, surprising to a newcomer, or took a 
 | [0006](0006-internationalization.md) | Internationalization: codes in the API, translations in tables | Accepted |
 | [0007](0007-api-conventions.md) | API conventions: errors, request IDs, pagination, contract | Accepted |
 | [0008](0008-engineering-quality-gates.md) | Tooling and quality gates | Accepted |
+| [0009](0009-ingredient-matching.md) | Ingredient matching is exact; fuzzy only suggests | Accepted |
 
 ## Template
 ```markdown

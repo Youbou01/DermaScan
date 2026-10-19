@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.deps import SessionDep
+from app.core.dependencies import SessionDep
 
 router = APIRouter(prefix="/health", tags=["health"])
 

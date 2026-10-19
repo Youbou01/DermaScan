@@ -60,6 +60,11 @@ A new module with models must be imported in `migrations/env.py`.
 To run the whole stack in containers (database, migrations, API on http://localhost:8000):
 `docker compose --profile app up --build`.
 
+## Trying the API with data
+After `alembic upgrade head`, run `uv run python scripts/seed_demo.py` (safe to run twice). Then open
+http://localhost:8000/docs, or call `GET /api/v1/products/by-barcode/6190000000019`
+(try `-H "Accept-Language: fr"`). Barcodes of the demo products: `6190000000019`, `6190000000026`, `6190000000033`.
+
 ## Errors and logging
 - Raise subclasses of `AppError` (`app/core/errors.py`); the API turns them into RFC 9457 `application/problem+json`.
 - Every response has an `X-Request-ID` header, and every log line of that request carries it.
@@ -70,7 +75,7 @@ To run the whole stack in containers (database, migrations, API on http://localh
 ```
 src/app/
   main.py            app factory
-  core/              config, logging, errors, middleware, DB plumbing, shared enums (cross-cutting only)
+  core/              config, logging, errors, middleware, i18n, shared HTTP dependencies, DB plumbing, shared enums (cross-cutting only)
   api/               deps, error handlers, router aggregation (no business logic)
   modules/
     ingredients/     ingredient dictionary, aliases, parsing/normalization
@@ -81,8 +86,8 @@ migrations/          Alembic
 tests/               unit/ (no DB) and integration/ (real PostgreSQL)
 ```
 
-## Architecture rules (checked by `lint-imports`)[to check if its respected run `lint-imports`]
-1. **One door per module.** Other modules may only import a module's public interface (its `__init__.py`: services and DTOs), never its `models` or `repository`.
+## Architecture rules (checked by `lint-imports`)
+1. **One door per module.** Other modules may only import a module's public interface (its `__init__.py`: services, DTOs, its router), never its `models` or `repository`.
 2. **Dependencies point down:** `ingestion → catalog → ingredients | scoring → core`. No cycles, no sideways imports between `ingredients` and `scoring`.
 3. **Each module owns its tables.** Cross-module foreign keys are fine in the database, but there is no `relationship()` across modules and no cross-module joins. Ask the other module's service.
 4. **Inside a module:** `router → service → repository → models`. Routers have no logic, services have no SQL.

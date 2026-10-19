@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.modules.catalog.models import (
-    CategoryTranslation,
     Product,
     ProductIngredient,
 )
@@ -114,7 +113,7 @@ async def test_score_must_be_between_0_and_100(db_session: AsyncSession, score: 
 
 
 async def test_locale_must_be_two_lowercase_letters(db_session: AsyncSession) -> None:
-    category = make_category(translations=[CategoryTranslation(locale="FR", name="Hydratant")])
+    category = make_category(names={"FR": "Hydratant"})
     db_session.add(category)
 
     with pytest.raises(IntegrityError, match="locale_format"):

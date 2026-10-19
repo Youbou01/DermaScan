@@ -22,4 +22,7 @@ and only a module itself may import its `models` / `repository`.
   across modules and no cross-module joins; a module asks the other module's service.
 - Flows that touch several modules (e.g. barcode miss → fetch from Open Beauty Facts → save)
   live in a thin orchestration layer at the top, never inside a lower module.
+- Each module has its own `router.py` and exports it from its `__init__.py` as `<module>_router`;
+  `app/api/v1/router.py` mounts them. Shared HTTP dependencies (database session, locale) live in
+  `app/core/dependencies.py`, because a module may not import from the `app.api` layer above it.
 - Strictness costs a little at first (the linter says no); it prevents spaghetti later.

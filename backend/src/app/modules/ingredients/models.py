@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import RiskLevel
@@ -48,6 +48,16 @@ class IngredientAlias(UUIDPrimaryKeyMixin, Base):
     an alias for its own INCI name, so matching only ever queries this table."""
 
     __tablename__ = "ingredient_alias"
+    __table_args__ = (
+        # Trigram index: makes "which known names look like this text?" fast (suggestions,
+        # ingredient search). Exact matching uses the unique index on normalized_alias.
+        Index(
+            "ix_ingredient_alias_normalized_alias_trgm",
+            "normalized_alias",
+            postgresql_using="gin",
+            postgresql_ops={"normalized_alias": "gin_trgm_ops"},
+        ),
+    )
 
     ingredient_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("ingredient.id", ondelete="CASCADE"), index=True
