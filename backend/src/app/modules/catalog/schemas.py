@@ -51,3 +51,35 @@ class ProductDetail(BaseModel):
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_coverage: float | None = Field(description="Share (0-1) of ingredients we could rate.")
     ingredients: list[ProductIngredientOut] = Field(description="In label order.")
+
+
+class ProductCardOut(BaseModel):
+    """Light product row for home shelves and search results (not the full detail page)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: uuid.UUID
+    name: str
+    brand: str | None
+    image_url: str | None
+    score: int | None = Field(description="0-100, or null when not scored.")
+    score_band: RiskLevel | None = Field(
+        description="Null when the product has no score; 'unknown' means insufficient data."
+    )
+    category_slug: str | None
+
+
+class HomeSectionOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(description="Stable section id, e.g. 'top_rated'.")
+    type: str = Field(description="Section kind for the client layout.")
+    title: str = Field(description="Localized section title.")
+    items: list[CategoryOut | ProductCardOut]
+    next_cursor: str | None = Field(description="Opaque cursor for the next page, or null.")
+
+
+class HomeFeedOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    sections: list[HomeSectionOut]
