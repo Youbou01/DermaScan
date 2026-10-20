@@ -1,10 +1,16 @@
 import { Stack } from 'expo-router';
 import type { ReactElement } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/api/query-client';
 
 /**
  * Root layout. Providers (query client, i18n, theme) are added here by MOB-01 to MOB-03.
  * Routes in this folder stay thin: they render a screen from `src/features/*`.
  */
 export default function RootLayout(): ReactElement {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </QueryClientProvider>
+  );
 }
