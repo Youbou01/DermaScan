@@ -41,3 +41,17 @@ repos:
         language: system
         pass_filenames: false
         files: ^backend/.*\.(py|toml)$
+
+      # --- mobile/ (needs `cd mobile && npm install` once). Same command CI runs. ---
+      - id: mobile-format
+        name: prettier (mobile, autofix)
+        entry: npm --prefix mobile run format
+        language: system
+        pass_filenames: false
+        files: ^mobile/
+      - id: mobile-check
+        name: mobile check (types + lint + format + tests)
+        entry: npm --prefix mobile run check
+        language: system
+        pass_filenames: false
+        files: ^mobile/

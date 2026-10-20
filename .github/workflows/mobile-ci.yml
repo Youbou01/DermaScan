@@ -1,0 +1,49 @@
+name: Mobile CI
+
+on:
+  pull_request:
+    paths: ["mobile/**", ".github/workflows/mobile-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/mobile-ci.yml"]
+
+# A new push to the same PR cancels the previous, now useless, run.
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: mobile/.nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies (fails if package-lock.json is out of date)
+        run: npm ci
+
+      # Types + lint + formatting + tests: the same command developers run before every commit.
+      - name: Quality gate
+        run: npm run check
+
+      # Every Expo-managed package must match the SDK. Catches a dependency bumped on its own.
+      - name: Dependencies match the Expo SDK
+        run: npx expo install --check
+
+      # Informational for now: make it blocking once it has been green on main for a while.
+      - name: Expo Doctor
+        continue-on-error: true
+        run: npx expo-doctor

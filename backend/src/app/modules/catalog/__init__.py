@@ -20,7 +20,10 @@ from app.modules.catalog.home_router import router as home_router
 from app.modules.catalog.home_service import HomeFeedService
 from app.modules.catalog.router import router as catalog_router
 from app.modules.catalog.schemas import (
+<<<<<<< HEAD
     CategoryGridSectionOut,
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
     CategoryNodeOut,
     CategoryOut,
     HomeFeedOut,
@@ -34,7 +37,10 @@ from app.modules.catalog.service import CatalogService
 
 __all__ = [
     "CatalogService",
+<<<<<<< HEAD
     "CategoryGridSectionOut",
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
     "CategoryNodeOut",
     "CategoryOut",
     "CategorySeedNode",
@@ -49,7 +55,10 @@ __all__ = [
     "ProductDetail",
     "ProductIngredientOut",
     "ProductNotFoundError",
+<<<<<<< HEAD
     "ProductShelfSectionOut",
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
     "SectionNotFoundError",
     "catalog_router",
     "categories_router",

@@ -22,6 +22,10 @@ from app.core.enums import RiskLevel
 from app.modules.catalog.enums import ProductSource
 from app.modules.catalog.gtin import compute_check_digit
 from app.modules.catalog.models import Brand, Category, Product
+<<<<<<< HEAD
+=======
+from app.modules.scoring.engine import GOOD_MIN_SCORE, MODERATE_MIN_SCORE, SCORING_VERSION
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
 
 # 12-digit bodies; check digit appended at insert time. Prefix 619 = Tunisia.
 SAMPLE_BODY_START = 619000100000
@@ -72,9 +76,15 @@ async def seed(session: AsyncSession) -> int:
             score = 55 + (i % 40)
             band = (
                 RiskLevel.LOW
+<<<<<<< HEAD
                 if score >= 80
                 else RiskLevel.MODERATE
                 if score >= 60
+=======
+                if score >= GOOD_MIN_SCORE
+                else RiskLevel.MODERATE
+                if score >= MODERATE_MIN_SCORE
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
                 else RiskLevel.HIGH
             )
             coverage = 0.85
@@ -88,7 +98,13 @@ async def seed(session: AsyncSession) -> int:
                 score=score,
                 score_band=band,
                 score_coverage=coverage,
+<<<<<<< HEAD
                 scoring_version=1 if score is not None else None,
+=======
+                # Current version, or recompute_scores.py would treat these rows as stale
+                # and re-score them from their (non-existent) ingredients.
+                scoring_version=SCORING_VERSION if score is not None else None,
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
                 source=ProductSource.MANUAL,
                 source_id=f"{SOURCE_ID_PREFIX}{i + 1:02d}",
                 created_at=base + timedelta(hours=i),

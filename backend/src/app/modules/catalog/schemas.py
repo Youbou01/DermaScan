@@ -72,6 +72,7 @@ class ProductCardOut(BaseModel):
     category_slug: str | None
 
 
+<<<<<<< HEAD
 class CategoryGridSectionOut(BaseModel):
     """Home section whose items are top-level categories (no pagination)."""
 
@@ -102,6 +103,18 @@ HomeSectionOut = Annotated[
 ]
 
 
+=======
+class HomeSectionOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(description="Stable section id, e.g. 'top_rated'.")
+    type: str = Field(description="Section kind for the client layout.")
+    title: str = Field(description="Localized section title.")
+    items: list[CategoryOut | ProductCardOut]
+    next_cursor: str | None = Field(description="Opaque cursor for the next page, or null.")
+
+
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
 class HomeFeedOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 

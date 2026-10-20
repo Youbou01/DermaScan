@@ -18,6 +18,14 @@ uv run alembic upgrade head
 uv run pre-commit install       # checks run automatically on every commit
 ```
 
+### Mobile (only if you touch `mobile/`)
+```bash
+cd mobile
+npm install && npx expo install --fix && npm run check
+cp .env.example .env            # set EXPO_PUBLIC_API_URL, see mobile/README.md
+```
+Full guide: `mobile/README.md`. Rules for people and AI assistants: `mobile/AGENTS.md`.
+
 ## What runs on every commit / PR
 | Check | Command | What it catches |
 |---|---|---|
@@ -26,6 +34,9 @@ uv run pre-commit install       # checks run automatically on every commit
 | Architecture | `lint-imports` | a module reaching into another module's internals |
 | Migrations | `alembic upgrade head`, `alembic check` | model changed without a migration |
 | Tests | `pytest` | regressions (integration tests use a real PostgreSQL) |
+
+Mobile (`mobile/`): `npm run check` = typecheck + ESLint + Prettier + Jest, run by pre-commit and by
+the **Mobile CI** workflow.
 
 If pre-commit rewrites files (formatting), re-stage them and commit again.
 Do **not** bypass hooks with `--no-verify`: CI runs the same checks and will fail anyway.
@@ -38,6 +49,7 @@ Do **not** bypass hooks with `--no-verify`: CI runs the same checks and will fai
 - [ ] No secrets in code or git; every new setting is in `Settings` and `.env.example`
 - [ ] Errors use the shared exception classes (`app/core/errors.py`), never raw `HTTPException` in services
 - [ ] Public API change is mentioned in the PR (the mobile app depends on it)
+- [ ] Mobile PRs: `npm run check` is green and a screen recording from a real device is attached
 - [ ] A decision that future developers will question gets a short ADR in `docs/adr/`
 
 ## Adding an endpoint (the usual path)
@@ -54,5 +66,5 @@ It is a stop-gap: the real seed loader and importer replace it.
 
 ## GitHub settings to enable once (repository owner)
 Settings → Branches → rule for `main`: require a pull request, require 1 approval, require the
-status check **Backend CI / checks**, require branches to be up to date, block force pushes.
+status checks **Backend CI / checks** and **Mobile CI / checks**, require branches to be up to date, block force pushes.
 Settings → General → Pull Requests: allow squash merging only, auto-delete head branches.

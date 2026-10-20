@@ -305,6 +305,7 @@ async def test_product_card_shape(client: httpx.AsyncClient, db_session: AsyncSe
     assert card["category_slug"] == "moisturizer"
     assert card["score"] == 80
     assert card["score_band"] == "low"
+<<<<<<< HEAD
 
 
 async def test_openapi_home_sections_are_discriminated_by_type(client: httpx.AsyncClient) -> None:
@@ -321,3 +322,5 @@ async def test_openapi_home_sections_are_discriminated_by_type(client: httpx.Asy
 
     feed_items = schemas["HomeFeedOut"]["properties"]["sections"]["items"]
     assert feed_items.get("discriminator", {}).get("propertyName") == "type"
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e

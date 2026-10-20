@@ -17,12 +17,18 @@ from app.modules.catalog.exceptions import (
 )
 from app.modules.catalog.home_repository import HomeRepository, ProductCardRow
 from app.modules.catalog.schemas import (
+<<<<<<< HEAD
     CategoryGridSectionOut,
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
     CategoryOut,
     HomeFeedOut,
     HomeSectionOut,
     ProductCardOut,
+<<<<<<< HEAD
     ProductShelfSectionOut,
+=======
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
 )
 
 DEFAULT_LIMIT = 10
@@ -71,10 +77,19 @@ class HomeFeedService:
             return await self._recent_section(locale, limit=limit, cursor=cursor)
         raise SectionNotFoundError(f"No home section named '{section_id}'.")
 
+<<<<<<< HEAD
     async def _category_section(self, locale: str) -> CategoryGridSectionOut:
         tree = await self._categories.get_tree(locale)
         items = [CategoryOut(slug=node.slug, name=node.name) for node in tree]
         return CategoryGridSectionOut(
+=======
+    async def _category_section(self, locale: str) -> HomeSectionOut:
+        tree = await self._categories.get_tree(locale)
+        items = [CategoryOut(slug=node.slug, name=node.name) for node in tree]
+        return HomeSectionOut(
+            id="categories",
+            type="category_grid",
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
             title=_title("categories", locale),
             items=items,
             next_cursor=None,
@@ -82,7 +97,11 @@ class HomeFeedService:
 
     async def _top_rated_section(
         self, locale: str, *, limit: int, cursor: str | None
+<<<<<<< HEAD
     ) -> ProductShelfSectionOut:
+=======
+    ) -> HomeSectionOut:
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
         seed_date, after_score, after_rotation, after_id = _parse_top_rated_cursor(
             cursor, default_date=self.today()
         )
@@ -94,7 +113,11 @@ class HomeFeedService:
             after_id=after_id,
         )
         page, next_cursor = _page_top_rated(rows, limit=limit, seed_date=seed_date)
+<<<<<<< HEAD
         return ProductShelfSectionOut(
+=======
+        return HomeSectionOut(
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
             id="top_rated",
             type="top_rated",
             title=_title("top_rated", locale),
@@ -104,13 +127,21 @@ class HomeFeedService:
 
     async def _recent_section(
         self, locale: str, *, limit: int, cursor: str | None
+<<<<<<< HEAD
     ) -> ProductShelfSectionOut:
+=======
+    ) -> HomeSectionOut:
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
         after_created_at, after_id = _parse_recent_cursor(cursor)
         rows = await self._home.list_recently_added(
             limit=limit + 1, after_created_at=after_created_at, after_id=after_id
         )
         page, next_cursor = _page_recent(rows, limit=limit)
+<<<<<<< HEAD
         return ProductShelfSectionOut(
+=======
+        return HomeSectionOut(
+>>>>>>> 1fd479cb87dbe5bed5fa5de16d93293b1e777d0e
             id="recently_added",
             type="recently_added",
             title=_title("recently_added", locale),
