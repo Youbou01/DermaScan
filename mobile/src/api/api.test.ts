@@ -3,6 +3,7 @@ import { createApiClient, mockApiFetch } from './client';
 import { categoriesFixture, homeFixture, ingredientFixture, productFixture } from './fixtures';
 import { getActiveApiLocale, setApiLocale } from './locale';
 import { searchFixture } from './search-fixture';
+import i18n from '@/i18n/i18n';
 
 describe('API layer', () => {
   beforeEach(() => {
@@ -80,13 +81,13 @@ describe('API layer', () => {
     expect(error).toMatchObject({
       name: 'ApiError',
       type: 'about:blank',
-      title: 'Request failed',
+      title: i18n.t('errors.request_failed'),
       status,
       detail: null,
       request_id: 'trace-fallback-1',
       errors: null,
     });
-    expect(error.message).toBe('Request failed');
+    expect(error.message).toBe(i18n.t('errors.request_failed'));
   });
 
   it('serves localized mock responses for the published API domains', async () => {

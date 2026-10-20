@@ -1,4 +1,5 @@
 import type { components } from './generated/schema';
+import i18n from '@/i18n/i18n';
 
 type ProblemDetails = components['schemas']['ProblemDetails'];
 type ValidationErrors = NonNullable<ProblemDetails['errors']>;
@@ -35,7 +36,7 @@ export class ApiError extends Error {
   readonly errors: ValidationErrors | null;
 
   constructor(status: number, problem: ProblemLike = {}, requestId: string | null = null) {
-    const title = readString(problem.title) ?? 'Request failed';
+    const title = readString(problem.title) ?? i18n.t('errors.request_failed');
     const detail = readString(problem.detail);
     super(detail ? `${title}: ${detail}` : title);
     this.name = 'ApiError';
