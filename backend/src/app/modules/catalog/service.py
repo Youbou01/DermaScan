@@ -3,21 +3,28 @@
 import uuid
 from collections.abc import Iterable
 
+import structlog
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
 from app.modules.catalog.exceptions import ProductNotFoundError
 from app.modules.catalog.gtin import normalize_gtin
+from app.modules.catalog.miss_repository import BarcodeMissRepository
 from app.modules.catalog.models import Category, CategoryTranslation, Product
 from app.modules.catalog.repository import ProductRepository
 from app.modules.catalog.schemas import CategoryOut, ProductDetail, ProductIngredientOut
 from app.modules.ingredients import IngredientInfo, IngredientService
 
+logger = structlog.get_logger(__name__)
+
 
 class CatalogService:
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self._products = ProductRepository(session)
+        self._misses = BarcodeMissRepository(session)
         # Same session = same transaction. Ingredient data comes ONLY through the other
         # module's public service, never through its tables or models.
         self._ingredients = IngredientService(session)
@@ -35,8 +42,18 @@ class CatalogService:
         gtin = normalize_gtin(barcode)
         product = await self._products.get_by_barcode(gtin)
         if product is None:
+            await self._record_miss(gtin)
             raise ProductNotFoundError(f"No product with barcode {gtin}.")
         return await self._to_detail(product, locale)
+
+    async def _record_miss(self, gtin: str) -> None:
+        """Count the miss. It must never turn a clean 404 into a 500."""
+        try:
+            await self._misses.record(gtin)
+            await self._session.commit()
+        except SQLAlchemyError:
+            await self._session.rollback()
+            logger.warning("barcode_miss_not_recorded", barcode=gtin, exc_info=True)
 
     async def _to_detail(self, product: Product, locale: str) -> ProductDetail:
         ingredient_ids = {

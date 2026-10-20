@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 import { radii, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface SkeletonProps {
   variant?: 'rect' | 'circle' | 'text';
@@ -16,6 +17,7 @@ export function Skeleton({
   height = variant === 'text' ? 16 : 80,
   borderRadius,
 }: SkeletonProps): ReactElement {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const [opacity] = useState(() => new Animated.Value(0.55));
   useEffect(() => {
@@ -43,7 +45,7 @@ export function Skeleton({
   return (
     <Animated.View
       accessibilityRole="progressbar"
-      accessibilityLabel="Loading"
+      accessibilityLabel={t('common.loading')}
       style={[
         styles.skeleton,
         { width, height, borderRadius: radius, backgroundColor: colors.skeleton, opacity },

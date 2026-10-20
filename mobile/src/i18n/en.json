@@ -1,0 +1,78 @@
+{
+  "app": { "title": "DermaScan", "open_design_system": "Open design system showcase" },
+  "common": {
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "close": "Close",
+    "clear_all": "Clear all",
+    "loading": "Loading",
+    "language": "Language",
+    "english": "English",
+    "french": "French",
+    "score_out_of": "{{score}} out of 100",
+    "risk_level": "Risk level: {{label}}",
+    "score": "Score: {{value}}",
+    "score_insufficient": "Score: insufficient data",
+    "selected": "Selected {{id}}",
+    "retry_action": "Retry action triggered",
+    "empty_action": "Empty state action triggered"
+  },
+  "risk": {
+    "low": "Low concern",
+    "moderate": "Moderate concern",
+    "high": "High concern",
+    "unknown": "Insufficient data",
+    "accessibility": {
+      "low": "Low concern level. This product has a low risk indicator.",
+      "moderate": "Moderate concern level. Review the ingredient information.",
+      "high": "High concern level. Review the ingredient information carefully.",
+      "unknown": "Insufficient data to determine a concern level."
+    }
+  },
+  "categories": {
+    "face-care": "Face care",
+    "cleanser": "Cleanser",
+    "toner": "Toner",
+    "serum": "Serum",
+    "moisturizer": "Moisturizer",
+    "face-mask": "Face mask",
+    "exfoliant": "Exfoliant",
+    "eye-care": "Eye care",
+    "sun-care": "Sun care",
+    "sunscreen": "Sunscreen",
+    "after-sun": "After-sun",
+    "body-care": "Body care",
+    "body-lotion": "Body lotion",
+    "body-wash": "Body wash",
+    "lip-care": "Lip care"
+  },
+  "errors": {
+    "offline_banner": "You are offline. Some information may be unavailable.",
+    "generic_title": "Something went wrong",
+    "generic_description": "We could not load this information. Please try again.",
+    "unknown_product": "Product not found",
+    "barcode_invalid": "This barcode is invalid.",
+    "product_image": "{{name}} product image",
+    "request_failed": "Request failed",
+    "not_found_title": "This screen does not exist.",
+    "go_home": "Go to the home screen",
+    "product_unavailable": "Product image unavailable",
+    "brand_unavailable": "Brand unavailable",
+    "unknown_brand": "Unknown brand"
+  },
+  "showcase": {
+    "title": "Design system",
+    "risk_indicators": "Risk indicators",
+    "grayscale_preview": "Grayscale preview",
+    "score_tiers": "Score tiers",
+    "product_cards": "Product cards",
+    "loading_placeholders": "Loading placeholders",
+    "error_empty_states": "Error and empty states",
+    "error_title": "Could not load preview",
+    "error_description": "Check your connection and try again.",
+    "retry": "Retry",
+    "empty_title": "No products yet",
+    "empty_description": "Scan a product to see its ingredient risk indicators.",
+    "scan_product": "Scan a product"
+  }
+}
