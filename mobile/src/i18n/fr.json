@@ -1,0 +1,91 @@
+{
+  "app": {
+    "title": "DermaScan",
+    "open_design_system": "Ouvrir la présentation du système de design"
+  },
+  "home": {
+    "hero_eyebrow": "Choisir en toute clarté",
+    "hero_title": "Plus de clarté pour votre routine.",
+    "hero_description": "Parcourez les soins par étape et consultez leurs indicateurs d’ingrédients.",
+    "empty_title": "Votre fil d’accueil est vide",
+    "empty_description": "Les nouvelles catégories et les nouveaux produits apparaîtront ici.",
+    "skeleton_categories": "Chargement des catégories",
+    "skeleton_products": "Chargement des produits",
+    "category_accessibility": "Parcourir {{name}}"
+  },
+  "common": {
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "clear_all": "Tout effacer",
+    "loading": "Chargement",
+    "language": "Langue",
+    "english": "Anglais",
+    "french": "Français",
+    "score_out_of": "{{score}} sur 100",
+    "risk_level": "Niveau de préoccupation : {{label}}",
+    "score": "Score : {{value}}",
+    "score_insufficient": "Score : données insuffisantes",
+    "selected": "Sélection : {{id}}",
+    "retry_action": "Action de nouvelle tentative déclenchée",
+    "empty_action": "Action de l’état vide déclenchée"
+  },
+  "risk": {
+    "low": "Préoccupation faible",
+    "moderate": "Préoccupation modérée",
+    "high": "Préoccupation élevée",
+    "unknown": "Données insuffisantes",
+    "accessibility": {
+      "low": "Niveau de préoccupation faible. Cet indicateur de risque est faible.",
+      "moderate": "Niveau de préoccupation modéré. Consultez les informations sur les ingrédients.",
+      "high": "Niveau de préoccupation élevé. Consultez attentivement les informations sur les ingrédients.",
+      "unknown": "Données insuffisantes pour déterminer le niveau de préoccupation."
+    }
+  },
+  "categories": {
+    "face-care": "Soin du visage",
+    "cleanser": "Nettoyant",
+    "toner": "Tonique",
+    "serum": "Sérum",
+    "moisturizer": "Hydratant",
+    "face-mask": "Masque",
+    "exfoliant": "Exfoliant",
+    "eye-care": "Contour des yeux",
+    "sun-care": "Protection solaire",
+    "sunscreen": "Écran solaire",
+    "after-sun": "Après-soleil",
+    "body-care": "Soin du corps",
+    "body-lotion": "Lait pour le corps",
+    "body-wash": "Gel douche",
+    "lip-care": "Soin des lèvres"
+  },
+  "errors": {
+    "offline_banner": "Vous êtes hors ligne. Certaines informations peuvent être indisponibles.",
+    "generic_title": "Une erreur s’est produite",
+    "generic_description": "Impossible de charger ces informations. Veuillez réessayer.",
+    "unknown_product": "Produit introuvable",
+    "barcode_invalid": "Ce code-barres est invalide.",
+    "product_image": "Image du produit {{name}}",
+    "request_failed": "Échec de la requête",
+    "not_found_title": "Cet écran n’existe pas.",
+    "go_home": "Aller à l’écran d’accueil",
+    "product_unavailable": "Image du produit indisponible",
+    "brand_unavailable": "Marque indisponible",
+    "unknown_brand": "Marque inconnue"
+  },
+  "showcase": {
+    "title": "Système de design",
+    "risk_indicators": "Indicateurs de risque",
+    "grayscale_preview": "Aperçu en niveaux de gris",
+    "score_tiers": "Niveaux de score",
+    "product_cards": "Fiches produit",
+    "loading_placeholders": "Espaces réservés au chargement",
+    "error_empty_states": "États d’erreur et états vides",
+    "error_title": "Impossible de charger l’aperçu",
+    "error_description": "Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer",
+    "empty_title": "Aucun produit pour le moment",
+    "empty_description": "Scannez un produit pour consulter les indicateurs de risque de ses ingrédients.",
+    "scan_product": "Scanner un produit"
+  }
+}

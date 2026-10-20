@@ -12,10 +12,17 @@
     "plugins": [
       "expo-router",
       [
+<<<<<<< HEAD
         "expo-camera",
         {
           "cameraPermission": "Allow Skincare to use your camera to scan product barcodes.",
           "recordAudioAndroid": false
+=======
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "supportedLocales": ["en", "fr"]
+>>>>>>> main
         }
       ]
     ],

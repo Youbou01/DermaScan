@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+<<<<<<< HEAD
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -46,3 +47,10 @@ const styles = StyleSheet.create({
   showcaseButton: { backgroundColor: '#246B50' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
+=======
+import { HomeScreen } from '@/features/home/HomeScreen';
+
+export default function HomeRoute(): ReactElement {
+  return <HomeScreen />;
+}
+>>>>>>> main

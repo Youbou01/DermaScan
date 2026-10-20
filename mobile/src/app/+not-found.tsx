@@ -1,16 +1,18 @@
 import { Link } from 'expo-router';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 // Reached for unknown deep links. Replaced by the shared ErrorState in MOB-10.
 export default function NotFoundRoute(): ReactElement {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text accessibilityRole="header" style={styles.title}>
-        This screen does not exist.
+        {t('errors.not_found_title')}
       </Text>
       <Link href="/" style={styles.link}>
-        Go to the home screen
+        {t('errors.go_home')}
       </Link>
     </View>
   );

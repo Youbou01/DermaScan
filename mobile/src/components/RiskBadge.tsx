@@ -2,12 +2,19 @@ import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { RiskLevel } from '@/api/types';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 
-const labels: Record<RiskLevel, string> = {
-  low: 'Low concern',
-  moderate: 'Moderate concern',
-  high: 'High concern',
-  unknown: 'Insufficient data',
+const labelKeys: Record<RiskLevel, `risk.${RiskLevel}`> = {
+  low: 'risk.low',
+  moderate: 'risk.moderate',
+  high: 'risk.high',
+  unknown: 'risk.unknown',
+};
+const accessibilityKeys: Record<RiskLevel, `risk.accessibility.${RiskLevel}`> = {
+  low: 'risk.accessibility.low',
+  moderate: 'risk.accessibility.moderate',
+  high: 'risk.accessibility.high',
+  unknown: 'risk.accessibility.unknown',
 };
 const icons: Record<RiskLevel, string> = { low: '○', moderate: '△', high: '⬟', unknown: '◇' };
 const colorKeys: Record<RiskLevel, 'low' | 'moderate' | 'high' | 'unknown'> = {
@@ -23,12 +30,14 @@ export interface RiskBadgeProps {
 }
 
 export function RiskBadge({ level, grayscale = false }: RiskBadgeProps): ReactElement {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const color = grayscale ? colors.text : colors[colorKeys[level]];
+  const label = t(labelKeys[level]);
   return (
     <View
       accessibilityRole="text"
-      accessibilityLabel={`Risk level: ${labels[level]}`}
+      accessibilityLabel={t(accessibilityKeys[level])}
       style={[
         styles.badge,
         {
@@ -37,15 +46,19 @@ export function RiskBadge({ level, grayscale = false }: RiskBadgeProps): ReactEl
         },
       ]}
     >
-      <Text accessibilityLabel={`Risk icon: ${icons[level]}`} style={[styles.icon, { color }]}>
+      <Text
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+        style={[styles.icon, { color }]}
+      >
         {icons[level]}
       </Text>
-      <Text style={[styles.label, { color }]}>{labels[level]}</Text>
+      <Text style={[styles.label, { color }]}>{label}</Text>
     </View>
   );
 }
 
-export const riskBadgeMeta = { labels, icons };
+export const riskBadgeMeta = { labelKeys, icons };
 
 const styles = StyleSheet.create({
   badge: {

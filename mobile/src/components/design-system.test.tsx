@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import i18n from '@/i18n/i18n';
 import type { RiskLevel } from '@/api/types';
 import {
   EmptyState,
@@ -11,11 +12,11 @@ import {
   Skeleton,
 } from '@/components';
 
-const riskCases: [RiskLevel, string, string][] = [
-  ['low', 'Low concern', '○'],
-  ['moderate', 'Moderate concern', '△'],
-  ['high', 'High concern', '⬟'],
-  ['unknown', 'Insufficient data', '◇'],
+const riskCases: [RiskLevel, `risk.${RiskLevel}`][] = [
+  ['low', 'risk.low'],
+  ['moderate', 'risk.moderate'],
+  ['high', 'risk.high'],
+  ['unknown', 'risk.unknown'],
 ];
 const product = {
   id: 'product-1',
@@ -24,17 +25,17 @@ const product = {
   image_url: null,
   score: 80,
   score_band: 'low' as const,
-  category_slug: 'moisturizers',
+  category_slug: 'moisturizer',
 };
 
 describe('RiskBadge', () => {
   it.each(riskCases)(
     'renders %s with icon, text and full accessibility label',
-    async (level, label, icon) => {
+    async (level, labelKey) => {
       const screen = await render(<RiskBadge level={level} />);
+      const label = i18n.t(labelKey);
       expect(screen.getByText(label)).toBeTruthy();
-      expect(screen.getByLabelText(`Risk icon: ${icon}`)).toBeTruthy();
-      expect(screen.getByLabelText(`Risk level: ${label}`)).toBeTruthy();
+      expect(screen.getByLabelText(i18n.t(`risk.accessibility.${level}`))).toBeTruthy();
     },
   );
 });
@@ -42,7 +43,9 @@ describe('RiskBadge', () => {
 describe('ScoreBadge and ProductCard', () => {
   it('announces the numeric score and maximum', async () => {
     expect(
-      (await render(<ScoreBadge score={82} band="low" />)).getByLabelText('Score: 82 out of 100'),
+      (await render(<ScoreBadge score={82} band="low" />)).getByLabelText(
+        i18n.t('common.score', { value: i18n.t('common.score_out_of', { score: 82 }) }),
+      ),
     ).toBeTruthy();
   });
 
@@ -51,7 +54,12 @@ describe('ScoreBadge and ProductCard', () => {
     const screen = await render(<ProductCard product={product} onPress={onPress} />);
     expect(screen.getByText('Daily cream')).toBeTruthy();
     expect(screen.getByText('Example')).toBeTruthy();
-    expect(screen.getByLabelText('Score: 80 out of 100')).toBeTruthy();
+    expect(screen.getByText(i18n.t('categories.moisturizer'))).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        i18n.t('common.score', { value: i18n.t('common.score_out_of', { score: 80 }) }),
+      ),
+    ).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Daily cream, Example' }));
     expect(onPress).toHaveBeenCalledWith('product-1');
   });
@@ -73,7 +81,9 @@ describe('state and loading components', () => {
   it('calls the retry action', async () => {
     const onRetry = jest.fn();
     await fireEvent.press(
-      (await render(<ErrorState onRetry={onRetry} />)).getByRole('button', { name: 'Try again' }),
+      (await render(<ErrorState onRetry={onRetry} />)).getByRole('button', {
+        name: i18n.t('common.retry'),
+      }),
     );
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
@@ -94,7 +104,7 @@ describe('state and loading components', () => {
     const screen = await render(
       <Skeleton variant="rect" width={128} height={42} borderRadius={6} />,
     );
-    expect(screen.getByLabelText('Loading')).toHaveStyle({
+    expect(screen.getByLabelText(i18n.t('common.loading'))).toHaveStyle({
       width: 128,
       height: 42,
       borderRadius: 6,

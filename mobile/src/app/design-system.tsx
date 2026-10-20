@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,8 +11,10 @@ import {
   Screen,
   Skeleton,
 } from '@/components';
+import { productFixture } from '@/api/fixtures';
 import type { RiskLevel } from '@/api/types';
 import { spacing, typography, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const levels: RiskLevel[] = ['low', 'moderate', 'high', 'unknown'];
 const product = {
@@ -21,42 +24,46 @@ const product = {
   image_url: null,
   score: 82,
   score_band: 'low' as const,
-  category_slug: 'moisturizers',
+  category_slug: 'moisturizer',
 };
 
 export default function DesignSystemShowcase(): ReactElement | null {
   const [grayscale, setGrayscale] = useState(false);
   const [message, setMessage] = useState('');
   const colors = useThemeColors();
+  const { t } = useTranslation();
   if (!__DEV__) return null;
   return (
     <Screen contentContainerStyle={styles.content}>
       <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-        Design system
+        {t('showcase.title')}
       </Text>
-      <Text style={[styles.section, { color: colors.text }]}>Risk indicators</Text>
+      <Text style={[styles.section, { color: colors.text }]}>{t('showcase.risk_indicators')}</Text>
       <Pressable
         accessibilityRole="switch"
         accessibilityState={{ checked: grayscale }}
         onPress={() => setGrayscale(!grayscale)}
         style={[styles.toggle, { borderColor: colors.border }]}
       >
-        <Text style={{ color: colors.text }}>{grayscale ? '✓ ' : ''}Grayscale preview</Text>
+        <Text style={{ color: colors.text }}>
+          {grayscale ? '✓ ' : ''}
+          {t('showcase.grayscale_preview')}
+        </Text>
       </Pressable>
       <View style={styles.wrap}>
         {levels.map((level) => (
           <RiskBadge key={level} level={level} grayscale={grayscale} />
         ))}
       </View>
-      <Text style={[styles.section, { color: colors.text }]}>Score tiers</Text>
+      <Text style={[styles.section, { color: colors.text }]}>{t('showcase.score_tiers')}</Text>
       <View style={styles.wrap}>
         <ScoreBadge score={91} />
         <ScoreBadge score={58} />
         <ScoreBadge score={21} />
         <ScoreBadge score={null} />
       </View>
-      <Text style={[styles.section, { color: colors.text }]}>Product cards</Text>
-      <ProductCard product={product} onPress={(id) => setMessage(`Selected ${id}`)} />
+      <Text style={[styles.section, { color: colors.text }]}>{t('showcase.product_cards')}</Text>
+      <ProductCard product={product} onPress={(id) => setMessage(t('common.selected', { id }))} />
       <ProductCard
         product={{
           ...product,
@@ -67,8 +74,20 @@ export default function DesignSystemShowcase(): ReactElement | null {
           score_band: null,
           category_slug: null,
         }}
-        onPress={(id) => setMessage(`Selected ${id}`)}
+        onPress={(id) => setMessage(t('common.selected', { id }))}
       />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() =>
+          router.push({
+            pathname: '/products/[productId]',
+            params: { productId: productFixture.id },
+          })
+        }
+        style={[styles.action, { backgroundColor: colors.primary }]}
+      >
+        <Text style={{ color: colors.onPrimary }}>Open sample product details</Text>
+      </Pressable>
       <Text style={[styles.section, { color: colors.text }]}>Loading placeholders</Text>
       <Skeleton variant="text" width="62%" />
       <View style={styles.row}>
@@ -79,23 +98,25 @@ export default function DesignSystemShowcase(): ReactElement | null {
         </View>
       </View>
       <Skeleton variant="rect" height={120} borderRadius={20} />
-      <Text style={[styles.section, { color: colors.text }]}>Error and empty states</Text>
+      <Text style={[styles.section, { color: colors.text }]}>
+        {t('showcase.error_empty_states')}
+      </Text>
       <ErrorState
-        title="Could not load preview"
-        description="Check your connection and try again."
-        onRetry={() => setMessage('Retry action triggered')}
-        buttonLabel="Retry"
+        title={t('showcase.error_title')}
+        description={t('showcase.error_description')}
+        onRetry={() => setMessage(t('common.retry_action'))}
+        buttonLabel={t('showcase.retry')}
       />
       <EmptyState
-        title="No products yet"
-        description="Scan a product to see its ingredient risk indicators."
+        title={t('showcase.empty_title')}
+        description={t('showcase.empty_description')}
         action={
           <Pressable
             accessibilityRole="button"
-            onPress={() => setMessage('Empty state action triggered')}
+            onPress={() => setMessage(t('common.empty_action'))}
             style={[styles.action, { backgroundColor: colors.primary }]}
           >
-            <Text style={{ color: colors.onPrimary }}>Scan a product</Text>
+            <Text style={{ color: colors.onPrimary }}>{t('showcase.scan_product')}</Text>
           </Pressable>
         }
       />
