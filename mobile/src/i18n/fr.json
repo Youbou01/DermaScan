@@ -3,6 +3,16 @@
     "title": "DermaScan",
     "open_design_system": "Ouvrir la présentation du système de design"
   },
+  "home": {
+    "hero_eyebrow": "Choisir en toute clarté",
+    "hero_title": "Plus de clarté pour votre routine.",
+    "hero_description": "Parcourez les soins par étape et consultez leurs indicateurs d’ingrédients.",
+    "empty_title": "Votre fil d’accueil est vide",
+    "empty_description": "Les nouvelles catégories et les nouveaux produits apparaîtront ici.",
+    "skeleton_categories": "Chargement des catégories",
+    "skeleton_products": "Chargement des produits",
+    "category_accessibility": "Parcourir {{name}}"
+  },
   "common": {
     "retry": "Réessayer",
     "cancel": "Annuler",

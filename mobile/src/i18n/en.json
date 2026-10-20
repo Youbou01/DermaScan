@@ -1,5 +1,15 @@
 {
   "app": { "title": "DermaScan", "open_design_system": "Open design system showcase" },
+  "home": {
+    "hero_eyebrow": "A calmer way to choose",
+    "hero_title": "A little more clarity for your routine.",
+    "hero_description": "Explore skincare by step and check each product’s ingredient indicators.",
+    "empty_title": "Your home feed is empty",
+    "empty_description": "New categories and products will appear here.",
+    "skeleton_categories": "Loading categories",
+    "skeleton_products": "Loading products",
+    "category_accessibility": "Browse {{name}}"
+  },
   "common": {
     "retry": "Try again",
     "cancel": "Cancel",
