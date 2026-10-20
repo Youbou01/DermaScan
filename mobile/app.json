@@ -9,7 +9,16 @@
     "ios": {
       "supportsTablet": false
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "supportedLocales": ["en", "fr"]
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }

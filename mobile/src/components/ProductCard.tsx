@@ -5,6 +5,8 @@ import type { ProductCard as ProductCardData } from '@/api/types';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import { RiskBadge } from './RiskBadge';
 import { ScoreBadge } from './ScoreBadge';
+import { getLocalizedCategorySlug } from '@/i18n/category';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface ProductCardProps {
   product: ProductCardData;
@@ -13,6 +15,10 @@ export interface ProductCardProps {
 
 export function ProductCard({ product, onPress }: ProductCardProps): ReactElement {
   const colors = useThemeColors();
+  const { t } = useTranslation();
+  const categoryLabel = product.category_slug
+    ? getLocalizedCategorySlug(product.category_slug)
+    : null;
   const [imageFailed, setImageFailed] = useState(false);
   const badge = product.score_band ? (
     product.score_band === 'unknown' ? (
@@ -26,7 +32,7 @@ export function ProductCard({ product, onPress }: ProductCardProps): ReactElemen
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${product.brand ?? 'Unknown brand'}`}
+      accessibilityLabel={`${product.name}, ${product.brand ?? t('errors.unknown_brand')}`}
       onPress={() => onPress?.(product.id)}
       style={({ pressed }) => [
         styles.card,
@@ -39,14 +45,14 @@ export function ProductCard({ product, onPress }: ProductCardProps): ReactElemen
     >
       {product.image_url && !imageFailed ? (
         <Image
-          accessibilityLabel={`${product.name} product image`}
+          accessibilityLabel={t('errors.product_image', { name: product.name })}
           onError={() => setImageFailed(true)}
           source={{ uri: product.image_url }}
           style={[styles.image, { backgroundColor: colors.surfaceMuted }]}
         />
       ) : (
         <View
-          accessibilityLabel="Product image unavailable"
+          accessibilityLabel={t('errors.product_unavailable')}
           style={[styles.image, styles.placeholder, { backgroundColor: colors.surfaceMuted }]}
         >
           <Text style={[styles.placeholderText, { color: colors.textMuted }]}>◇</Text>
@@ -57,11 +63,11 @@ export function ProductCard({ product, onPress }: ProductCardProps): ReactElemen
           {product.name}
         </Text>
         <Text numberOfLines={1} style={[styles.brand, { color: colors.textMuted }]}>
-          {product.brand ?? 'Brand unavailable'}
+          {product.brand ?? t('errors.brand_unavailable')}
         </Text>
-        {product.category_slug ? (
+        {categoryLabel ? (
           <Text numberOfLines={1} style={[styles.category, { color: colors.textMuted }]}>
-            {product.category_slug}
+            {categoryLabel}
           </Text>
         ) : null}
         {badge}

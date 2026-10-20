@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { RiskLevel } from '@/api/types';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface ScoreBadgeProps {
   score: number | null;
@@ -9,18 +10,20 @@ export interface ScoreBadgeProps {
 }
 
 export function ScoreBadge({ score, band }: ScoreBadgeProps): ReactElement {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const tier =
     band ?? (score === null ? 'unknown' : score >= 75 ? 'low' : score >= 40 ? 'moderate' : 'high');
-  const label = score === null || tier === 'unknown' ? 'Insufficient data' : `${score} / 100`;
+  const isUnknown = score === null || tier === 'unknown';
+  const label = isUnknown ? t('risk.unknown') : t('common.score_out_of', { score });
   const fg = colors[tier];
   return (
     <View
       accessibilityRole="text"
       accessibilityLabel={
-        score === null || tier === 'unknown'
-          ? 'Score: insufficient data'
-          : `Score: ${score} out of 100`
+        isUnknown
+          ? t('common.score_insufficient')
+          : t('common.score', { value: t('common.score_out_of', { score }) })
       }
       style={[styles.badge, { backgroundColor: colors[`${tier}Surface`], borderColor: fg }]}
     >

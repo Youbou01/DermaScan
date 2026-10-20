@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface ErrorStateProps {
   title?: string;
@@ -10,12 +11,15 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = 'Something went wrong',
-  description = 'We could not load this information. Please try again.',
+  title,
+  description,
   onRetry,
-  buttonLabel = 'Try again',
+  buttonLabel,
 }: ErrorStateProps): ReactElement {
+  const { t } = useTranslation();
   const colors = useThemeColors();
+  const displayedTitle = title ?? t('errors.generic_title');
+  const displayedDescription = description ?? t('errors.generic_description');
   return (
     <View style={styles.container}>
       <Text
@@ -25,9 +29,9 @@ export function ErrorState({
         !
       </Text>
       <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-        {title}
+        {displayedTitle}
       </Text>
-      <Text style={[styles.description, { color: colors.textMuted }]}>{description}</Text>
+      <Text style={[styles.description, { color: colors.textMuted }]}>{displayedDescription}</Text>
       {onRetry ? (
         <Pressable
           accessibilityRole="button"
@@ -37,7 +41,9 @@ export function ErrorState({
             { backgroundColor: colors.primary, opacity: pressed ? 0.75 : 1 },
           ]}
         >
-          <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{buttonLabel}</Text>
+          <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
+            {buttonLabel ?? t('common.retry')}
+          </Text>
         </Pressable>
       ) : null}
     </View>
