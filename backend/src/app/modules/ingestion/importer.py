@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import RiskLevel as CoreRiskLevel
 from app.modules.catalog.enums import ProductSource
 from app.modules.catalog.gtin import normalize_gtin
+from app.modules.catalog.search_text import normalize_name
 from app.modules.ingestion.mapper import resolve_category_slug
 from app.modules.ingredients.parser import parse_ingredient_label
 from app.modules.ingredients.service import IngredientService
@@ -140,12 +141,12 @@ async def import_product_record(
             text(
                 """
                 INSERT INTO product (
-                    id, barcode, name, brand_id, primary_category_id,
+                    id, barcode, name, name_normalized, brand_id, primary_category_id,
                     image_url, raw_ingredients_text, source, source_id,
                     score, score_band, score_coverage, scoring_version
                 )
                 VALUES (
-                    :id, :barcode, :name, :brand_id, :primary_category_id,
+                    :id, :barcode, :name, :name_normalized, :brand_id, :primary_category_id,
                     :image_url, :raw_ingredients_text, :source, :source_id,
                     :score, :score_band, :score_coverage, :scoring_version
                 )
@@ -155,6 +156,7 @@ async def import_product_record(
                 id=new_prod_id,
                 barcode=gtin13_barcode,
                 name=name,
+                name_normalized=normalize_name(name),
                 brand_id=brand_id,
                 primary_category_id=category_id,
                 image_url=image_url if image_url else None,
@@ -175,7 +177,8 @@ async def import_product_record(
             text(
                 """
                 UPDATE product
-                SET barcode = :barcode, name = :name, brand_id = :brand_id,
+                SET barcode = :barcode, name = :name, name_normalized = :name_normalized,
+                    brand_id = :brand_id,
                     primary_category_id = :primary_category_id,
                     image_url = :image_url, raw_ingredients_text = :raw_ingredients_text,
                     score = :score, score_band = :score_band,
@@ -186,6 +189,7 @@ async def import_product_record(
                 id=product_id,
                 barcode=gtin13_barcode,
                 name=name,
+                name_normalized=normalize_name(name),
                 brand_id=brand_id,
                 primary_category_id=category_id,
                 image_url=image_url if image_url else None,

@@ -11,11 +11,12 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.enums import RiskLevel
 from app.core.orm import Base, TimestampMixin, UUIDPrimaryKeyMixin, enum_check, enum_type
 from app.modules.catalog.enums import ProductSource
+from app.modules.catalog.search_text import normalize_name
 
 
 class Brand(UUIDPrimaryKeyMixin, Base):
@@ -83,10 +84,17 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             text("id DESC"),
             postgresql_where=text("score IS NOT NULL"),
         ),
+        Index(
+            "ix_product_name_normalized_trgm",
+            "name_normalized",
+            postgresql_using="gin",
+            postgresql_ops={"name_normalized": "gin_trgm_ops"},
+        ),
     )
 
     barcode: Mapped[str] = mapped_column(String(13), unique=True)
     name: Mapped[str] = mapped_column(String(255))
+    name_normalized: Mapped[str] = mapped_column(Text)
     brand_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("brand.id", ondelete="RESTRICT"), index=True
     )
@@ -105,6 +113,12 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     # Share of ingredients we recognized (0-1). Low coverage => "insufficient data".
     score_coverage: Mapped[float | None] = mapped_column(Float)
+
+    @validates("name")
+    def _set_name_normalized(self, _key: str, value: str) -> str:
+        self.name_normalized = normalize_name(value)
+        return value
+
     scoring_version: Mapped[int | None] = mapped_column(SmallInteger)
 
     source: Mapped[ProductSource] = mapped_column(enum_type(ProductSource))
