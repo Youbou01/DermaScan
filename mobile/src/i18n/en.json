@@ -21,5 +21,17 @@
     "body-lotion": "Body lotion",
     "body-wash": "Body wash",
     "lip-care": "Lip care"
+  },
+  "home": {
+    "title": "Skincare"
+  },
+  "notFound": {
+    "title": "This screen does not exist.",
+    "goHome": "Go to the home screen"
+  },
+  "language": {
+    "title": "Language",
+    "en": "English",
+    "fr": "Français"
   }
 }
