@@ -17,6 +17,12 @@
           "supportsRTL": true,
           "supportedLocales": ["en", "fr"]
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Skincare to use your camera to scan product barcodes."
+        }
       ]
     ],
     "experiments": {
