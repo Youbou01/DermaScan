@@ -10,7 +10,7 @@ Scores stay empty until the scoring module exists (task C1).
 
 import asyncio
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -100,23 +100,59 @@ async def seed(session: AsyncSession) -> None:
         session.add(category)
 
     for inci, risk, extra_names, rationale, source in INGREDIENTS:
-        if await session.scalar(select(Ingredient.id).where(Ingredient.inci_name == inci)):
-            continue
-        session.add(
-            Ingredient(
+        aliases = unique_aliases([inci, *extra_names])
+        existing_aliases = list(
+            (
+                await session.scalars(
+                    select(IngredientAlias).where(IngredientAlias.normalized_alias.in_(aliases))
+                )
+            ).all()
+        )
+        ingredient_ids = {alias.ingredient_id for alias in existing_aliases}
+        canonical = await session.scalar(
+            select(Ingredient).where(func.lower(Ingredient.inci_name) == inci.lower())
+        )
+
+        if len(ingredient_ids) > 1:
+            raise ValueError(
+                f"Demo ingredient {inci!r} aliases belong to multiple ingredients; "
+                "resolve the dictionary collision before seeding."
+            )
+        if canonical is not None and ingredient_ids and canonical.id not in ingredient_ids:
+            raise ValueError(
+                f"Demo ingredient {inci!r} conflicts with an existing alias owner; "
+                "resolve the dictionary collision before seeding."
+            )
+
+        if canonical is None and ingredient_ids:
+            canonical = await session.get(Ingredient, next(iter(ingredient_ids)))
+
+        if canonical is None:
+            canonical = Ingredient(
                 inci_name=inci,
                 risk_level=risk,
                 source_ref=source,
-                aliases=[
-                    IngredientAlias(alias=name, normalized_alias=key)
-                    for key, name in unique_aliases([inci, *extra_names]).items()
-                ],
                 translations=[
                     IngredientTranslation(locale=loc, rationale=text)
                     for loc, text in rationale.items()
                 ],
             )
+            session.add(canonical)
+            await session.flush()
+
+        existing_keys = {alias.normalized_alias for alias in existing_aliases}
+        session.add_all(
+            IngredientAlias(
+                ingredient_id=canonical.id,
+                alias=name,
+                normalized_alias=key,
+            )
+            for key, name in aliases.items()
+            if key not in existing_keys
         )
+        # Flush each iteration so later demo entries see aliases added above and can
+        # report a useful collision instead of failing during an implicit autoflush.
+        await session.flush()
     await session.flush()
 
     ingredients = IngredientService(session)

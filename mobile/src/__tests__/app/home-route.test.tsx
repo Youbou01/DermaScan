@@ -6,9 +6,9 @@ import HomeRoute, { FOUNDATION_TITLE } from '@/app/index';
 // Route files must stay in src/app, but their tests must NOT (Expo Router turns every file in
 // src/app into a route), which is why this lives in src/__tests__/app.
 describe('HomeRoute', () => {
-  it('renders the placeholder title', async () => {
+  it('renders its title as an accessible header', async () => {
     // `await` works for both a sync and an async `render` (it changed between library versions).
     const screen = await render(<HomeRoute />);
-    expect(screen.getByText(FOUNDATION_TITLE)).toBeTruthy();
+    expect(screen.getByRole('header', { name: FOUNDATION_TITLE })).toBeTruthy();
   });
 });
