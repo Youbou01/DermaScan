@@ -21,7 +21,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Skincare to use your camera to scan product barcodes."
+          "cameraPermission": "Allow Skincare to use your camera to scan product barcodes.",
+          "recordAudioAndroid": false
         }
       ]
     ],
