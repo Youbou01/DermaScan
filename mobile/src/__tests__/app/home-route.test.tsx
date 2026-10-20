@@ -75,8 +75,8 @@ describe('HomeRoute', () => {
     await fireEvent.press(screen.getAllByRole('button', { name: /Daily Hydration Serum/i })[0]!);
     await waitFor(() => {
       expect(mockPush).toHaveBeenLastCalledWith({
-        pathname: '/product/[id]',
-        params: { id: expect.any(String) },
+        pathname: '/products/[productId]',
+        params: { productId: expect.any(String) },
       });
     });
   });
