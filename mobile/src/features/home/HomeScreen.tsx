@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, type ReactElement } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useRouter, type Href } from 'expo-router';
 import type { HomeSection } from '@/api/types';
@@ -37,7 +37,10 @@ export function HomeScreen(): ReactElement {
       const now = Date.now();
       if (now - lastProductNavigation.current < 500) return;
       lastProductNavigation.current = now;
-      router.push({ pathname: '/product/[id]', params: { id } } as unknown as Href);
+      router.push({
+        pathname: '/products/[productId]',
+        params: { productId: id },
+      } as unknown as Href);
     },
     [router],
   );
@@ -131,6 +134,7 @@ export function HomeScreen(): ReactElement {
 
 function HomeHero(): ReactElement {
   const colors = useThemeColors();
+  const router = useRouter();
   const { t } = useTranslation();
   const foreground = colors.onPrimary;
   return (
@@ -145,6 +149,18 @@ function HomeHero(): ReactElement {
       <Text style={[styles.heroDescription, { color: foreground }]}>
         {t('home.hero_description')}
       </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/scan' as unknown as Href)}
+        style={({ pressed }) => [
+          styles.scanButton,
+          { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+        ]}
+      >
+        <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+          {t('scan.scan_button')}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -216,6 +232,15 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     lineHeight: typography.lineHeight.sm,
   },
+  scanButton: {
+    minHeight: 44,
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+  },
+  scanButtonText: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold },
   categorySkeletons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
