@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +11,7 @@ import {
   Screen,
   Skeleton,
 } from '@/components';
+import { productFixture } from '@/api/fixtures';
 import type { RiskLevel } from '@/api/types';
 import { spacing, typography, useThemeColors } from '@/theme/tokens';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -74,9 +76,19 @@ export default function DesignSystemShowcase(): ReactElement | null {
         }}
         onPress={(id) => setMessage(t('common.selected', { id }))}
       />
-      <Text style={[styles.section, { color: colors.text }]}>
-        {t('showcase.loading_placeholders')}
-      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() =>
+          router.push({
+            pathname: '/products/[productId]',
+            params: { productId: productFixture.id },
+          })
+        }
+        style={[styles.action, { backgroundColor: colors.primary }]}
+      >
+        <Text style={{ color: colors.onPrimary }}>Open sample product details</Text>
+      </Pressable>
+      <Text style={[styles.section, { color: colors.text }]}>Loading placeholders</Text>
       <Skeleton variant="text" width="62%" />
       <View style={styles.row}>
         <Skeleton variant="circle" width={56} height={56} />
