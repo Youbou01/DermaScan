@@ -3,7 +3,7 @@
     "low": "Low risk",
     "moderate": "Moderate risk",
     "high": "High risk",
-    "unknown": "Unknown"
+    "unknown": "Insufficient data"
   },
   "categories": {
     "face-care": "Face care",

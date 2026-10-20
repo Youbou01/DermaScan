@@ -3,7 +3,7 @@
     "low": "Risque faible",
     "moderate": "Risque modéré",
     "high": "Risque élevé",
-    "unknown": "Inconnu"
+    "unknown": "Données insuffisantes"
   },
   "categories": {
     "face-care": "Soin du visage",
