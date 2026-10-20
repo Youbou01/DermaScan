@@ -11,6 +11,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
+    "api:generate": "uv run --project ../backend python scripts/export-openapi.py && npm run api:types",
+    "api:types": "openapi-typescript openapi.json -o src/api/generated/schema.d.ts && prettier --write openapi.json src/api/generated/schema.d.ts",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -18,10 +20,12 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.5",
     "expo": "~58.0.0",
     "expo-constants": "~58.0.0",
     "expo-linking": "~58.0.0",
     "expo-router": "~58.0.0",
+    "openapi-fetch": "^0.17.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0",
@@ -38,6 +42,7 @@
     "eslint-config-prettier": "^10.1.0",
     "jest": "^30.0.0",
     "jest-expo": "~58.0.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.6.0",
     "test-renderer": "^1.0.0",
     "typescript": "~6.0.3"
