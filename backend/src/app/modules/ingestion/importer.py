@@ -45,7 +45,9 @@ async def get_or_create_brand_id(db: AsyncSession, brand_name: str) -> uuid.UUID
     return brand_id
 
 
-async def get_category_id_by_slug(db: AsyncSession, slug: str) -> uuid.UUID | None:
+async def get_category_id_by_slug(db: AsyncSession, slug: str | None) -> uuid.UUID | None:
+    if not slug:
+        return None
     res = await db.execute(text("SELECT id FROM category WHERE slug = :slug").bindparams(slug=slug))
     row = res.fetchone()
     return cast(uuid.UUID, row[0]) if row else None

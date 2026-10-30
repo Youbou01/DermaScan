@@ -25,6 +25,10 @@ Display names live in `category_translation` and are returned by the API accordi
 | `body-care` | — | Body care | Soin du corps |
 | `body-lotion` | body-care | Body lotion | Lait corps |
 | `body-wash` | body-care | Body wash | Gel douche |
+| `hand-care` | body-care | Hand care | Soin des mains |
+| `deodorant` | body-care | Deodorant | Déodorant |
+| `shaving` | body-care | Shaving | Rasage |
+| `baby-care` | body-care | Baby care | Soin bébé |
 | `lip-care` | — | Lip care | Soin des lèvres |
 
 Endpoint: `GET /api/v1/categories` (tree of top-level nodes with `children`).

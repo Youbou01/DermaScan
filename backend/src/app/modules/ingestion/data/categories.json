@@ -26,7 +26,11 @@
       "names": {"en": "Body care", "fr": "Soin du corps"},
       "children": [
         {"slug": "body-lotion", "names": {"en": "Body lotion", "fr": "Lait corps"}},
-        {"slug": "body-wash", "names": {"en": "Body wash", "fr": "Gel douche"}}
+        {"slug": "body-wash", "names": {"en": "Body wash", "fr": "Gel douche"}},
+        {"slug": "hand-care", "names": {"en": "Hand care", "fr": "Soin des mains"}},
+        {"slug": "deodorant", "names": {"en": "Deodorant", "fr": "Déodorant"}},
+        {"slug": "shaving", "names": {"en": "Shaving", "fr": "Rasage"}},
+        {"slug": "baby-care", "names": {"en": "Baby care", "fr": "Soin bébé"}}
       ]
     },
     {
