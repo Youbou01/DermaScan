@@ -22,6 +22,7 @@ from app.modules.catalog.router import router as catalog_router
 from app.modules.catalog.schemas import (
     CategoryNodeOut,
     CategoryOut,
+    CreateProductInput,
     HomeFeedOut,
     HomeSectionOut,
     ProductCardOut,
@@ -36,6 +37,7 @@ __all__ = [
     "CategoryOut",
     "CategorySeedNode",
     "CategoryService",
+    "CreateProductInput",
     "HomeFeedOut",
     "HomeFeedService",
     "HomeSectionOut",

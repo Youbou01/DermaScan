@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     db_echo: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    enable_obf_fallback: bool = True
     # Freeze the home-feed "Top rated" daily rotation (YYYY-MM-DD). Empty = real UTC today.
     home_feed_date: date | None = None
 

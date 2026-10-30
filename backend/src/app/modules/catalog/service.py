@@ -1,7 +1,8 @@
-"""The catalog module's public service (read side; writes arrive with the importer)."""
+"""The catalog module's public service."""
 
 import uuid
-from collections.abc import Collection, Iterable
+from collections.abc import Awaitable, Callable, Collection, Iterable
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from sqlalchemy import update
@@ -10,12 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
+from app.modules.catalog.category_repository import CategoryRepository
+from app.modules.catalog.enums import EnrichmentStatus, ImageStatus
 from app.modules.catalog.exceptions import ProductNotFoundError
 from app.modules.catalog.gtin import normalize_gtin
 from app.modules.catalog.miss_repository import BarcodeMissRepository
-from app.modules.catalog.models import Category, CategoryTranslation, Product
+from app.modules.catalog.models import Category, CategoryTranslation, Product, ProductIngredient
 from app.modules.catalog.repository import ProductRepository
-from app.modules.catalog.schemas import CategoryOut, ProductDetail, ProductIngredientOut
+from app.modules.catalog.schemas import (
+    CategoryOut,
+    CreateProductInput,
+    ProductDetail,
+    ProductIngredientOut,
+)
+from app.modules.catalog.search_text import normalize_name
 from app.modules.ingredients import IngredientInfo, IngredientService
 from app.modules.scoring import (
     INTERIM_RISK_TO_RATING,
@@ -26,15 +35,21 @@ from app.modules.scoring import (
 
 logger = structlog.get_logger(__name__)
 
+FallbackHandler = Callable[[str, str], Awaitable[ProductDetail | None]]
+
 
 class CatalogService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        fallback_handler: FallbackHandler | None = None,
+    ) -> None:
         self._session = session
         self._products = ProductRepository(session)
+        self._categories = CategoryRepository(session)
         self._misses = BarcodeMissRepository(session)
-        # Same session = same transaction. Ingredient data comes ONLY through the other
-        # module's public service, never through its tables or models.
         self._ingredients = IngredientService(session)
+        self._fallback_handler = fallback_handler
 
     async def get_product_detail(self, product_id: uuid.UUID, locale: str) -> ProductDetail:
         product = await self._products.get_by_id(product_id)
@@ -49,7 +64,12 @@ class CatalogService:
         gtin = normalize_gtin(barcode)
         product = await self._products.get_by_barcode(gtin)
         if product is None:
-            await self._record_miss(gtin)
+            if self._fallback_handler is not None:
+                fallback_detail = await self._fallback_handler(gtin, locale)
+                if fallback_detail is not None:
+                    return fallback_detail
+            else:
+                await self._record_miss(gtin)
             raise ProductNotFoundError(f"No product with barcode {gtin}.")
         return await self._to_detail(product, locale)
 
@@ -61,6 +81,26 @@ class CatalogService:
         except SQLAlchemyError:
             await self._session.rollback()
             logger.warning("barcode_miss_not_recorded", barcode=gtin, exc_info=True)
+
+    async def record_barcode_miss(self, barcode: str) -> None:
+        gtin = normalize_gtin(barcode)
+        await self._record_miss(gtin)
+
+    async def is_barcode_miss_negative_cached(
+        self, barcode: str, duration: timedelta = timedelta(hours=24)
+    ) -> bool:
+        try:
+            gtin = normalize_gtin(barcode)
+        except Exception:
+            return False
+        miss = await self._misses.get_by_barcode(gtin)
+        if miss is None:
+            return False
+        now = datetime.now(UTC)
+        last_seen = miss.last_seen_at
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=UTC)
+        return (now - last_seen) < duration
 
     async def _to_detail(self, product: Product, locale: str) -> ProductDetail:
         ingredient_ids = {
@@ -176,6 +216,114 @@ class CatalogService:
         count = await self._products.mark_products_dirty_for_ingredients(ingredient_ids)
         await self._session.flush()
         return count
+
+    async def upsert_product_from_import(self, data: CreateProductInput) -> Product:
+        brand_id: uuid.UUID | None = None
+        if data.brand_name:
+            brand = await self._products.get_or_create_brand(data.brand_name)
+            brand_id = brand.id
+
+        category_id: uuid.UUID | None = None
+        if data.category_slug:
+            category = await self._categories.get_by_slug(data.category_slug)
+            if category:
+                category_id = category.id
+
+        product = await self._products.get_by_source(data.source, data.source_id)
+        if product is None:
+            product = await self._products.get_by_barcode(data.barcode)
+
+        if product is None:
+            product = Product(
+                barcode=data.barcode,
+                name=data.name,
+                name_normalized=normalize_name(data.name),
+                source=data.source,
+                source_id=data.source_id,
+                brand_id=brand_id,
+                primary_category_id=category_id,
+                image_url=data.image_url,
+                raw_ingredients_text=data.raw_ingredients_text,
+                source_lang=data.source_lang,
+                name_i18n=data.name_i18n,
+                field_provenance=data.field_provenance,
+                enrichment_status=EnrichmentStatus.PENDING,
+                image_status=ImageStatus.CANDIDATE if data.image_url else ImageStatus.NONE,
+            )
+            self._session.add(product)
+            await self._session.flush()
+        else:
+            product.barcode = data.barcode
+            product.name = data.name
+            product.name_normalized = normalize_name(data.name)
+            product.brand_id = brand_id
+            if category_id is not None:
+                product.primary_category_id = category_id
+            if data.image_url:
+                product.image_url = data.image_url
+            product.raw_ingredients_text = data.raw_ingredients_text
+            product.source_lang = data.source_lang
+            if data.name_i18n:
+                product.name_i18n = data.name_i18n
+            if data.field_provenance:
+                product.field_provenance = data.field_provenance
+            await self._session.flush()
+
+        await self._products.delete_product_ingredients(product.id)
+        new_ingredients: list[ProductIngredient] = [
+            ProductIngredient(
+                product_id=product.id,
+                position=pos,
+                raw_text=raw_text,
+                ingredient_id=ing_id,
+            )
+            for pos, raw_text, ing_id in data.ingredients
+        ]
+        self._session.add_all(new_ingredients)
+        await self._session.flush()
+
+        all_ing_ids = {ing_id for _, _, ing_id in data.ingredients if ing_id is not None}
+        infos = await self._ingredients.get_many(all_ing_ids, locale="en") if all_ing_ids else {}
+
+        score_inputs: list[IngredientScoreInput] = []
+        for pos, _, ing_id in data.ingredients:
+            info = infos.get(ing_id) if ing_id else None
+            if info is not None:
+                rating = (
+                    info.rating
+                    if info.rating is not None
+                    else INTERIM_RISK_TO_RATING.get(info.risk_level)
+                )
+                conf = (
+                    info.rating_confidence
+                    if info.rating_confidence is not None
+                    else (0.0 if rating is None else 1.0)
+                )
+                is_proh = info.is_prohibited
+            else:
+                rating = None
+                conf = 0.0
+                is_proh = False
+            score_inputs.append(
+                IngredientScoreInput(
+                    position=pos,
+                    rating=rating,
+                    confidence=conf,
+                    is_prohibited=is_proh,
+                )
+            )
+
+        res = calculate_score(score_inputs)
+        product.score = res.score
+        product.score_band = res.band
+        product.score_coverage = res.confidence
+        product.score_is_estimated = res.is_estimated
+        product.scoring_version = res.version
+        product.score_dirty = False
+        await self._session.flush()
+
+        loaded = await self._products.get_by_id(product.id)
+        return loaded or product
 
 
 def _ingredient_out(

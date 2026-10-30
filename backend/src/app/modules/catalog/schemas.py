@@ -2,10 +2,12 @@
 changing a field name or type is a breaking API change (mention it in the PR)."""
 
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import RiskLevel
+from app.modules.catalog.enums import ProductSource
 
 
 class CategoryOut(BaseModel):
@@ -88,3 +90,20 @@ class HomeFeedOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sections: list[HomeSectionOut]
+
+
+class CreateProductInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    barcode: str
+    name: str
+    source: ProductSource = ProductSource.OPEN_BEAUTY_FACTS
+    source_id: str
+    brand_name: str | None = None
+    category_slug: str | None = None
+    image_url: str | None = None
+    raw_ingredients_text: str = ""
+    source_lang: str | None = None
+    name_i18n: dict[str, str] = Field(default_factory=dict)
+    field_provenance: dict[str, Any] = Field(default_factory=dict)
+    ingredients: list[tuple[int, str, uuid.UUID | None]] = Field(default_factory=list)

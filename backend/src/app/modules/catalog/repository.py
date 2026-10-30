@@ -4,11 +4,12 @@ import uuid
 from collections.abc import Collection
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, Select, select, update
+from sqlalchemy import CursorResult, Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.modules.catalog.models import Category, Product, ProductIngredient
+from app.modules.catalog.enums import ProductSource
+from app.modules.catalog.models import Brand, Category, Product, ProductIngredient
 
 
 class ProductRepository:
@@ -77,3 +78,28 @@ class ProductRepository:
         )
         result = await self._session.execute(stmt)
         return int(cast(CursorResult[Any], result).rowcount)
+
+    async def get_by_source(self, source: ProductSource, source_id: str) -> Product | None:
+        return await self._session.scalar(
+            self._with_detail_loaded().where(
+                Product.source == source, Product.source_id == source_id
+            )
+        )
+
+    async def get_or_create_brand(self, brand_name: str) -> Brand:
+        clean = brand_name.strip()
+        existing = await self._session.scalar(
+            select(Brand).where(func.lower(Brand.name) == func.lower(clean))
+        )
+        if existing is not None:
+            return existing
+        brand = Brand(name=clean)
+        self._session.add(brand)
+        await self._session.flush()
+        return brand
+
+    async def delete_product_ingredients(self, product_id: uuid.UUID) -> None:
+        await self._session.execute(
+            delete(ProductIngredient).where(ProductIngredient.product_id == product_id)
+        )
+        await self._session.flush()
