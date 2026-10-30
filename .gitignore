@@ -22,3 +22,6 @@ dist/
 node_modules/
 .expo/
 .import_linter_cache/
+
+# Local data cache
+backend/data/

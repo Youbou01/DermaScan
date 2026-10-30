@@ -54,7 +54,7 @@ class Ingredient(UUIDPrimaryKeyMixin, Base):
         ),
     )
 
-    inci_name: Mapped[str] = mapped_column(String(255), unique=True)
+    inci_name: Mapped[str] = mapped_column(Text, unique=True)
     risk_level: Mapped[RiskLevel] = mapped_column(
         enum_type(RiskLevel),
         default=RiskLevel.UNKNOWN,
@@ -139,8 +139,8 @@ class IngredientAlias(UUIDPrimaryKeyMixin, Base):
     ingredient_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("ingredient.id", ondelete="CASCADE"), index=True
     )
-    alias: Mapped[str] = mapped_column(String(255))
-    normalized_alias: Mapped[str] = mapped_column(String(255), unique=True)
+    alias: Mapped[str] = mapped_column(Text)
+    normalized_alias: Mapped[str] = mapped_column(Text, unique=True)
     language: Mapped[str | None] = mapped_column(String(2))
     source: Mapped[AliasSource] = mapped_column(
         enum_type(AliasSource),
