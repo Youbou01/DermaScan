@@ -1,7 +1,33 @@
 {
-  "app": {
-    "title": "DermaScan",
-    "open_design_system": "Open design system showcase"
+  "app": { "title": "DermaScan", "open_design_system": "Open design system showcase" },
+  "home": {
+    "hero_eyebrow": "A calmer way to choose",
+    "hero_title": "A little more clarity for your routine.",
+    "hero_description": "Explore skincare by step and check each product’s ingredient indicators.",
+    "empty_title": "Your home feed is empty",
+    "empty_description": "New categories and products will appear here.",
+    "skeleton_categories": "Loading categories",
+    "skeleton_products": "Loading products",
+    "category_accessibility": "Browse {{name}}"
+  },
+  "scan": {
+    "title": "Scan a product",
+    "instruction": "Place the product barcode inside the frame.",
+    "camera_permission": "Allow camera access to scan a product barcode.",
+    "camera_denied": "Camera access is unavailable. You can still enter a barcode manually.",
+    "allow_camera": "Allow camera",
+    "open_settings": "Open settings",
+    "manual_label": "Enter barcode manually",
+    "manual_placeholder": "Barcode number",
+    "lookup": "Look up product",
+    "loading": "Looking up product…",
+    "camera_loading": "Preparing camera…",
+    "torch_on": "Turn torch on",
+    "torch_off": "Turn torch off",
+    "unknown_product": "We don't know this product yet.",
+    "invalid_barcode": "Check the barcode and try again.",
+    "enter_barcode": "Enter a barcode to continue.",
+    "scan_button": "Scan a product"
   },
   "common": {
     "retry": "Try again",

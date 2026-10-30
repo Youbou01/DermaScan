@@ -3,6 +3,35 @@
     "title": "DermaScan",
     "open_design_system": "Ouvrir la présentation du système de design"
   },
+  "home": {
+    "hero_eyebrow": "Choisir en toute clarté",
+    "hero_title": "Plus de clarté pour votre routine.",
+    "hero_description": "Parcourez les soins par étape et consultez leurs indicateurs d’ingrédients.",
+    "empty_title": "Votre fil d’accueil est vide",
+    "empty_description": "Les nouvelles catégories et les nouveaux produits apparaîtront ici.",
+    "skeleton_categories": "Chargement des catégories",
+    "skeleton_products": "Chargement des produits",
+    "category_accessibility": "Parcourir {{name}}"
+  },
+  "scan": {
+    "title": "Scanner un produit",
+    "instruction": "Placez le code-barres du produit dans le cadre.",
+    "camera_permission": "Autorisez l’accès à la caméra pour scanner un code-barres.",
+    "camera_denied": "L’accès à la caméra est indisponible. Vous pouvez saisir le code-barres manuellement.",
+    "allow_camera": "Autoriser la caméra",
+    "open_settings": "Ouvrir les réglages",
+    "manual_label": "Saisir le code-barres manuellement",
+    "manual_placeholder": "Numéro du code-barres",
+    "lookup": "Rechercher le produit",
+    "loading": "Recherche du produit…",
+    "camera_loading": "Préparation de la caméra…",
+    "torch_on": "Allumer la lampe",
+    "torch_off": "Éteindre la lampe",
+    "unknown_product": "Nous ne connaissons pas encore ce produit.",
+    "invalid_barcode": "Vérifiez le code-barres et réessayez.",
+    "enter_barcode": "Saisissez un code-barres pour continuer.",
+    "scan_button": "Scanner un produit"
+  },
   "common": {
     "retry": "Réessayer",
     "cancel": "Annuler",

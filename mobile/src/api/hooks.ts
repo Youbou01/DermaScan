@@ -3,7 +3,13 @@ import { env } from '@/config/env';
 import { ApiError } from './errors';
 import { apiClient } from './client';
 import { findMockSearchResults } from './search-fixture';
-import type { CategoryNode, HomeFeed, ProductDetail, ProductIngredient } from './types';
+import type {
+  CategoryNode,
+  HomeFeed,
+  HomeSection,
+  ProductDetail,
+  ProductIngredient,
+} from './types';
 
 export class ApiContractUnavailableError extends Error {
   constructor(message: string) {
@@ -29,6 +35,18 @@ export function useHomeQuery(limit = 10): UseQueryResult<HomeFeed, ApiError> {
     queryFn: async () =>
       requireData(await apiClient.GET('/api/v1/home', { params: { query: { limit } } })),
   });
+}
+
+export async function fetchHomeSection(
+  sectionId: string,
+  cursor: string,
+  limit = 10,
+): Promise<HomeSection> {
+  return requireData(
+    await apiClient.GET('/api/v1/home/sections/{section_id}', {
+      params: { path: { section_id: sectionId }, query: { cursor, limit } },
+    }),
+  );
 }
 
 export function useCategoriesQuery(): UseQueryResult<CategoryNode[], ApiError> {
