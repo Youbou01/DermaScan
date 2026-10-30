@@ -77,5 +77,10 @@
     "empty_title": "Aucun produit pour le moment",
     "empty_description": "Scannez un produit pour consulter les indicateurs de risque de ses ingrédients.",
     "scan_product": "Scanner un produit"
+  },
+  "productList": {
+    "empty_title": "Aucun produit trouvé",
+    "empty_description": "Essayez une autre recherche ou une autre catégorie.",
+    "load_more_failed": "Impossible de charger plus de produits."
   }
 }

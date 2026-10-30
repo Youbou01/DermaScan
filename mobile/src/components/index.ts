@@ -12,3 +12,5 @@ export { Screen } from './Screen';
 export type { ScreenProps } from './Screen';
 export { Skeleton } from './Skeleton';
 export type { SkeletonProps } from './Skeleton';
+export { ProductList } from './ProductList';
+export type { ProductListProps } from './ProductList';

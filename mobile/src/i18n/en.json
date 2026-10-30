@@ -1,5 +1,8 @@
 {
-  "app": { "title": "DermaScan", "open_design_system": "Open design system showcase" },
+  "app": {
+    "title": "DermaScan",
+    "open_design_system": "Open design system showcase"
+  },
   "common": {
     "retry": "Try again",
     "cancel": "Cancel",
@@ -74,5 +77,10 @@
     "empty_title": "No products yet",
     "empty_description": "Scan a product to see its ingredient risk indicators.",
     "scan_product": "Scan a product"
+  },
+  "productList": {
+    "empty_title": "No products found",
+    "empty_description": "Try another search or another category.",
+    "load_more_failed": "Could not load more products."
   }
 }
