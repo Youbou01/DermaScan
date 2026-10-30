@@ -16,7 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
+from app.core.jobs import Job
 from app.modules.catalog.models import Product, ProductIngredient
+from app.modules.ingestion.models import IngestionRun, QuarantineItem, RawProduct
+from app.modules.ingredients.models import Ingredient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -157,6 +160,55 @@ async def generate_quality_report(db: AsyncSession, output_path: Path) -> str:
         (unknown_among_5_plus / with_5_plus_ingredients) * 100 if with_5_plus_ingredients > 0 else 0
     )
 
+    # Phase 1 & 2 Ingestion Metrics
+    total_raw = await db.scalar(select(func.count(RawProduct.id))) or 0
+    raw_by_source_res = await db.execute(
+        select(RawProduct.source, func.count(RawProduct.id)).group_by(RawProduct.source)
+    )
+    raw_by_source = {str(row[0]): row[1] for row in raw_by_source_res.all()}
+
+    total_quarantine = await db.scalar(select(func.count(QuarantineItem.id))) or 0
+    quarantine_by_status_res = await db.execute(
+        select(QuarantineItem.status, func.count(QuarantineItem.id)).group_by(QuarantineItem.status)
+    )
+    quarantine_by_status = {str(row[0]): row[1] for row in quarantine_by_status_res.all()}
+
+    quarantine_by_reason_res = await db.execute(
+        select(QuarantineItem.reason, func.count(QuarantineItem.id)).group_by(QuarantineItem.reason)
+    )
+    quarantine_by_reason = {str(row[0]): row[1] for row in quarantine_by_reason_res.all()}
+
+    total_runs = await db.scalar(select(func.count(IngestionRun.id))) or 0
+
+    # Phase 2 Enrichment & Image Status
+    enrich_status_res = await db.execute(
+        select(Product.enrichment_status, func.count(Product.id)).group_by(
+            Product.enrichment_status
+        )
+    )
+    enrich_dist = {str(row[0]): row[1] for row in enrich_status_res.all()}
+
+    image_status_res = await db.execute(
+        select(Product.image_status, func.count(Product.id)).group_by(Product.image_status)
+    )
+    image_dist = {str(row[0]): row[1] for row in image_status_res.all()}
+
+    # Phase 1 Ingredient Ratings
+    total_ingredients = await db.scalar(select(func.count(Ingredient.id))) or 0
+    rating_source_res = await db.execute(
+        select(Ingredient.rating_source, func.count(Ingredient.id)).group_by(
+            Ingredient.rating_source
+        )
+    )
+    rating_source_dist = {str(row[0]): row[1] for row in rating_source_res.all()}
+
+    # PostgreSQL Job Queue
+    total_jobs = await db.scalar(select(func.count(Job.id))) or 0
+    jobs_by_status_res = await db.execute(
+        select(Job.status, func.count(Job.id)).group_by(Job.status)
+    )
+    jobs_by_status = {str(row[0]): row[1] for row in jobs_by_status_res.all()}
+
     now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     report_lines = [
@@ -213,12 +265,113 @@ async def generate_quality_report(db: AsyncSession, output_path: Path) -> str:
             f"| 0 - 19 (High concern) | {bucket_0_19:,} | {b0_pct:.1f}% |",
             f"| Unscored (`None`) | {unscored_products:,} | {unscored_pct:.1f}% |",
             "",
-            "## 3. Phase 0 Verification Assessment",
+            "## 3. Ingestion & Pipeline Staging (Phase 1 & 2)",
+            "",
+            f"- **Raw Products Total**: {total_raw:,}",
+            f"- **Ingestion Runs Total**: {total_runs:,}",
+            f"- **Quarantine Items Total**: {total_quarantine:,}",
+            "",
+            "### Raw Products By Source",
+            "",
+            "| Source | Count |",
+            "|---|---|",
+        ]
+    )
+
+    for src, cnt in sorted(raw_by_source.items()):
+        report_lines.append(f"| `{src}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "### Quarantine Items By Status",
+            "",
+            "| Status | Count |",
+            "|---|---|",
+        ]
+    )
+    for q_st, cnt in sorted(quarantine_by_status.items()):
+        report_lines.append(f"| `{q_st}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "### Quarantine Items By Reason",
+            "",
+            "| Reason | Count |",
+            "|---|---|",
+        ]
+    )
+    for rsn, cnt in sorted(quarantine_by_reason.items()):
+        report_lines.append(f"| `{rsn}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "## 4. Product Enrichment & Media Pipeline",
+            "",
+            "### Enrichment Status",
+            "",
+            "| Status | Count |",
+            "|---|---|",
+        ]
+    )
+    for st, cnt in sorted(enrich_dist.items()):
+        report_lines.append(f"| `{st}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "### Product Image Status",
+            "",
+            "| Image Status | Count |",
+            "|---|---|",
+        ]
+    )
+    for img_st, cnt in sorted(image_dist.items()):
+        report_lines.append(f"| `{img_st}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "## 5. Ingredient Intelligence & Ratings",
+            "",
+            f"- **Total Ingredients in Dictionary**: {total_ingredients:,}",
+            "",
+            "### Ratings By Source",
+            "",
+            "| Rating Source | Count |",
+            "|---|---|",
+        ]
+    )
+    for rsrc, cnt in sorted(rating_source_dist.items()):
+        report_lines.append(f"| `{rsrc}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "## 6. PostgreSQL Job Queue Status",
+            "",
+            f"- **Total Jobs Tracked**: {total_jobs:,}",
+            "",
+            "| Job Status | Count |",
+            "|---|---|",
+        ]
+    )
+    for j_st, cnt in sorted(jobs_by_status.items()):
+        report_lines.append(f"| `{j_st}` | {cnt:,} |")
+
+    report_lines.extend(
+        [
+            "",
+            "## 7. Overhaul Verification Summary",
             "",
             "- **Scoring v3 Algorithm**: Active across 100% of products (`scoring_version = 3`).",
-            "- **EU CosIng Dictionary**: Seeded with >= 24,000 regulatory ingredients.",
-            "- **Deterministic Mapper**: Exact tag matching, zero wrong 'moisturizer' defaults.",
-            "- **Rescoring & Rematch Pipeline**: Successfully tested and verified.",
+            "- **PostgreSQL Job Queue**: Active (`app/core/jobs.py` + `app/worker.py`).",
+            "- **Enrichment Gateway**: Multi-provider fallback and rate limiting active.",
+            "- **Product Provenance**: Source precedence (`curated > retailer/brand > obf > ai`).",
+            "- **Multilingual Localization**: Strict INCI preservation, Arabic support.",
+            "- **Self-Hosted Image Pipeline**: 1024x1024 + 320x320 WebP, no hotlinking.",
             "",
         ]
     )

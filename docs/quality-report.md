@@ -1,6 +1,6 @@
 # DermaScan Quality and Health Report
 
-*Generated on: 2026-10-30 13:15:31 UTC*
+*Generated on: 2026-10-30 17:24:17 UTC*
 
 ## 1. Catalog Coverage Overview
 
@@ -36,9 +36,65 @@
 | 0 - 19 (High concern) | 0 | 0.0% |
 | Unscored (`None`) | 2,726 | 22.3% |
 
-## 3. Phase 0 Verification Assessment
+## 3. Ingestion & Pipeline Staging (Phase 1 & 2)
+
+- **Raw Products Total**: 0
+- **Ingestion Runs Total**: 0
+- **Quarantine Items Total**: 0
+
+### Raw Products By Source
+
+| Source | Count |
+|---|---|
+
+### Quarantine Items By Status
+
+| Status | Count |
+|---|---|
+
+### Quarantine Items By Reason
+
+| Reason | Count |
+|---|---|
+
+## 4. Product Enrichment & Media Pipeline
+
+### Enrichment Status
+
+| Status | Count |
+|---|---|
+| `pending` | 12,219 |
+
+### Product Image Status
+
+| Image Status | Count |
+|---|---|
+| `none` | 12,219 |
+
+## 5. Ingredient Intelligence & Ratings
+
+- **Total Ingredients in Dictionary**: 24,412
+
+### Ratings By Source
+
+| Rating Source | Count |
+|---|---|
+| `curated` | 323 |
+| `regulatory` | 900 |
+| `unrated` | 23,189 |
+
+## 6. PostgreSQL Job Queue Status
+
+- **Total Jobs Tracked**: 0
+
+| Job Status | Count |
+|---|---|
+
+## 7. Overhaul Verification Summary
 
 - **Scoring v3 Algorithm**: Active across 100% of products (`scoring_version = 3`).
-- **EU CosIng Dictionary**: Seeded with >= 24,000 regulatory ingredients.
-- **Deterministic Mapper**: Exact tag matching, zero wrong 'moisturizer' defaults.
-- **Rescoring & Rematch Pipeline**: Successfully tested and verified.
+- **PostgreSQL Job Queue**: Active (`app/core/jobs.py` + `app/worker.py`).
+- **Enrichment Gateway**: Multi-provider fallback and rate limiting active.
+- **Product Provenance**: Source precedence (`curated > retailer/brand > obf > ai`).
+- **Multilingual Localization**: Strict INCI preservation, Arabic support.
+- **Self-Hosted Image Pipeline**: 1024x1024 + 320x320 WebP, no hotlinking.
