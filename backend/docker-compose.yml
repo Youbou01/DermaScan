@@ -45,5 +45,14 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  worker:
+    profiles: ["app"]
+    build: .
+    command: ["python", "-m", "app.worker"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:

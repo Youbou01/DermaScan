@@ -1,6 +1,8 @@
+"""PostgreSQL-backed transactional job queue with SKIP LOCKED concurrency."""
+
 import uuid
 from collections.abc import Callable, Coroutine
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 
@@ -65,19 +67,22 @@ class Job(UUIDPrimaryKeyMixin, Base):
     )
 
 
-# In-memory registry of async task handlers: task_name -> handler(payload, session)
 TaskHandler = Callable[[dict[str, Any], AsyncSession], Coroutine[Any, Any, Any]]
 _TASK_REGISTRY: dict[str, TaskHandler] = {}
 
 
 def register_task(name: str) -> Callable[[TaskHandler], TaskHandler]:
-    """Decorator to register a task handler."""
+    """Decorator to register an async task handler for a task name."""
 
-    def decorator(func: TaskHandler) -> TaskHandler:
-        _TASK_REGISTRY[name] = func
-        return func
+    def decorator(fn: TaskHandler) -> TaskHandler:
+        _TASK_REGISTRY[name] = fn
+        return fn
 
     return decorator
+
+
+def get_registered_task(name: str) -> TaskHandler | None:
+    return _TASK_REGISTRY.get(name)
 
 
 async def enqueue_job(
@@ -88,7 +93,7 @@ async def enqueue_job(
     scheduled_at: datetime | None = None,
     max_attempts: int = 3,
 ) -> uuid.UUID:
-    """Enqueue a job idempotently into the PostgreSQL job queue."""
+    """Enqueue a job into the PostgreSQL job queue."""
     job = Job(
         queue=queue,
         task_name=task_name,
@@ -98,7 +103,7 @@ async def enqueue_job(
     )
     session.add(job)
     await session.flush()
-    logger.info("Enqueued background job", job_id=str(job.id), task_name=task_name, queue=queue)
+    logger.info("job_enqueued", job_id=str(job.id), task_name=task_name, queue=queue)
     return job.id
 
 
@@ -124,3 +129,65 @@ async def fetch_and_lock_next_job(session: AsyncSession, queue: str = "default")
         job.attempts += 1
         await session.flush()
     return job
+
+
+async def execute_job(session: AsyncSession, job: Job) -> bool:
+    """Execute a single job with backoff retries and status tracking."""
+    handler = _TASK_REGISTRY.get(job.task_name)
+    now = datetime.now(UTC)
+    if handler is None:
+        job.status = JobStatus.FAILED
+        job.finished_at = now
+        job.error = f"No handler registered for task '{job.task_name}'"
+        await session.flush()
+        logger.error("job_no_handler", task=job.task_name, job_id=str(job.id))
+        return False
+
+    try:
+        await handler(job.payload, session)
+        job.status = JobStatus.COMPLETED
+        job.finished_at = datetime.now(UTC)
+        job.error = None
+        await session.flush()
+        logger.info("job_completed", task=job.task_name, job_id=str(job.id))
+        return True
+    except Exception as exc:
+        job.error = str(exc)
+        if job.attempts < job.max_attempts:
+            backoff_secs = 2**job.attempts * 5
+            job.status = JobStatus.PENDING
+            job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)
+            logger.warning(
+                "job_failed_retrying",
+                task=job.task_name,
+                job_id=str(job.id),
+                attempt=job.attempts,
+                error=str(exc),
+            )
+        else:
+            job.status = JobStatus.FAILED
+            job.finished_at = datetime.now(UTC)
+            logger.error(
+                "job_failed_exhausted",
+                task=job.task_name,
+                job_id=str(job.id),
+                attempts=job.attempts,
+                error=str(exc),
+            )
+        await session.flush()
+        return False
+
+
+async def run_pending_jobs(
+    session: AsyncSession, queue: str = "default", limit: int | None = None
+) -> int:
+    """In-process test and execution runner for pending jobs."""
+    executed = 0
+    while limit is None or executed < limit:
+        job = await fetch_and_lock_next_job(session, queue=queue)
+        if job is None:
+            break
+        await execute_job(session, job)
+        await session.commit()
+        executed += 1
+    return executed
