@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.metrics import QUARANTINE_ITEMS_TOTAL
 from app.modules.ingestion.enums import QuarantineStatus
 from app.modules.ingestion.models import IngestionRun, QuarantineItem, RawProduct
 from app.modules.ingestion.repository import IngestionRepository
@@ -70,6 +71,7 @@ class IngestionService:
             reason=reason,
             payload=payload,
         )
+        QUARANTINE_ITEMS_TOTAL.labels(stage=stage).inc()
         return _to_quarantine_out(item)
 
     async def list_quarantine(
@@ -85,6 +87,9 @@ class IngestionService:
         item = await self._repo.get_quarantine_item(quarantine_id)
         return _to_quarantine_out(item) if item else None
 
+    async def get_quarantine_counts(self) -> dict[str, int]:
+        return await self._repo.count_quarantine_by_status()
+
     async def approve_quarantine(
         self, quarantine_id: uuid.UUID, reviewed_by: str | None = None
     ) -> bool:
@@ -93,7 +98,10 @@ class IngestionService:
             status=QuarantineStatus.APPROVED,
             reviewed_by=reviewed_by,
         )
-        return item is not None
+        if item is not None:
+            QUARANTINE_ITEMS_TOTAL.labels(stage=item.stage).dec()
+            return True
+        return False
 
     async def reject_quarantine(
         self, quarantine_id: uuid.UUID, reviewed_by: str | None = None
@@ -103,7 +111,10 @@ class IngestionService:
             status=QuarantineStatus.REJECTED,
             reviewed_by=reviewed_by,
         )
-        return item is not None
+        if item is not None:
+            QUARANTINE_ITEMS_TOTAL.labels(stage=item.stage).dec()
+            return True
+        return False
 
     async def create_run(self, source: str) -> IngestionRunOut:
         run = await self._repo.create_run(source=source)

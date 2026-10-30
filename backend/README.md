@@ -22,6 +22,8 @@ Open http://localhost:8000/docs. `GET /health/ready` should return `{"status":"o
 | Task | Command |
 |---|---|
 | Run the API | `uv run uvicorn app.main:create_app --factory --reload` |
+| Run Background Worker | `uv run python -m app.worker` |
+| Run Load Tests | `uv run locust -f load_tests/locustfile.py --headless -u 50 -r 10 --run-time 30s` |
 | Tests (fast, no database) | `uv run pytest tests/unit` |
 | All tests (needs Docker running) | `uv run pytest` |
 | Lint + format | `uv run ruff check . --fix && uv run ruff format .` |
@@ -34,6 +36,14 @@ Before every push, these four must pass: `pytest`, `ruff check`, `mypy`, `lint-i
 pre-commit runs the last three for you on every commit, and CI re-runs everything on each pull request.
 Workflow, commit style and the definition of done are in [`../CONTRIBUTING.md`](../CONTRIBUTING.md);
 the reasons behind our choices are in [`../docs/adr/`](../docs/adr/README.md).
+Operations, backup, and restore runbooks are in [`../docs/operations/backup-and-migrations.md`](../docs/operations/backup-and-migrations.md).
+
+## Observability & Caching
+- **Metrics**: Real-time Prometheus metrics are exported at `GET /metrics` (`dermascan_http_requests_total`, `dermascan_job_status_total`, `dermascan_llm_requests_total`, `dermascan_quarantine_items_total`).
+- **Admin Dashboard**: Summary metrics for background jobs and quarantine at `GET /admin/metrics/summary`.
+- **HTTP Caching**: Automatic ASGI ETag generation and `304 Not Modified` handling on catalog routes (`/api/v1/categories`, `/api/v1/home`, `/api/v1/products/...`).
+- **Rate Limiting**: Sliding window IP rate limiter on public endpoints configurable via `ENABLE_RATE_LIMITING` and `RATE_LIMIT_RPM`.
+- **Response Compression**: Automatic GZip compression for payloads > 1000 bytes.
 
 ## Database migrations (Alembic)
 ```bash
@@ -75,15 +85,18 @@ http://localhost:8000/docs, or call `GET /api/v1/products/by-barcode/61900000000
 ```
 src/app/
   main.py            app factory
-  core/              config, logging, errors, middleware, i18n, shared HTTP dependencies, DB plumbing, shared enums (cross-cutting only)
-  api/               deps, error handlers, router aggregation (no business logic)
+  worker.py          asynchronous job queue worker daemon
+  core/              config, jobs, metrics, caching, rate_limit, logging, errors, middleware, i18n
+  api/               deps, error handlers, router aggregation, admin review interface
   modules/
     ingredients/     ingredient dictionary, aliases, parsing/normalization
     scoring/         pure scoring algorithm (no tables)
     catalog/         products, brands, categories, search, home feed
-    ingestion/       Open Beauty Facts importer, seed loaders
+    enrichment/      AI/LLM gateway, quota manager, prompt cache, multi-provider routing
+    ingestion/       Open Beauty Facts importer, web scraping framework, photo contributions
 migrations/          Alembic
 tests/               unit/ (no DB) and integration/ (real PostgreSQL)
+load_tests/          Locust benchmark suites
 ```
 
 ## Architecture rules (checked by `lint-imports`)

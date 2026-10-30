@@ -9,20 +9,24 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Response
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.api import health
 from app.api.admin import create_admin_app
 from app.api.admin.app import init_admin_ui
 from app.api.error_handlers import register_error_handlers
 from app.api.v1.router import router as api_v1_router
+from app.core.caching import HttpCacheMiddleware
 from app.core.config import Settings, get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.dependencies import get_session
 from app.core.logging import configure_logging
+from app.core.metrics import CONTENT_TYPE_LATEST, generate_metrics
 from app.core.middleware import RequestContextMiddleware
+from app.core.rate_limit import RateLimitMiddleware
 from app.modules.catalog import CatalogService, ProductDetail
 from app.modules.catalog.router import get_catalog_service
 from app.modules.ingestion import handle_barcode_miss_fallback
@@ -65,10 +69,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=operation_id,
     )
     app.state.settings = settings
+    app.add_middleware(HttpCacheMiddleware)
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(RateLimitMiddleware, settings=settings)
     app.add_middleware(RequestContextMiddleware)
     register_error_handlers(app)
     app.include_router(health.router)
     app.include_router(api_v1_router, prefix="/api/v1")
+
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics() -> Response:
+        return Response(content=generate_metrics(), media_type=CONTENT_TYPE_LATEST)
 
     admin_app = create_admin_app(settings)
     admin_app.dependency_overrides = app.dependency_overrides

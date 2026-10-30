@@ -1,5 +1,6 @@
 """PostgreSQL-backed transactional job queue with SKIP LOCKED concurrency."""
 
+import time
 import uuid
 from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
@@ -21,6 +22,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.metrics import record_job_execution
 from app.core.orm import Base, UUIDPrimaryKeyMixin, enum_check, enum_type
 
 logger = structlog.get_logger(__name__)
@@ -135,11 +137,13 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
     """Execute a single job with backoff retries and status tracking."""
     handler = _TASK_REGISTRY.get(job.task_name)
     now = datetime.now(UTC)
+    start_t = time.perf_counter()
     if handler is None:
         job.status = JobStatus.FAILED
         job.finished_at = now
         job.error = f"No handler registered for task '{job.task_name}'"
         await session.flush()
+        record_job_execution(job.queue, job.task_name, "failed", time.perf_counter() - start_t)
         logger.error("job_no_handler", task=job.task_name, job_id=str(job.id))
         return False
 
@@ -149,14 +153,17 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
         job.finished_at = datetime.now(UTC)
         job.error = None
         await session.flush()
+        record_job_execution(job.queue, job.task_name, "completed", time.perf_counter() - start_t)
         logger.info("job_completed", task=job.task_name, job_id=str(job.id))
         return True
     except Exception as exc:
         job.error = str(exc)
+        duration_s = time.perf_counter() - start_t
         if job.attempts < job.max_attempts:
             backoff_secs = 2**job.attempts * 5
             job.status = JobStatus.PENDING
             job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)
+            record_job_execution(job.queue, job.task_name, "retrying", duration_s)
             logger.warning(
                 "job_failed_retrying",
                 task=job.task_name,
@@ -167,6 +174,7 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
         else:
             job.status = JobStatus.FAILED
             job.finished_at = datetime.now(UTC)
+            record_job_execution(job.queue, job.task_name, "failed", duration_s)
             logger.error(
                 "job_failed_exhausted",
                 task=job.task_name,
@@ -191,3 +199,10 @@ async def run_pending_jobs(
         await session.commit()
         executed += 1
     return executed
+
+
+async def count_jobs_by_status(session: AsyncSession) -> dict[str, int]:
+    """Return counts of jobs grouped by status for observability dashboards."""
+    stmt = select(Job.status, func.count(Job.id)).group_by(Job.status)
+    res = await session.execute(stmt)
+    return {str(status): int(count) for status, count in res.all()}

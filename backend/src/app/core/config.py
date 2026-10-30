@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     admin_ui_user: str | None = None
     admin_ui_password: str | None = None
 
+    # --- Security & Rate Limiting ---
+    enable_rate_limiting: bool = False
+    rate_limit_rpm: int = 120
+
     # --- Scraping ---
     scraper_respect_robots: bool = False
     scraper_proxy_list: str | None = None

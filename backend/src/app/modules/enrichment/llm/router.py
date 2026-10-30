@@ -6,6 +6,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.core.metrics import record_llm_request
 from app.modules.enrichment.llm.cache import (
     compute_cache_key,
     get_cached_response,
@@ -125,6 +126,7 @@ class LLMRouter:
                         cached=True,
                         latency_ms=0.0,
                     )
+                    record_llm_request("cache", task, "hit", 0.0)
                     return validated, result
                 except ValidationError:
                     logger.warning("stale_invalid_cached_json_ignored", cache_key=cache_key)
@@ -141,7 +143,18 @@ class LLMRouter:
 
                 # 2. Check token bucket rate limit
                 RateLimiterRegistry.check_rate_limit(provider)
-            except (LLMQuotaExhaustedError, LLMRateLimitError) as exc:
+            except LLMQuotaExhaustedError as exc:
+                record_llm_request(provider, task, "quota_exhausted", 0.0)
+                logger.warning(
+                    "provider_rate_limited_or_capped",
+                    provider=provider,
+                    task=task,
+                    error=str(exc),
+                )
+                last_error = exc
+                continue
+            except LLMRateLimitError as exc:
+                record_llm_request(provider, task, "rate_limited", 0.0)
                 logger.warning(
                     "provider_rate_limited_or_capped",
                     provider=provider,
@@ -165,10 +178,12 @@ class LLMRouter:
                         images=images,
                     )
                 except LLMRateLimitError as exc:
+                    record_llm_request(provider, task, "rate_limited", 0.0)
                     logger.warning("provider_429_fallthrough", provider=provider, error=str(exc))
                     last_error = exc
                     break
                 except LLMError as exc:
+                    record_llm_request(provider, task, "error", 0.0)
                     logger.warning("provider_error_retry", provider=provider, error=str(exc))
                     last_error = exc
                     repair_attempts += 1
@@ -206,6 +221,7 @@ class LLMRouter:
                         provider=provider,
                         tokens=res.tokens_used,
                     )
+                    record_llm_request(provider, task, "success", max(0.0, res.latency_ms / 1000.0))
                     return validated, res
                 except ValidationError as err:
                     repair_attempts += 1
@@ -220,6 +236,7 @@ class LLMRouter:
                         f"Correct the fields and return ONLY valid JSON matching the schema."
                     )
 
+        record_llm_request("chain", task, "exhausted", 0.0)
         raise LLMChainExhaustedError(
             f"All providers in chain {chain} exhausted for task '{task}'. Last error: {last_error}"
         )

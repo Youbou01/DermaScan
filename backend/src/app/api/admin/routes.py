@@ -13,7 +13,7 @@ from app.api.admin.schemas import (
     SetCuratedRatingInput,
 )
 from app.core.dependencies import get_session
-from app.core.jobs import enqueue_job
+from app.core.jobs import count_jobs_by_status, enqueue_job
 from app.modules.catalog import CatalogService
 from app.modules.ingestion import (
     IngestionRunOut,
@@ -208,3 +208,16 @@ async def trigger_obf_run(
             count += 1
 
     return {"run_id": str(run.id), "status": "started", "count": count}
+
+
+@router.get("/metrics/summary")
+async def get_metrics_summary(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, Any]:
+    jobs_summary = await count_jobs_by_status(session)
+    ingestion_service = IngestionService(session)
+    quarantine_summary = await ingestion_service.get_quarantine_counts()
+    return {
+        "jobs": jobs_summary,
+        "quarantine": quarantine_summary,
+    }

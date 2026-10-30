@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.ingestion.enums import QuarantineStatus, RawProductSource
@@ -76,6 +76,13 @@ class IngestionRepository:
         item.reviewed_by = reviewed_by
         await self._session.flush()
         return item
+
+    async def count_quarantine_by_status(self) -> dict[str, int]:
+        stmt = select(QuarantineItem.status, func.count(QuarantineItem.id)).group_by(
+            QuarantineItem.status
+        )
+        res = await self._session.execute(stmt)
+        return {str(status): int(cnt) for status, cnt in res.all()}
 
     async def create_run(self, source: str) -> IngestionRun:
         run = IngestionRun(
