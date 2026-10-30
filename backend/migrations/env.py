@@ -13,7 +13,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import app.core.jobs
 import app.modules.catalog.models
+import app.modules.enrichment.models
+import app.modules.ingestion.models
 import app.modules.ingredients.models
 from app.core.config import get_settings
 from app.core.orm import Base
@@ -21,7 +24,13 @@ from app.core.orm import Base
 # Importing every module's models registers its tables on Base.metadata, which is
 # what autogenerate compares against the database. A NEW MODULE WITH MODELS MUST
 # BE IMPORTED HERE, otherwise its tables will be missing from migrations.
-_REGISTERED_MODELS = (app.modules.catalog.models, app.modules.ingredients.models)
+_REGISTERED_MODELS = (
+    app.core.jobs,
+    app.modules.catalog.models,
+    app.modules.enrichment.models,
+    app.modules.ingestion.models,
+    app.modules.ingredients.models,
+)
 
 config = context.config
 if config.config_file_name is not None:

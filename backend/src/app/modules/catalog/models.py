@@ -1,12 +1,16 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Float,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -14,11 +18,12 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.enums import RiskLevel
 from app.core.orm import Base, TimestampMixin, UUIDPrimaryKeyMixin, enum_check, enum_type
-from app.modules.catalog.enums import ProductSource
+from app.modules.catalog.enums import EnrichmentStatus, ImageStatus, ProductSource
 from app.modules.catalog.search_text import normalize_name
 
 
@@ -60,6 +65,8 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         enum_check("score_band", RiskLevel),
         enum_check("source", ProductSource),
+        enum_check("enrichment_status", EnrichmentStatus),
+        enum_check("image_status", ImageStatus),
         # Barcodes are normalized to GTIN-13 before they reach the database.
         CheckConstraint("barcode ~ '^[0-9]{13}$'", name="barcode_gtin13"),
         CheckConstraint("score IS NULL OR score BETWEEN 0 AND 100", name="score_range"),
@@ -93,6 +100,11 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_using="gin",
             postgresql_ops={"name_normalized": "gin_trgm_ops"},
         ),
+        Index(
+            "ix_product_score_dirty_partial",
+            "score_dirty",
+            postgresql_where=text("score_dirty = true"),
+        ),
     )
 
     barcode: Mapped[str] = mapped_column(String(13), unique=True)
@@ -123,6 +135,34 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         return value
 
     scoring_version: Mapped[int | None] = mapped_column(SmallInteger)
+    score_is_estimated: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    score_dirty: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+
+    source_lang: Mapped[str | None] = mapped_column(String(2))
+    name_i18n: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    brand_source: Mapped[str | None] = mapped_column(Text)
+    category_source: Mapped[str | None] = mapped_column(Text)
+    field_provenance: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    enrichment_status: Mapped[EnrichmentStatus] = mapped_column(
+        enum_type(EnrichmentStatus),
+        default=EnrichmentStatus.PENDING,
+        server_default=EnrichmentStatus.PENDING.value,
+        index=True,
+    )
+    enrichment_version: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
+
+    image_source_url: Mapped[str | None] = mapped_column(Text)
+    image_status: Mapped[ImageStatus] = mapped_column(
+        enum_type(ImageStatus),
+        default=ImageStatus.NONE,
+        server_default=ImageStatus.NONE.value,
+        index=True,
+    )
+    image_quality: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
+    data_quality: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
 
     source: Mapped[ProductSource] = mapped_column(enum_type(ProductSource))
     source_id: Mapped[str | None] = mapped_column(String(64))
