@@ -9,7 +9,12 @@ never from `models` or `repository` (enforced by import-linter).
 
 from app.modules.ingredients.matching import Candidates, candidate_keys
 from app.modules.ingredients.normalizer import normalize
-from app.modules.ingredients.parser import ParsedIngredient, parse_ingredient_label
+from app.modules.ingredients.parser import (
+    ParsedIngredient,
+    Suspicion,
+    looks_like_ingredient_list,
+    parse_ingredient_label,
+)
 from app.modules.ingredients.schemas import (
     IngredientInfo,
     IngredientMatch,
@@ -26,7 +31,9 @@ __all__ = [
     "IngredientSuggestion",
     "MatchType",
     "ParsedIngredient",
+    "Suspicion",
     "candidate_keys",
+    "looks_like_ingredient_list",
     "normalize",
     "parse_ingredient_label",
 ]

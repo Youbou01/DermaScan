@@ -133,3 +133,76 @@ def test_parsing_never_raises_on_hostile_input() -> None:
     nasty = ["(" * 5000, ")" * 5000, "," * 5000, "\x00\x01\x02", "💥" * 100, "Aqua," * 3000]
     for raw in nasty:
         assert isinstance(parse_ingredient_label(raw), list)
+
+
+def test_multilingual_prefixes() -> None:
+    assert texts("Zutaten: Aqua, Glycerin") == ["Aqua", "Glycerin"]
+    assert texts("Inhaltsstoffe: Aqua, Glycerin") == ["Aqua", "Glycerin"]
+    assert texts("Ingredientes: Aqua, Glycerin") == ["Aqua", "Glycerin"]
+    assert texts("Ingredienti: Aqua, Glycerin") == ["Aqua", "Glycerin"]
+    assert texts("المكونات: ماء, جلسرين") == ["ماء", "جلسرin".replace("in", "ين")]
+    assert texts("Ingredients (INCI): Aqua, Glycerin") == ["Aqua", "Glycerin"]
+
+
+def test_extended_separators_dash_slash_dot() -> None:
+    # " - " space dash space
+    assert texts("Aqua - Glycerin - Parfum") == ["Aqua", "Glycerin", "Parfum"]
+    # 1,2-Hexanediol chemical hyphen preserved
+    assert texts("Aqua, 1,2-Hexanediol, Glycerin") == ["Aqua", "1,2-Hexanediol", "Glycerin"]
+    # " / " space slash space
+    assert texts("Aqua / Glycerin / Parfum") == ["Aqua", "Glycerin", "Parfum"]
+    # parenthetical clause with slash preserved
+    assert texts("Aqua (Water / Eau), Glycerin") == ["Aqua (Water / Eau)", "Glycerin"]
+    # "." followed by capital letter
+    assert texts("Aqua. Glycerin. Alcohol Denat.") == ["Aqua", "Glycerin", "Alcohol Denat"]
+
+
+def test_multi_language_block_selection() -> None:
+    raw = "Ingredients: Aqua, Glycerin, Parfum. Ingrédients: Eau, Glycérine, Parfum."
+    fr_items = [i.text for i in parse_ingredient_label(raw, preferred_lang="fr")]
+    assert "Eau" in fr_items or "Glycérine" in fr_items
+
+    en_items = [i.text for i in parse_ingredient_label(raw, preferred_lang="en")]
+    assert "Aqua" in en_items
+
+
+def test_suspicion_detector_flags_anomalies() -> None:
+    from app.modules.ingredients.parser import looks_like_ingredient_list
+
+    # Clean list is not suspicious
+    clean = parse_ingredient_label("Aqua, Glycerin, Niacinamide, Tocopherol")
+    susp = looks_like_ingredient_list(clean)
+    assert not susp.is_suspicious
+    assert susp.reasons == []
+
+    # Fewer than 2 items
+    one_item = parse_ingredient_label("Aqua")
+    susp_one = looks_like_ingredient_list(one_item)
+    assert susp_one.is_suspicious
+    assert "fewer_than_2_items" in susp_one.reasons
+
+    # Marketing sentence
+    marketing = parse_ingredient_label("Aqua, Apply morning and evening on clean face, Glycerin")
+    susp_mkt = looks_like_ingredient_list(marketing)
+    assert susp_mkt.is_suspicious
+    assert "contains_marketing_or_instruction_sentences" in susp_mkt.reasons
+
+    # French instruction
+    fr_warn = parse_ingredient_label("Aqua, Tenir hors de portée des enfants, Parfum")
+    susp_fr = looks_like_ingredient_list(fr_warn)
+    assert susp_fr.is_suspicious
+    assert "contains_marketing_or_instruction_sentences" in susp_fr.reasons
+
+    # Spanish modo de empleo
+    es_usage = parse_ingredient_label(
+        "SPRAY PROTECTOR SOLAR SPF 50 KIDS. "
+        "MODO DE EMPLEO: Producto para uso corporal. Agitar antes de usar."
+    )
+    susp_es = looks_like_ingredient_list(es_usage)
+    assert susp_es.is_suspicious
+
+    # Excessive digits
+    digits_label = parse_ingredient_label("1234567890123, 9876543210987, 5432109876543")
+    susp_digits = looks_like_ingredient_list(digits_label)
+    assert susp_digits.is_suspicious
+    assert "excessive_digits" in susp_digits.reasons
