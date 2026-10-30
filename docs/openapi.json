@@ -1,0 +1,1241 @@
+{
+  "components": {
+    "schemas": {
+      "CategoryNodeOut": {
+        "description": "A category in the browse tree (top-level or child).",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryNodeOut"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "name": {
+            "description": "Display name in the response language (English fallback).",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Stable key shared with the mobile app and seed files.",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "CategoryNodeOut",
+        "type": "object"
+      },
+      "CategoryOut": {
+        "properties": {
+          "name": {
+            "description": "Display name in the response language (English fallback).",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Stable key, e.g. 'moisturizer'. Use it for icons and i18n.",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "CategoryOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HomeFeedOut": {
+        "properties": {
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/HomeSectionOut"
+            },
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections"
+        ],
+        "title": "HomeFeedOut",
+        "type": "object"
+      },
+      "HomeSectionOut": {
+        "properties": {
+          "id": {
+            "description": "Stable section id, e.g. 'top_rated'.",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CategoryOut"
+                },
+                {
+                  "$ref": "#/components/schemas/ProductCardOut"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for the next page, or null.",
+            "title": "Next Cursor"
+          },
+          "title": {
+            "description": "Localized section title.",
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "description": "Section kind for the client layout.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "items",
+          "next_cursor"
+        ],
+        "title": "HomeSectionOut",
+        "type": "object"
+      },
+      "Page_ProductSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pass it as `cursor` to get the next page. Null on the last page.",
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ProductSummary]",
+        "type": "object"
+      },
+      "ProblemDetails": {
+        "description": "Error body. Declared so it appears in the OpenAPI schema (typed client).",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          },
+          "instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "title": "ProblemDetails",
+        "type": "object"
+      },
+      "ProductCardOut": {
+        "description": "Light product row for home shelves and search results (not the full detail page).",
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "category_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Slug"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0-100, or null when not scored.",
+            "title": "Score"
+          },
+          "score_band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the product has no score; 'unknown' means insufficient data."
+          },
+          "score_is_estimated": {
+            "default": false,
+            "description": "True when confidence K < 0.60.",
+            "title": "Score Is Estimated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "brand",
+          "image_url",
+          "score",
+          "score_band",
+          "category_slug"
+        ],
+        "title": "ProductCardOut",
+        "type": "object"
+      },
+      "ProductDetail": {
+        "properties": {
+          "barcode": {
+            "description": "GTIN-13.",
+            "title": "Barcode",
+            "type": "string"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategoryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "ingredients": {
+            "description": "In label order.",
+            "items": {
+              "$ref": "#/components/schemas/ProductIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0-100, or null when the product is not scored.",
+            "title": "Score"
+          },
+          "score_band": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "'unknown' means insufficient data, NOT safe."
+          },
+          "score_coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Share (0-1) of ingredients we could rate.",
+            "title": "Score Coverage"
+          },
+          "score_is_estimated": {
+            "default": false,
+            "description": "True when confidence K < 0.60.",
+            "title": "Score Is Estimated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "barcode",
+          "name",
+          "brand",
+          "image_url",
+          "category",
+          "score",
+          "score_band",
+          "score_coverage",
+          "ingredients"
+        ],
+        "title": "ProductDetail",
+        "type": "object"
+      },
+      "ProductIngredientOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rating confidence 0.0-1.0.",
+            "title": "Confidence"
+          },
+          "inci_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Standard INCI name, when the ingredient is recognized.",
+            "title": "Inci Name"
+          },
+          "matched": {
+            "description": "False when we do not recognize this ingredient yet.",
+            "title": "Matched",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The ingredient exactly as printed on this product's label.",
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "description": "1-based position on the label (decreasing amount).",
+            "title": "Position",
+            "type": "integer"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0.0-10.0 scale, 10 = least concern.",
+            "title": "Rating"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it is rated this way, in the response language.",
+            "title": "Rationale"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "'unknown' when not recognized or not rated."
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Plain-language function summary.",
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "position",
+          "name",
+          "inci_name",
+          "matched",
+          "risk_level",
+          "rationale"
+        ],
+        "title": "ProductIngredientOut",
+        "type": "object"
+      },
+      "ProductSummary": {
+        "properties": {
+          "barcode": {
+            "description": "GTIN-13.",
+            "title": "Barcode",
+            "type": "string"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0-100, or null when the product is not scored.",
+            "title": "Score"
+          },
+          "score_band": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "'unknown' means insufficient data, NOT safe."
+          }
+        },
+        "required": [
+          "id",
+          "barcode",
+          "name",
+          "brand",
+          "image_url",
+          "score",
+          "score_band"
+        ],
+        "title": "ProductSummary",
+        "type": "object"
+      },
+      "RiskLevel": {
+        "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe.",
+        "enum": [
+          "low",
+          "moderate",
+          "high",
+          "unknown"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Skincare API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/categories": {
+      "get": {
+        "description": "Top-level categories with children. Names follow `Accept-Language`.",
+        "operationId": "categories_list_categories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryNodeOut"
+                  },
+                  "title": "Response Categories List Categories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List the category tree",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/api/v1/home": {
+      "get": {
+        "description": "Category grid, top-rated (daily rotation), and recently added. Each product shelf\nhas its own `next_cursor` for infinite scroll.",
+        "operationId": "home_get_home_feed",
+        "parameters": [
+          {
+            "description": "Page size for product shelves.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Page size for product shelves.",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeFeedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid cursor or limit."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Home feed sections",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    "/api/v1/home/sections/{section_id}": {
+      "get": {
+        "operationId": "home_get_home_section",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Page size.",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeSectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid cursor or limit."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown section."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Load more items for one home section",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    "/api/v1/products/by-barcode/{barcode}": {
+      "get": {
+        "description": "EAN-13, UPC-A and EAN-8 are accepted (spaces and hyphens are ignored); the product is\nstored and returned under its 13-digit form. A valid barcode we do not know is a 404\nwith type `urn:skincare:problem:product-not-found`; a malformed one is a 422\n`invalid-barcode`.",
+        "operationId": "products_get_product_by_barcode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "barcode",
+            "required": true,
+            "schema": {
+              "title": "Barcode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "No such product."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed barcode or identifier."
+          }
+        },
+        "summary": "Get a product by scanning its barcode",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/filter": {
+      "get": {
+        "operationId": "products_filter_products",
+        "parameters": [
+          {
+            "description": "Category slug; child categories are included.",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Category slug; child categories are included.",
+              "title": "Category"
+            }
+          },
+          {
+            "description": "One or more score bands.",
+            "in": "query",
+            "name": "band",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskLevel"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One or more score bands.",
+              "title": "Band"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Score"
+            }
+          },
+          {
+            "description": "Must contain all of these.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Must contain all of these.",
+              "title": "Include"
+            }
+          },
+          {
+            "description": "Must contain none of these.",
+            "in": "query",
+            "name": "exclude",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Must contain none of these.",
+              "title": "Exclude"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid query, cursor or score range."
+          }
+        },
+        "summary": "Filter scored products, best score first",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/search": {
+      "get": {
+        "operationId": "products_search_products",
+        "parameters": [
+          {
+            "description": "Name to look for.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Name to look for.",
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid query, cursor or score range."
+          }
+        },
+        "summary": "Search products by name (accent-insensitive, typo-tolerant)",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}": {
+      "get": {
+        "operationId": "products_get_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "No such product."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed barcode or identifier."
+          }
+        },
+        "summary": "Get a product by id",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "health_live",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Live",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "health_ready",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Ready",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

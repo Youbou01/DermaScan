@@ -1,3 +1,5 @@
+"""CLI job to rematch unmatched product ingredients and recompute dirty/stale product scores."""
+
 import asyncio
 import logging
 import sys
@@ -7,69 +9,48 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(BACKEND_DIR))
 
 # ruff: noqa: E402
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
-from app.core.enums import RiskLevel
-from app.modules.catalog.models import Product
-from app.modules.ingredients.models import Ingredient
-from app.modules.scoring import (
-    SCORING_VERSION,
-    IngredientPositionInput,
-    calculate_score,
-)
+from app.modules.catalog import CatalogService
+from app.modules.scoring import SCORING_VERSION
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def recompute_stale_products(db: AsyncSession, batch_size: int = 100) -> int:
-    """Finds products with missing or outdated scoring_version and updates them."""
-    stmt = (
-        select(Product)
-        .options(selectinload(Product.ingredients))
-        .where((Product.scoring_version.is_(None)) | (Product.scoring_version < SCORING_VERSION))
-        .limit(batch_size)
-    )
-    result = await db.execute(stmt)
-    stale_products = result.scalars().all()
+async def rematch_all_unmatched(db: AsyncSession, batch_size: int = 500) -> int:
+    """Repeatedly rematches unmatched product ingredients until no more matches are found."""
+    catalog_service = CatalogService(db)
+    total_rematched = 0
+    while True:
+        count = await catalog_service.rematch_unmatched(batch_size=batch_size)
+        if count == 0:
+            break
+        await db.commit()
+        total_rematched += count
+        logger.info("Rematched batch of %d ingredient rows (total %d)", count, total_rematched)
+    return total_rematched
 
-    if not stale_products:
-        return 0
 
-    updated_count = 0
-    for product in stale_products:
-        input_items: list[IngredientPositionInput] = []
-        for pi in product.ingredients:
-            risk = RiskLevel.UNKNOWN
-            if pi.ingredient_id is not None:
-                ing_res = await db.execute(
-                    select(Ingredient).where(Ingredient.id == pi.ingredient_id)
-                )
-                ing = ing_res.scalar_one_or_none()
-                if ing is not None:
-                    risk = RiskLevel(ing.risk_level.value)
-
-            input_items.append(IngredientPositionInput(risk_level=risk, position=pi.position))
-
-        score_output = calculate_score(input_items)
-
-        product.score = score_output.score
-        product.score_band = score_output.band
-        product.score_coverage = score_output.coverage
-        product.scoring_version = score_output.scoring_version
-        updated_count += 1
-
-    await db.commit()
-    logger.info(
-        "Recomputed scores for %d products (version %d).",
-        updated_count,
-        SCORING_VERSION,
-    )
-    return updated_count
+async def rescore_all_dirty(db: AsyncSession, batch_size: int = 100) -> int:
+    """Repeatedly rescores products flagged score_dirty or with outdated scoring_version."""
+    catalog_service = CatalogService(db)
+    total_rescored = 0
+    while True:
+        count = await catalog_service.recompute_dirty_scores(batch_size=batch_size)
+        if count == 0:
+            break
+        await db.commit()
+        total_rescored += count
+        logger.info(
+            "Rescored batch of %d products for version %d (total %d)",
+            count,
+            SCORING_VERSION,
+            total_rescored,
+        )
+    return total_rescored
 
 
 async def main() -> None:
@@ -77,17 +58,17 @@ async def main() -> None:
     engine = create_engine(settings)
     session_factory = create_session_factory(engine)
 
-    logger.info("Starting score recomputation CLI job...")
-    total_updated = 0
+    logger.info("Starting rematch and score recomputation job (Scoring v%d)...", SCORING_VERSION)
 
     async with session_factory() as db:
-        while True:
-            count = await recompute_stale_products(db, batch_size=200)
-            if count == 0:
-                break
-            total_updated += count
+        rematched = await rematch_all_unmatched(db)
+        rescored = await rescore_all_dirty(db)
 
-    logger.info("Recomputation complete. Total products updated: %d", total_updated)
+    logger.info(
+        "Job completed. Rematched ingredients: %d. Rescored products: %d.",
+        rematched,
+        rescored,
+    )
     await engine.dispose()
 
 

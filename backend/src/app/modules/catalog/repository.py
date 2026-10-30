@@ -1,12 +1,14 @@
 """SQL for the catalog module. Private: the outside world uses `CatalogService`."""
 
 import uuid
+from collections.abc import Collection
+from typing import Any, cast
 
-from sqlalchemy import Select, select
+from sqlalchemy import CursorResult, Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.modules.catalog.models import Category, Product
+from app.modules.catalog.models import Category, Product, ProductIngredient
 
 
 class ProductRepository:
@@ -33,3 +35,45 @@ class ProductRepository:
         return await self._session.scalar(
             self._with_detail_loaded().where(Product.barcode == barcode)
         )
+
+    async def find_dirty_or_stale_products(
+        self, batch_size: int = 100, min_scoring_version: int = 3
+    ) -> list[Product]:
+        stmt = (
+            self._with_detail_loaded()
+            .where(
+                (Product.score_dirty.is_(True))
+                | (Product.scoring_version.is_(None))
+                | (Product.scoring_version < min_scoring_version)
+            )
+            .order_by(Product.updated_at.desc())
+            .limit(batch_size)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def find_unmatched_ingredients(self, limit: int = 500) -> list[ProductIngredient]:
+        stmt = (
+            select(ProductIngredient).where(ProductIngredient.ingredient_id.is_(None)).limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def mark_products_dirty_for_ingredients(
+        self, ingredient_ids: Collection[uuid.UUID]
+    ) -> int:
+        if not ingredient_ids:
+            return 0
+        stmt = (
+            update(Product)
+            .where(
+                Product.id.in_(
+                    select(ProductIngredient.product_id)
+                    .where(ProductIngredient.ingredient_id.in_(ingredient_ids))
+                    .distinct()
+                )
+            )
+            .values(score_dirty=True)
+        )
+        result = await self._session.execute(stmt)
+        return int(cast(CursorResult[Any], result).rowcount)

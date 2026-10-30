@@ -1,9 +1,10 @@
 """The catalog module's public service (read side; writes arrive with the importer)."""
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 
 import structlog
+from sqlalchemy import update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,12 @@ from app.modules.catalog.models import Category, CategoryTranslation, Product
 from app.modules.catalog.repository import ProductRepository
 from app.modules.catalog.schemas import CategoryOut, ProductDetail, ProductIngredientOut
 from app.modules.ingredients import IngredientInfo, IngredientService
+from app.modules.scoring import (
+    INTERIM_RISK_TO_RATING,
+    SCORING_VERSION,
+    IngredientScoreInput,
+    calculate_score,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -71,6 +78,7 @@ class CatalogService:
             score=product.score,
             score_band=RiskLevel(product.score_band),
             score_coverage=product.score_coverage,
+            score_is_estimated=product.score_is_estimated,
             ingredients=[
                 _ingredient_out(
                     item.position,
@@ -80,6 +88,94 @@ class CatalogService:
                 for item in product.ingredients
             ],
         )
+
+    async def rematch_unmatched(self, batch_size: int = 500) -> int:
+        """Re-runs exact matching on product_ingredient rows with ingredient_id IS NULL."""
+        unmatched_rows = await self._products.find_unmatched_ingredients(limit=batch_size)
+        if not unmatched_rows:
+            return 0
+
+        tokens = [row.raw_text for row in unmatched_rows]
+        matches = await self._ingredients.match(tokens)
+
+        matched_count = 0
+        dirty_product_ids = set()
+
+        for row, match in zip(unmatched_rows, matches, strict=True):
+            if match.ingredient_id is not None:
+                row.ingredient_id = match.ingredient_id
+                dirty_product_ids.add(row.product_id)
+                matched_count += 1
+
+        if dirty_product_ids:
+            await self._session.execute(
+                update(Product).where(Product.id.in_(dirty_product_ids)).values(score_dirty=True)
+            )
+        await self._session.flush()
+        return matched_count
+
+    async def recompute_dirty_scores(self, batch_size: int = 100) -> int:
+        """Selects products where score_dirty = True or version is old and rescores them."""
+        products = await self._products.find_dirty_or_stale_products(
+            batch_size=batch_size, min_scoring_version=SCORING_VERSION
+        )
+        if not products:
+            return 0
+
+        all_ing_ids: set[uuid.UUID] = set()
+        for prod in products:
+            for pi in prod.ingredients:
+                if pi.ingredient_id is not None:
+                    all_ing_ids.add(pi.ingredient_id)
+
+        infos = await self._ingredients.get_many(all_ing_ids, locale="en") if all_ing_ids else {}
+
+        for prod in products:
+            score_inputs: list[IngredientScoreInput] = []
+            for pi in prod.ingredients:
+                info = infos.get(pi.ingredient_id) if pi.ingredient_id else None
+                if info is not None:
+                    rating = (
+                        info.rating
+                        if info.rating is not None
+                        else INTERIM_RISK_TO_RATING.get(info.risk_level)
+                    )
+                    conf = (
+                        info.rating_confidence
+                        if info.rating_confidence is not None
+                        else (0.0 if rating is None else 1.0)
+                    )
+                    is_proh = info.is_prohibited
+                else:
+                    rating = None
+                    conf = 0.0
+                    is_proh = False
+                score_inputs.append(
+                    IngredientScoreInput(
+                        position=pi.position,
+                        rating=rating,
+                        confidence=conf,
+                        is_prohibited=is_proh,
+                    )
+                )
+
+            res = calculate_score(score_inputs)
+            prod.score = res.score
+            prod.score_band = res.band
+            prod.score_coverage = res.confidence
+            prod.score_is_estimated = res.is_estimated
+            prod.scoring_version = res.version
+            prod.score_dirty = False
+
+        await self._session.flush()
+        return len(products)
+
+    async def mark_products_dirty_for_ingredients(
+        self, ingredient_ids: Collection[uuid.UUID]
+    ) -> int:
+        count = await self._products.mark_products_dirty_for_ingredients(ingredient_ids)
+        await self._session.flush()
+        return count
 
 
 def _ingredient_out(
@@ -93,6 +189,9 @@ def _ingredient_out(
             matched=False,
             risk_level=RiskLevel.UNKNOWN,
             rationale=None,
+            rating=None,
+            summary=None,
+            confidence=None,
         )
     return ProductIngredientOut(
         position=position,
@@ -101,6 +200,9 @@ def _ingredient_out(
         matched=True,
         risk_level=info.risk_level,
         rationale=info.rationale,
+        rating=info.rating,
+        summary=info.summary,
+        confidence=info.rating_confidence,
     )
 
 

@@ -30,8 +30,14 @@ class IngredientInfo(BaseModel):
     id: uuid.UUID
     inci_name: str
     risk_level: RiskLevel
-    rationale: str | None  # in the requested locale, English fallback, None if no text exists
-    source_ref: str | None
+    rationale: str | None = None  # in requested locale, English fallback, None if no text
+    source_ref: str | None = None
+    rating: float | None = None
+    rating_confidence: float | None = None
+    summary: str | None = None
+    is_prohibited: bool = False
+    is_restricted: bool = False
+    is_allergen: bool = False
 
 
 class IngredientSuggestion(BaseModel):

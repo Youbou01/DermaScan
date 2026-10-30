@@ -36,6 +36,9 @@ class ProductIngredientOut(BaseModel):
     matched: bool = Field(description="False when we do not recognize this ingredient yet.")
     risk_level: RiskLevel = Field(description="'unknown' when not recognized or not rated.")
     rationale: str | None = Field(description="Why it is rated this way, in the response language.")
+    rating: float | None = Field(default=None, description="0.0-10.0 scale, 10 = least concern.")
+    summary: str | None = Field(default=None, description="Plain-language function summary.")
+    confidence: float | None = Field(default=None, description="Rating confidence 0.0-1.0.")
 
 
 class ProductDetail(BaseModel):
@@ -50,6 +53,7 @@ class ProductDetail(BaseModel):
     score: int | None = Field(description="0-100, or null when the product is not scored.")
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_coverage: float | None = Field(description="Share (0-1) of ingredients we could rate.")
+    score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     ingredients: list[ProductIngredientOut] = Field(description="In label order.")
 
 
@@ -66,6 +70,7 @@ class ProductCardOut(BaseModel):
     score_band: RiskLevel | None = Field(
         description="Null when the product has no score; 'unknown' means insufficient data."
     )
+    score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     category_slug: str | None
 
 

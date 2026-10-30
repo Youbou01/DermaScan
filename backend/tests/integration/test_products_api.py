@@ -28,9 +28,20 @@ PRODUCT_KEYS = {
     "score",
     "score_band",
     "score_coverage",
+    "score_is_estimated",
     "ingredients",
 }
-INGREDIENT_KEYS = {"position", "name", "inci_name", "matched", "risk_level", "rationale"}
+INGREDIENT_KEYS = {
+    "position",
+    "name",
+    "inci_name",
+    "matched",
+    "risk_level",
+    "rationale",
+    "rating",
+    "summary",
+    "confidence",
+}
 
 
 async def add_product(
@@ -152,6 +163,9 @@ async def test_unrecognized_ingredients_are_shown_as_unknown_never_as_safe(
         "matched": False,
         "risk_level": "unknown",
         "rationale": None,
+        "rating": None,
+        "summary": None,
+        "confidence": None,
     }
 
 
