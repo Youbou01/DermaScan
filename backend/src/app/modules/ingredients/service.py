@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
-from app.modules.ingredients.enums import RatingSource, ReviewStatus
+from app.modules.ingredients.enums import AliasSource, RatingSource, ReviewStatus
 from app.modules.ingredients.matching import candidate_keys
 from app.modules.ingredients.models import IngredientTranslation, derive_risk_from_rating
 from app.modules.ingredients.normalizer import normalize
@@ -106,8 +106,38 @@ class IngredientService:
                 risk_level=RiskLevel(ingredient.risk_level),
                 rationale=texts.get(locale) or texts.get(DEFAULT_LOCALE),
                 source_ref=ingredient.source_ref,
+                rating=float(ingredient.rating) if ingredient.rating is not None else None,
+                rating_confidence=(
+                    float(ingredient.rating_confidence)
+                    if ingredient.rating_confidence is not None
+                    else None
+                ),
+                is_prohibited=ingredient.is_prohibited,
+                is_restricted=ingredient.is_restricted,
+                is_allergen=ingredient.is_allergen,
             )
         return infos
+
+    async def find_unrated_ingredient_ids(self, limit: int = 100) -> list[uuid.UUID]:
+        return await self._repository.find_unrated_ids(limit=limit)
+
+    async def add_alias(
+        self,
+        ingredient_id: uuid.UUID,
+        alias: str,
+        language: str | None = None,
+        source: AliasSource = AliasSource.AI,
+    ) -> bool:
+        normalized = normalize(alias)
+        if not normalized:
+            return False
+        return await self._repository.add_alias_if_not_exists(
+            ingredient_id=ingredient_id,
+            alias=alias,
+            normalized_alias=normalized,
+            language=language,
+            source=source,
+        )
 
     async def suggest(
         self, text: str, *, limit: int = 5, min_similarity: float = 0.4

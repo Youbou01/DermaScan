@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.ingredients.enums import AliasSource
+from app.modules.ingredients.enums import AliasSource, RatingSource
 from app.modules.ingredients.models import Ingredient, IngredientAlias, IngredientTranslation
 
 
@@ -78,6 +78,18 @@ class IngredientRepository:
         stmt = select(Ingredient).where(Ingredient.inci_name == inci_name)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def find_unrated_ids(self, limit: int = 100) -> list[uuid.UUID]:
+        stmt = (
+            select(Ingredient.id)
+            .where(
+                Ingredient.rating.is_(None),
+                Ingredient.rating_source != RatingSource.CURATED,
+            )
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_translation(
         self, ingredient_id: uuid.UUID, locale: str
