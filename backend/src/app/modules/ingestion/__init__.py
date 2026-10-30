@@ -3,6 +3,11 @@
 Owns no tables in sprint 1. Writes products only through the catalog public interface.
 """
 
+from app.modules.ingestion.admin import (
+    IngestionRunAdmin,
+    QuarantineItemAdmin,
+    RawProductAdmin,
+)
 from app.modules.ingestion.enums import QuarantineStatus, RawProductSource
 from app.modules.ingestion.fallback import (
     OBFAsyncFallbackClient,
@@ -28,13 +33,16 @@ from app.modules.ingestion.sources import (
 
 __all__ = [
     "ImportReport",
+    "IngestionRunAdmin",
     "IngestionRunOut",
     "IngestionService",
     "MappedProduct",
     "OBFAsyncFallbackClient",
     "OBFSourceAdapter",
+    "QuarantineItemAdmin",
     "QuarantineItemOut",
     "QuarantineStatus",
+    "RawProductAdmin",
     "RawProductOut",
     "RawProductSource",
     "RawRecord",

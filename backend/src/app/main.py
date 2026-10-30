@@ -14,6 +14,8 @@ from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import health
+from app.api.admin import create_admin_app
+from app.api.admin.app import init_admin_ui
 from app.api.error_handlers import register_error_handlers
 from app.api.v1.router import router as api_v1_router
 from app.core.config import Settings, get_settings
@@ -39,6 +41,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_engine(app.state.settings)
     app.state.session_factory = create_session_factory(engine)
     app.state.http_client = httpx.AsyncClient(timeout=5.0)
+
+    admin_app = getattr(app.state, "admin_app", None)
+    if admin_app is not None:
+        admin_app.state.session_factory = app.state.session_factory
+        if getattr(admin_app.state, "admin_ui", None) is None:
+            init_admin_ui(admin_app, engine, app.state.settings)
+
     try:
         yield
     finally:
@@ -60,6 +69,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_error_handlers(app)
     app.include_router(health.router)
     app.include_router(api_v1_router, prefix="/api/v1")
+
+    admin_app = create_admin_app(settings)
+    admin_app.dependency_overrides = app.dependency_overrides
+    app.state.admin_app = admin_app
+    app.mount("/admin", admin_app)
 
     if settings.enable_obf_fallback and settings.app_env != "test":
 

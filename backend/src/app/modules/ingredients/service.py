@@ -91,20 +91,21 @@ class IngredientService:
         translations = await self._repository.get_translations(
             ingredients.keys(), {locale, DEFAULT_LOCALE}
         )
-        by_ingredient: dict[uuid.UUID, dict[str, str]] = {}
+        by_ingredient: dict[uuid.UUID, dict[str, IngredientTranslation]] = {}
         for translation in translations:
             by_ingredient.setdefault(translation.ingredient_id, {})[translation.locale] = (
-                translation.rationale
+                translation
             )
 
         infos: dict[uuid.UUID, IngredientInfo] = {}
         for ingredient_id, ingredient in ingredients.items():
-            texts = by_ingredient.get(ingredient_id, {})
+            trans_map = by_ingredient.get(ingredient_id, {})
+            trans = trans_map.get(locale) or trans_map.get(DEFAULT_LOCALE)
             infos[ingredient_id] = IngredientInfo(
                 id=ingredient_id,
                 inci_name=ingredient.inci_name,
                 risk_level=RiskLevel(ingredient.risk_level),
-                rationale=texts.get(locale) or texts.get(DEFAULT_LOCALE),
+                rationale=trans.rationale if trans else None,
                 source_ref=ingredient.source_ref,
                 rating=float(ingredient.rating) if ingredient.rating is not None else None,
                 rating_confidence=(
@@ -112,6 +113,7 @@ class IngredientService:
                     if ingredient.rating_confidence is not None
                     else None
                 ),
+                summary=trans.summary if trans else None,
                 is_prohibited=ingredient.is_prohibited,
                 is_restricted=ingredient.is_restricted,
                 is_allergen=ingredient.is_allergen,

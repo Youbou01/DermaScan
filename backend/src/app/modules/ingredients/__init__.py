@@ -7,6 +7,7 @@ PUBLIC INTERFACE: everything exported below. Other modules import ONLY from here
 never from `models` or `repository` (enforced by import-linter).
 """
 
+from app.modules.ingredients.admin import IngredientAdmin
 from app.modules.ingredients.enums import AliasSource, RatingSource, ReviewStatus
 from app.modules.ingredients.matching import Candidates, candidate_keys
 from app.modules.ingredients.normalizer import normalize
@@ -27,6 +28,7 @@ from app.modules.ingredients.service import IngredientService
 __all__ = [
     "AliasSource",
     "Candidates",
+    "IngredientAdmin",
     "IngredientInfo",
     "IngredientMatch",
     "IngredientService",

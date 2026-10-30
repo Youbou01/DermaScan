@@ -6,6 +6,7 @@ PUBLIC INTERFACE: everything exported below. Other modules import ONLY from here
 never from `models` or `repository` (enforced by import-linter).
 """
 
+from app.modules.catalog.admin import ProductAdmin
 from app.modules.catalog.categories_router import router as categories_router
 from app.modules.catalog.category_service import CategorySeedNode, CategoryService
 from app.modules.catalog.exceptions import (
@@ -50,6 +51,7 @@ __all__ = [
     "InvalidBarcodeError",
     "InvalidCursorError",
     "InvalidLimitError",
+    "ProductAdmin",
     "ProductCardOut",
     "ProductDetail",
     "ProductIngredientOut",
