@@ -11,9 +11,10 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    event,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import RiskLevel
 from app.core.orm import Base, UUIDPrimaryKeyMixin, enum_check, enum_type
@@ -90,29 +91,6 @@ class Ingredient(UUIDPrimaryKeyMixin, Base):
         server_default=ReviewStatus.AUTO.value,
     )
 
-    @validates("rating")
-    def _validate_rating(self, _key: str, value: Decimal | float | None) -> Decimal | None:
-        if value is not None:
-            expected_risk = derive_risk_from_rating(value)
-            if getattr(self, "risk_level", None) != expected_risk:
-                self.__dict__["risk_level"] = expected_risk
-            return Decimal(str(value))
-        if getattr(self, "risk_level", None) != RiskLevel.UNKNOWN:
-            self.__dict__["risk_level"] = RiskLevel.UNKNOWN
-        return None
-
-    @validates("risk_level")
-    def _validate_risk_level(self, _key: str, value: RiskLevel) -> RiskLevel:
-        curr_rating = getattr(self, "rating", None)
-        if curr_rating is None:
-            if value == RiskLevel.LOW:
-                self.__dict__["rating"] = Decimal("9.0")
-            elif value == RiskLevel.MODERATE:
-                self.__dict__["rating"] = Decimal("5.5")
-            elif value == RiskLevel.HIGH:
-                self.__dict__["rating"] = Decimal("2.0")
-        return value
-
     aliases: Mapped[list[IngredientAlias]] = relationship(
         back_populates="ingredient",
         cascade="all, delete-orphan",
@@ -122,6 +100,22 @@ class Ingredient(UUIDPrimaryKeyMixin, Base):
     translations: Mapped[list[IngredientTranslation]] = relationship(
         cascade="all, delete-orphan", passive_deletes=True, lazy="raise"
     )
+
+
+@event.listens_for(Ingredient, "before_insert")
+@event.listens_for(Ingredient, "before_update")
+def _sync_ingredient_rating_and_risk(
+    _mapper: object, _connection: object, target: Ingredient
+) -> None:
+    if target.rating is not None:
+        target.risk_level = derive_risk_from_rating(target.rating)
+    elif target.risk_level != RiskLevel.UNKNOWN:
+        if target.risk_level == RiskLevel.LOW:
+            target.rating = Decimal("9.0")
+        elif target.risk_level == RiskLevel.MODERATE:
+            target.rating = Decimal("5.5")
+        elif target.risk_level == RiskLevel.HIGH:
+            target.rating = Decimal("2.0")
 
 
 class IngredientAlias(UUIDPrimaryKeyMixin, Base):

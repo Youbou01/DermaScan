@@ -14,6 +14,7 @@ from sqlalchemy import select
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
 from app.core.enums import RiskLevel
+from app.modules.ingredients.enums import RatingSource, ReviewStatus
 from app.modules.ingredients.models import (
     Ingredient,
     IngredientAlias,
@@ -66,12 +67,16 @@ async def seed_ingredients() -> None:
                     inci_name=inci,
                     risk_level=risk_level,
                     source_ref=source_ref,
+                    rating_source=RatingSource.CURATED,
+                    review_status=ReviewStatus.APPROVED,
                 )
                 db.add(ingredient)
                 await db.flush()
             else:
                 ingredient.risk_level = risk_level
                 ingredient.source_ref = source_ref
+                ingredient.rating_source = RatingSource.CURATED
+                ingredient.review_status = ReviewStatus.APPROVED
                 await db.flush()
 
             all_alias_names = [inci]

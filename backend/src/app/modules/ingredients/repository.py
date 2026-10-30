@@ -4,8 +4,10 @@ import uuid
 from collections.abc import Collection
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.ingredients.enums import AliasSource
 from app.modules.ingredients.models import Ingredient, IngredientAlias, IngredientTranslation
 
 
@@ -68,3 +70,45 @@ class IngredientRepository:
             .limit(limit)
         )
         return [(row[0], row[1], row[2], float(row[3])) for row in result.all()]
+
+    async def get(self, ingredient_id: uuid.UUID) -> Ingredient | None:
+        return await self._session.get(Ingredient, ingredient_id)
+
+    async def get_by_inci(self, inci_name: str) -> Ingredient | None:
+        stmt = select(Ingredient).where(Ingredient.inci_name == inci_name)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_translation(
+        self, ingredient_id: uuid.UUID, locale: str
+    ) -> IngredientTranslation | None:
+        stmt = select(IngredientTranslation).where(
+            IngredientTranslation.ingredient_id == ingredient_id,
+            IngredientTranslation.locale == locale,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def add_alias_if_not_exists(
+        self,
+        ingredient_id: uuid.UUID,
+        alias: str,
+        normalized_alias: str,
+        language: str | None = None,
+        source: AliasSource = AliasSource.AI,
+    ) -> bool:
+        stmt = (
+            insert(IngredientAlias)
+            .values(
+                id=uuid.uuid7(),
+                ingredient_id=ingredient_id,
+                alias=alias,
+                normalized_alias=normalized_alias,
+                language=language,
+                source=source,
+            )
+            .on_conflict_do_nothing(index_elements=[IngredientAlias.normalized_alias])
+            .returning(IngredientAlias.id)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none() is not None

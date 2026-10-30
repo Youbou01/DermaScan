@@ -1,13 +1,18 @@
 """The ingredients module's public service."""
 
 import uuid
-from collections.abc import Collection, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
+from decimal import Decimal
+from typing import ClassVar
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
+from app.modules.ingredients.enums import RatingSource, ReviewStatus
 from app.modules.ingredients.matching import candidate_keys
+from app.modules.ingredients.models import IngredientTranslation, derive_risk_from_rating
 from app.modules.ingredients.normalizer import normalize
 from app.modules.ingredients.repository import IngredientRepository
 from app.modules.ingredients.schemas import (
@@ -17,8 +22,21 @@ from app.modules.ingredients.schemas import (
     MatchType,
 )
 
+logger = structlog.get_logger(__name__)
+
 
 class IngredientService:
+    _dirty_hooks: ClassVar[
+        list[Callable[[AsyncSession, Collection[uuid.UUID]], Awaitable[int]]]
+    ] = []
+
+    @classmethod
+    def register_dirty_hook(
+        cls, hook: Callable[[AsyncSession, Collection[uuid.UUID]], Awaitable[int]]
+    ) -> None:
+        if hook not in cls._dirty_hooks:
+            cls._dirty_hooks.append(hook)
+
     def __init__(self, session: AsyncSession) -> None:
         self._repository = IngredientRepository(session)
 
@@ -117,3 +135,115 @@ class IngredientService:
                     similarity=round(similarity, 3),
                 )
         return list(best.values())[:limit]
+
+    async def set_rating(
+        self,
+        ingredient_id: uuid.UUID,
+        rating: Decimal | float | None,
+        confidence: Decimal | float | None = None,
+        source: RatingSource = RatingSource.AI,
+        source_ref: str | None = None,
+        model: str | None = None,
+        version: int = 1,
+        review_status: ReviewStatus | None = None,
+        functions: list[str] | None = None,
+        summary_i18n: dict[str, str] | None = None,
+        concern_note_i18n: dict[str, str] | None = None,
+        mark_dirty: bool = True,
+        dirty_notifier: Callable[[Collection[uuid.UUID]], Awaitable[int]] | None = None,
+    ) -> bool:
+        """Single authoritative writer of ingredient rating, risk_level, and regulatory state.
+
+        Marks affected catalog products score_dirty = True when rating changes.
+        """
+        ingredient = await self._repository.get(ingredient_id)
+        if not ingredient:
+            return False
+
+        # Protect curated ratings from being overwritten by AI
+        if ingredient.rating_source == RatingSource.CURATED and source != RatingSource.CURATED:
+            logger.info("cannot_overwrite_curated_rating", ingredient_id=str(ingredient_id))
+            return False
+
+        final_rating: Decimal | None
+        final_source: RatingSource
+        final_ref: str | None
+
+        # Regulatory pre-rule: Annex II prohibited forces 0.5 rating and regulatory source
+        if ingredient.is_prohibited:
+            final_rating = Decimal("0.5")
+            final_source = RatingSource.REGULATORY
+            final_ref = source_ref or "EU CosIng Annex II (Prohibited)"
+        else:
+            final_rating = Decimal(str(rating)) if rating is not None else None
+            final_source = source
+            # Annex III / fragrance allergen cap: cannot exceed 8.0
+            if (
+                (ingredient.is_restricted or ingredient.is_allergen)
+                and final_rating is not None
+                and final_rating > Decimal("8.0")
+            ):
+                final_rating = Decimal("8.0")
+            final_ref = source_ref
+
+        # DB constraint requires source_ref when risk is moderate or high
+        if final_rating is not None and final_rating < Decimal("7.0") and not final_ref:
+            final_ref = f"{final_source.value}:{model or 'assessment'}"
+
+        expected_risk = derive_risk_from_rating(final_rating)
+        ingredient.risk_level = expected_risk
+        ingredient.rating = final_rating
+        ingredient.source_ref = final_ref
+        ingredient.rating_source = final_source
+        if confidence is not None:
+            ingredient.rating_confidence = Decimal(str(confidence))
+        ingredient.rating_version = version
+        if model is not None:
+            ingredient.rating_model = model
+        if functions is not None:
+            ingredient.functions = functions
+
+        if review_status is not None:
+            ingredient.review_status = review_status
+        elif (
+            final_rating is not None
+            and final_rating < Decimal("4.0")
+            and final_source == RatingSource.AI
+        ):
+            ingredient.review_status = ReviewStatus.NEEDS_REVIEW
+        else:
+            ingredient.review_status = ReviewStatus.AUTO
+
+        # Translations update
+        locales = set((summary_i18n or {}).keys()) | set((concern_note_i18n or {}).keys())
+        for loc in locales:
+            trans = await self._repository.get_translation(ingredient_id, loc)
+            sum_text = (summary_i18n or {}).get(loc)
+            con_text = (concern_note_i18n or {}).get(loc)
+            if trans is None:
+                rationale = con_text or sum_text or ""
+                new_trans = IngredientTranslation(
+                    ingredient_id=ingredient_id,
+                    locale=loc,
+                    rationale=rationale,
+                    summary=sum_text,
+                    concern_note=con_text,
+                )
+                self._repository._session.add(new_trans)
+            else:
+                if sum_text is not None:
+                    trans.summary = sum_text
+                if con_text is not None:
+                    trans.concern_note = con_text
+                if not trans.rationale and (con_text or sum_text):
+                    trans.rationale = con_text or sum_text or ""
+
+        await self._repository._session.flush()
+
+        if mark_dirty:
+            if dirty_notifier:
+                await dirty_notifier([ingredient_id])
+            for hook in self._dirty_hooks:
+                await hook(self._repository._session, [ingredient_id])
+
+        return True

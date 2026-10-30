@@ -30,6 +30,11 @@ from app.modules.catalog.schemas import (
     ProductIngredientOut,
 )
 from app.modules.catalog.service import CatalogService
+from app.modules.ingredients.service import IngredientService
+
+IngredientService.register_dirty_hook(
+    lambda session, ids: CatalogService(session).mark_products_dirty_for_ingredients(ids)
+)
 
 __all__ = [
     "CatalogService",
