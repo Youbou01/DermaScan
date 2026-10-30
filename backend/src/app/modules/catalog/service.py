@@ -468,6 +468,32 @@ class CatalogService:
         loaded = await self._products.get_by_id(product.id)
         return loaded or product
 
+    async def get_image_info(
+        self, product_id: uuid.UUID
+    ) -> tuple[str, str | None, ImageStatus] | None:
+        """Returns (barcode, image_source_url, image_status) for image processing."""
+        prod = await self._products.get_by_id(product_id)
+        if prod is None:
+            return None
+        return (prod.barcode, prod.image_source_url, prod.image_status)
+
+    async def update_image_result(
+        self,
+        product_id: uuid.UUID,
+        image_url: str | None,
+        image_status: ImageStatus,
+        image_quality: Decimal | None = None,
+    ) -> None:
+        """Updates product image URL, status, and quality."""
+        prod = await self._products.get_by_id(product_id)
+        if prod is None:
+            return
+        prod.image_url = image_url
+        prod.image_status = image_status
+        if image_quality is not None:
+            prod.image_quality = image_quality
+        await self._session.flush()
+
 
 def _ingredient_out(
     position: int, raw_text: str, info: IngredientInfo | None

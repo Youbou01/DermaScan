@@ -25,3 +25,4 @@ node_modules/
 
 # Local data cache
 backend/data/
+backend/uploads/
