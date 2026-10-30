@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
-from app.core.i18n import DEFAULT_LOCALE
+from app.core.i18n import DEFAULT_LOCALE, resolve_product_name
 from app.modules.catalog.category_repository import CategoryRepository
 from app.modules.catalog.enums import EnrichmentStatus, ImageStatus
 from app.modules.catalog.exceptions import ProductNotFoundError
@@ -114,7 +114,7 @@ class CatalogService:
         return ProductDetail(
             id=product.id,
             barcode=product.barcode,
-            name=product.name,
+            name=resolve_product_name(product.name, product.name_i18n, locale),
             brand=product.brand.name if product.brand else None,
             image_url=product.image_url,
             category=_category_out(product.primary_category, locale),

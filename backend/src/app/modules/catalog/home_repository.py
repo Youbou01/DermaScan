@@ -24,6 +24,7 @@ class ProductCardRow:
     category_slug: str | None
     created_at: datetime
     rotation_key: str | None = None
+    name_i18n: dict[str, str] | None = None
 
 
 class HomeRepository:
@@ -78,6 +79,7 @@ class HomeRepository:
                 category_slug=category_slug,
                 created_at=product.created_at,
                 rotation_key=rot_key,
+                name_i18n=product.name_i18n,
             )
             for product, brand_name, category_slug, rot_key in rows
         ]
@@ -114,6 +116,7 @@ class HomeRepository:
                 score_band=RiskLevel(product.score_band),
                 category_slug=category_slug,
                 created_at=product.created_at,
+                name_i18n=product.name_i18n,
             )
             for product, brand_name, category_slug in rows
         ]
