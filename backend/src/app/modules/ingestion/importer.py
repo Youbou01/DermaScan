@@ -5,28 +5,19 @@ import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import RiskLevel as CoreRiskLevel
+from app.core.enums import RiskLevel
 from app.modules.catalog.enums import ProductSource
 from app.modules.catalog.gtin import normalize_gtin
 from app.modules.catalog.search_text import normalize_name
 from app.modules.ingestion.mapper import resolve_category_slug
 from app.modules.ingredients.parser import parse_ingredient_label
 from app.modules.ingredients.service import IngredientService
-from app.modules.scoring.engine import (
+from app.modules.scoring import (
     IngredientPositionInput,
-    RiskLevel,
-    ScoreBand,
     calculate_score,
 )
 
 logger = structlog.get_logger()
-
-BAND_TO_CORE_RISK: dict[ScoreBand, CoreRiskLevel] = {
-    ScoreBand.GOOD: CoreRiskLevel.LOW,
-    ScoreBand.MODERATE: CoreRiskLevel.MODERATE,
-    ScoreBand.POOR: CoreRiskLevel.HIGH,
-    ScoreBand.INSUFFICIENT_DATA: CoreRiskLevel.UNKNOWN,
-}
 
 
 async def get_or_create_brand_id(db: AsyncSession, brand_name: str) -> uuid.UUID | None:
@@ -131,7 +122,7 @@ async def import_product_record(
     prod_row = res.fetchone()
 
     score_val = score_output.score
-    score_band_val = BAND_TO_CORE_RISK[score_output.band].value
+    score_band_val = score_output.band.value
     coverage_val = score_output.coverage
     version_val = score_output.scoring_version
 

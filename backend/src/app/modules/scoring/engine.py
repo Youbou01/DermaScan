@@ -1,113 +1,217 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from enum import StrEnum
 
 from app.core.enums import RiskLevel
 
 __all__ = [
-    "GOOD_MIN_COVERAGE",
+    "DEFAULT_SCORING_PARAMS",
     "GOOD_MIN_SCORE",
-    "HIGH_RISK_SCORE_CAP",
-    "MIN_COVERAGE_THRESHOLD",
+    "INTERIM_RISK_TO_RATING",
     "MODERATE_MIN_SCORE",
     "SCORING_VERSION",
     "IngredientPositionInput",
+    "IngredientScoreInput",
     "RiskLevel",
-    "ScoreBand",
     "ScoreOutput",
+    "ScoreResult",
+    "ScoringParams",
     "calculate_score",
+    "get_position_weight",
 ]
 
-# Bump whenever ANY number or rule below changes: the recompute job (scripts/recompute_scores.py)
-# finds products with `scoring_version < SCORING_VERSION` and rescores them.
-# The decisions behind these numbers are recorded in docs/adr/0004 (amendment of 2026-10-19).
-SCORING_VERSION: int = 2
+# Bump whenever ANY mathematical formula or constant changes.
+# The decisions behind these numbers are recorded in docs/adr/0015-scoring-v3.md.
+SCORING_VERSION: int = 3
 
 
-class ScoreBand(StrEnum):
-    GOOD = "good"
-    MODERATE = "moderate"
-    POOR = "poor"
-    INSUFFICIENT_DATA = "insufficient_data"
+@dataclass(frozen=True, slots=True)
+class ScoringParams:
+    pessimistic_prior_d: float = 0.4
+    position_weight_base: float = 0.85
+    position_weight_floor: float = 0.05
+    power_mean_q: float = 3.0
+    prohibited_score_cap: int = 25
+    insufficient_confidence_threshold: float = 0.35
+    insufficient_ingredient_count: int = 3
+    estimated_confidence_threshold: float = 0.60
+    low_risk_min_score: int = 75
+    moderate_risk_min_score: int = 50
 
 
-# Share of ingredients we must recognize before we publish a score at all.
-MIN_COVERAGE_THRESHOLD: float = 0.70
-# Share of ingredients we must recognize before a product may be called "good".
-# Unknown ingredients are left out of the average, so without this a product that is half
-# unknown could score 100: "unknown looks safe", which ADR-0004 forbids.
-GOOD_MIN_COVERAGE: float = 0.80
+DEFAULT_SCORING_PARAMS = ScoringParams()
 
-HIGH_RISK_SCORE_CAP: int = 49
-GOOD_MIN_SCORE: int = 75
-MODERATE_MIN_SCORE: int = 40
+# Backward-compatibility constants
+GOOD_MIN_SCORE: int = DEFAULT_SCORING_PARAMS.low_risk_min_score
+MODERATE_MIN_SCORE: int = DEFAULT_SCORING_PARAMS.moderate_risk_min_score
 
-BASE_POINTS: dict[RiskLevel, float] = {
-    RiskLevel.LOW: 100.0,
-    RiskLevel.MODERATE: 55.0,
-    RiskLevel.HIGH: 10.0,
-    RiskLevel.UNKNOWN: 0.0,
+INTERIM_RISK_TO_RATING: dict[RiskLevel, float | None] = {
+    RiskLevel.LOW: 9.0,
+    RiskLevel.MODERATE: 5.5,
+    RiskLevel.HIGH: 2.0,
+    RiskLevel.UNKNOWN: None,
 }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
+class IngredientScoreInput:
+    position: int
+    rating: float | None
+    confidence: float = 1.0
+    is_prohibited: bool = False
+    estimated_percent: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class IngredientPositionInput:
     risk_level: RiskLevel
     position: int
+    is_prohibited: bool = False
+    estimated_percent: float | None = None
+
+    def to_score_input(self) -> IngredientScoreInput:
+        rating = INTERIM_RISK_TO_RATING.get(self.risk_level)
+        conf = 0.0 if self.risk_level == RiskLevel.UNKNOWN or rating is None else 1.0
+        return IngredientScoreInput(
+            position=self.position,
+            rating=rating,
+            confidence=conf,
+            is_prohibited=self.is_prohibited,
+            estimated_percent=self.estimated_percent,
+        )
 
 
-@dataclass(frozen=True)
-class ScoreOutput:
+@dataclass(frozen=True, slots=True)
+class ScoreResult:
     score: int | None
-    band: ScoreBand
-    coverage: float
-    scoring_version: int = SCORING_VERSION
+    band: RiskLevel
+    confidence: float
+    is_estimated: bool
+    version: int = SCORING_VERSION
+
+    @property
+    def coverage(self) -> float:
+        """Backward-compatible alias for exposure-weighted confidence K."""
+        return self.confidence
+
+    @property
+    def scoring_version(self) -> int:
+        return self.version
+
+    @property
+    def insufficient_data(self) -> bool:
+        return self.score is None
 
 
-def get_position_weight(position: int) -> float:
+# Backward-compatible alias
+ScoreOutput = ScoreResult
+
+
+def get_position_weight(position: int, params: ScoringParams = DEFAULT_SCORING_PARAMS) -> float:
     clamped_pos = max(1, position)
-    return 1.0 / (1.0 + 0.2 * (clamped_pos - 1))
+    return max(params.position_weight_floor, params.position_weight_base ** (clamped_pos - 1))
 
 
-def calculate_score(items: Sequence[IngredientPositionInput]) -> ScoreOutput:
+def calculate_score(
+    items: Sequence[IngredientScoreInput | IngredientPositionInput],
+    params: ScoringParams = DEFAULT_SCORING_PARAMS,
+) -> ScoreResult:
+    """Pure Scoring v3 mathematical formula."""
     if not items:
-        return ScoreOutput(score=None, band=ScoreBand.INSUFFICIENT_DATA, coverage=0.0)
+        return ScoreResult(
+            score=None,
+            band=RiskLevel.UNKNOWN,
+            confidence=0.0,
+            is_estimated=True,
+            version=SCORING_VERSION,
+        )
 
-    total = len(items)
-    known = [i for i in items if i.risk_level != RiskLevel.UNKNOWN]
-    coverage = round(len(known) / total, 4)
+    score_inputs: list[IngredientScoreInput] = [
+        item.to_score_input() if isinstance(item, IngredientPositionInput) else item
+        for item in items
+    ]
 
-    if coverage < MIN_COVERAGE_THRESHOLD or not known:
-        return ScoreOutput(score=None, band=ScoreBand.INSUFFICIENT_DATA, coverage=coverage)
+    has_all_percents = all(
+        i.estimated_percent is not None and i.estimated_percent >= 0 for i in score_inputs
+    )
+    percent_sum = sum(i.estimated_percent or 0.0 for i in score_inputs) if has_all_percents else 0.0
 
-    weighted_points = 0.0
-    total_weight = 0.0
-    has_high_risk = False
+    weights: list[float] = []
+    d_stars: list[float] = []
+    confs: list[float] = []
+    any_prohibited = False
 
-    for item in known:
-        weight = get_position_weight(item.position)
-        weighted_points += BASE_POINTS[item.risk_level] * weight
-        total_weight += weight
-        if item.risk_level == RiskLevel.HIGH:
-            has_high_risk = True
+    for item in score_inputs:
+        if item.is_prohibited:
+            any_prohibited = True
 
-    raw_score = round(weighted_points / total_weight)
+        if has_all_percents and percent_sum > 0:
+            w = (item.estimated_percent or 0.0) / percent_sum
+        else:
+            p = max(1, item.position)
+            w = max(params.position_weight_floor, params.position_weight_base ** (p - 1))
 
-    if has_high_risk:
-        raw_score = min(raw_score, HIGH_RISK_SCORE_CAP)
+        if item.rating is None:
+            d = 0.0
+            c = 0.0
+        else:
+            d = 1.0 - (item.rating / 10.0)
+            c = max(0.0, min(1.0, item.confidence))
 
-    # Cap the score itself (not only the band) so the number and the band never disagree,
-    # e.g. no "90, moderate" on screen.
-    if coverage < GOOD_MIN_COVERAGE:
-        raw_score = min(raw_score, GOOD_MIN_SCORE - 1)
+        d_star = c * d + (1.0 - c) * params.pessimistic_prior_d
+        weights.append(w)
+        d_stars.append(d_star)
+        confs.append(c)
 
-    final_score = max(0, min(100, int(raw_score)))
+    sum_w = sum(weights)
+    if sum_w <= 0.0:
+        return ScoreResult(
+            score=None,
+            band=RiskLevel.UNKNOWN,
+            confidence=0.0,
+            is_estimated=True,
+            version=SCORING_VERSION,
+        )
 
-    if final_score >= GOOD_MIN_SCORE and not has_high_risk:
-        band = ScoreBand.GOOD
-    elif final_score >= MODERATE_MIN_SCORE:
-        band = ScoreBand.MODERATE
+    raw_k = sum(w * c for w, c in zip(weights, confs, strict=False)) / sum_w
+    k = round(raw_k, 3)
+
+    is_estimated = k < params.estimated_confidence_threshold
+    is_insufficient = (
+        k < params.insufficient_confidence_threshold
+        or len(score_inputs) < params.insufficient_ingredient_count
+    )
+
+    if is_insufficient:
+        return ScoreResult(
+            score=None,
+            band=RiskLevel.UNKNOWN,
+            confidence=k,
+            is_estimated=is_estimated,
+            version=SCORING_VERSION,
+        )
+
+    weighted_d_cubed = sum(
+        w * (d_star**params.power_mean_q) for w, d_star in zip(weights, d_stars, strict=False)
+    )
+    c_agg = (weighted_d_cubed / sum_w) ** (1.0 / params.power_mean_q)
+
+    score = round(100.0 * (1.0 - c_agg))
+    score = max(0, min(100, score))
+
+    if any_prohibited:
+        score = min(score, params.prohibited_score_cap)
+        band = RiskLevel.HIGH
+    elif score >= params.low_risk_min_score:
+        band = RiskLevel.LOW
+    elif score >= params.moderate_risk_min_score:
+        band = RiskLevel.MODERATE
     else:
-        band = ScoreBand.POOR
+        band = RiskLevel.HIGH
 
-    return ScoreOutput(score=final_score, band=band, coverage=coverage)
+    return ScoreResult(
+        score=score,
+        band=band,
+        confidence=k,
+        is_estimated=is_estimated,
+        version=SCORING_VERSION,
+    )

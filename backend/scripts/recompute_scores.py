@@ -13,26 +13,17 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
-from app.core.enums import RiskLevel as CoreRiskLevel
+from app.core.enums import RiskLevel
 from app.modules.catalog.models import Product
 from app.modules.ingredients.models import Ingredient
-from app.modules.scoring.engine import (
+from app.modules.scoring import (
     SCORING_VERSION,
     IngredientPositionInput,
-    RiskLevel,
-    ScoreBand,
     calculate_score,
 )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-BAND_TO_CORE_RISK: dict[ScoreBand, CoreRiskLevel] = {
-    ScoreBand.GOOD: CoreRiskLevel.LOW,
-    ScoreBand.MODERATE: CoreRiskLevel.MODERATE,
-    ScoreBand.POOR: CoreRiskLevel.HIGH,
-    ScoreBand.INSUFFICIENT_DATA: CoreRiskLevel.UNKNOWN,
-}
 
 
 async def recompute_stale_products(db: AsyncSession, batch_size: int = 100) -> int:
@@ -67,7 +58,7 @@ async def recompute_stale_products(db: AsyncSession, batch_size: int = 100) -> i
         score_output = calculate_score(input_items)
 
         product.score = score_output.score
-        product.score_band = BAND_TO_CORE_RISK[score_output.band]
+        product.score_band = score_output.band
         product.score_coverage = score_output.coverage
         product.scoring_version = score_output.scoring_version
         updated_count += 1
