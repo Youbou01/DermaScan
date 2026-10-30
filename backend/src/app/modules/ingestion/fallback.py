@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.catalog import CatalogService, ProductDetail
 from app.modules.catalog.gtin import normalize_gtin
 from app.modules.ingestion.importer import import_product_record
+from app.modules.ingestion.sources.obf import OBFSourceAdapter, store_raw_product
 from app.modules.ingredients import IngredientService
 
 logger = structlog.get_logger(__name__)
@@ -120,6 +121,10 @@ async def handle_barcode_miss_fallback(
     prod_data = await obf_client.fetch_product_by_barcode(gtin)
 
     if prod_data is not None:
+        adapter = OBFSourceAdapter()
+        raw_record = adapter.to_raw(prod_data)
+        await store_raw_product(session, raw_record)
+
         ingredient_service = IngredientService(session)
         success = await import_product_record(
             session,

@@ -11,11 +11,22 @@ from app.modules.ingestion.fallback import (
 from app.modules.ingestion.importer import ImportReport, import_product_record
 from app.modules.ingestion.mapper import MappedProduct, map_obf_record, resolve_category_slug
 from app.modules.ingestion.seed_categories import load_category_seed, seed_categories
+from app.modules.ingestion.sources import (
+    OBFSourceAdapter,
+    RawRecord,
+    SourceAdapter,
+    compute_content_hash,
+    store_raw_product,
+)
 
 __all__ = [
     "ImportReport",
     "MappedProduct",
     "OBFAsyncFallbackClient",
+    "OBFSourceAdapter",
+    "RawRecord",
+    "SourceAdapter",
+    "compute_content_hash",
     "fetch_remote_product_by_barcode",
     "handle_barcode_miss_fallback",
     "import_product_record",
@@ -23,4 +34,5 @@ __all__ = [
     "map_obf_record",
     "resolve_category_slug",
     "seed_categories",
+    "store_raw_product",
 ]
