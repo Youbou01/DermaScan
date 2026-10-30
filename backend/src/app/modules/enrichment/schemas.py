@@ -1,4 +1,8 @@
+from dataclasses import dataclass
+
 from pydantic import BaseModel, Field
+
+from app.modules.catalog.enums import EnrichmentStatus
 
 
 class IngredientInciItem(BaseModel):
@@ -51,3 +55,10 @@ class AliasAdjudicationItem(BaseModel):
 
 class AliasAdjudicationResult(BaseModel):
     adjudications: list[AliasAdjudicationItem] = Field(default_factory=list)
+
+
+@dataclass(slots=True, frozen=True)
+class EnrichmentOutcome:
+    status: EnrichmentStatus
+    reason: str | None = None
+    result: ProductEnrichmentResult | None = None

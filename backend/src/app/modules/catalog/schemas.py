@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import RiskLevel
-from app.modules.catalog.enums import ProductSource
+from app.modules.catalog.enums import EnrichmentStatus, ProductSource
 
 
 class CategoryOut(BaseModel):
@@ -107,3 +107,25 @@ class CreateProductInput(BaseModel):
     name_i18n: dict[str, str] = Field(default_factory=dict)
     field_provenance: dict[str, Any] = Field(default_factory=dict)
     ingredients: list[tuple[int, str, uuid.UUID | None]] = Field(default_factory=list)
+
+
+class ProductUpsert(BaseModel):
+    """Canonical DTO for publishing enriched or curated products into the catalog."""
+
+    model_config = ConfigDict(frozen=True)
+
+    barcode: str
+    name: str
+    source: ProductSource = ProductSource.OPEN_BEAUTY_FACTS
+    source_id: str
+    source_lang: str | None = None
+    name_i18n: dict[str, str] = Field(default_factory=dict)
+    brand_name: str | None = None
+    category_slug: str | None = None
+    image_url: str | None = None
+    image_source_url: str | None = None
+    raw_ingredients_text: str = ""
+    ingredients: list[tuple[int, str, uuid.UUID | None]] = Field(default_factory=list)
+    field_provenance: dict[str, Any] = Field(default_factory=dict)
+    enrichment_status: EnrichmentStatus = EnrichmentStatus.DONE
+    data_quality: float | None = None

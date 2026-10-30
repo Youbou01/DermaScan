@@ -7,6 +7,10 @@ import sys
 
 import structlog
 
+# Register all module background task handlers
+import app.modules.catalog.tasks
+import app.modules.enrichment.tasks
+import app.modules.ingestion.tasks  # noqa: F401
 from app.core.config import Settings, get_settings
 from app.core.database import create_engine, create_session_factory
 from app.core.jobs import execute_job, fetch_and_lock_next_job

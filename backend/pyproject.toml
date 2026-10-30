@@ -9,7 +9,9 @@ dependencies = [
     "asyncpg>=0.32.0",
     "fastapi>=0.143.2",
     "httpx>=0.28.1",
+    "pillow>=13.0.0",
     "pydantic-settings>=2.16.0",
+    "sqladmin>=0.32.0",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
@@ -32,6 +34,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.17.1",
     "testcontainers[postgres]>=4.15.0",
+    "types-pillow>=10.2.0.20240822",
 ]
 
 # ---------------------------------------------------------------- Alembic
@@ -132,5 +135,5 @@ allowed_importers = ["app.modules.enrichment"]
 [[tool.importlinter.contracts]]
 name = "ingestion internals are private"
 type = "protected"
-protected_modules = ["app.modules.ingestion.models"]
+protected_modules = ["app.modules.ingestion.models", "app.modules.ingestion.repository"]
 allowed_importers = ["app.modules.ingestion"]

@@ -3,6 +3,8 @@
 import uuid
 from collections.abc import Awaitable, Callable, Collection, Iterable
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from typing import Any
 
 import structlog
 from sqlalchemy import update
@@ -23,6 +25,7 @@ from app.modules.catalog.schemas import (
     CreateProductInput,
     ProductDetail,
     ProductIngredientOut,
+    ProductUpsert,
 )
 from app.modules.catalog.search_text import normalize_name
 from app.modules.ingredients import IngredientInfo, IngredientService
@@ -321,6 +324,146 @@ class CatalogService:
         product.scoring_version = res.version
         product.score_dirty = False
         await self._session.flush()
+
+        loaded = await self._products.get_by_id(product.id)
+        return loaded or product
+
+    async def upsert_product(self, data: ProductUpsert) -> Product:
+        """Publish a product with strict per-field provenance precedence:
+        curated > retailer/brand > open_beauty_facts > ai.
+        A lower-precedence source never overwrites a higher-precedence field.
+        """
+        source_precedence: dict[str, int] = {
+            "curated": 4,
+            "manual": 4,
+            "retailer": 3,
+            "brand": 3,
+            "scrape": 3,
+            "open_beauty_facts": 2,
+            "obf": 2,
+            "ai": 1,
+            "ai-guess": 1,
+        }
+
+        brand_id: uuid.UUID | None = None
+        if data.brand_name:
+            brand = await self._products.get_or_create_brand(data.brand_name)
+            brand_id = brand.id
+
+        category_id: uuid.UUID | None = None
+        if data.category_slug:
+            category = await self._categories.get_by_slug(data.category_slug)
+            if category:
+                category_id = category.id
+
+        product = await self._products.get_by_source(data.source, data.source_id)
+        if product is None:
+            product = await self._products.get_by_barcode(data.barcode)
+
+        now_iso = datetime.now(UTC).isoformat()
+        current_prov: dict[str, Any] = dict(product.field_provenance or {}) if product else {}
+
+        def can_update_field(field_name: str) -> bool:
+            if product is None:
+                return True
+            old_source = str(
+                current_prov.get(field_name, {}).get("source", product.source.value)
+            ).lower()
+            new_source = str(
+                data.field_provenance.get(field_name, {}).get("source", data.source.value)
+            ).lower()
+            old_rank = source_precedence.get(old_source, 0)
+            new_rank = source_precedence.get(new_source, 0)
+            return new_rank >= old_rank
+
+        if product is None:
+            prov: dict[str, Any] = {}
+            for field in ("name", "brand", "category", "ingredients", "image"):
+                if field in data.field_provenance:
+                    prov[field] = data.field_provenance[field]
+                else:
+                    prov[field] = {"source": data.source.value, "updated_at": now_iso}
+
+            product = Product(
+                barcode=data.barcode,
+                name=data.name,
+                name_normalized=normalize_name(data.name),
+                source=data.source,
+                source_id=data.source_id,
+                brand_id=brand_id,
+                primary_category_id=category_id,
+                image_url=data.image_url,
+                image_source_url=data.image_source_url,
+                raw_ingredients_text=data.raw_ingredients_text,
+                source_lang=data.source_lang,
+                name_i18n=data.name_i18n,
+                field_provenance=prov,
+                enrichment_status=data.enrichment_status,
+                image_status=ImageStatus.CANDIDATE if data.image_url else ImageStatus.NONE,
+                score_dirty=True,
+                data_quality=(
+                    Decimal(str(data.data_quality)) if data.data_quality is not None else None
+                ),
+            )
+            self._session.add(product)
+            await self._session.flush()
+        else:
+            if can_update_field("name"):
+                product.name = data.name
+                product.name_normalized = normalize_name(data.name)
+                if data.name_i18n:
+                    product.name_i18n = data.name_i18n
+                if "name" in data.field_provenance:
+                    current_prov["name"] = data.field_provenance["name"]
+
+            if can_update_field("brand") and brand_id is not None:
+                product.brand_id = brand_id
+                if "brand" in data.field_provenance:
+                    current_prov["brand"] = data.field_provenance["brand"]
+
+            if can_update_field("category") and category_id is not None:
+                product.primary_category_id = category_id
+                if "category" in data.field_provenance:
+                    current_prov["category"] = data.field_provenance["category"]
+
+            if can_update_field("image") and (data.image_url or data.image_source_url):
+                if data.image_url:
+                    product.image_url = data.image_url
+                if data.image_source_url:
+                    product.image_source_url = data.image_source_url
+                if "image" in data.field_provenance:
+                    current_prov["image"] = data.field_provenance["image"]
+
+            if data.source_lang:
+                product.source_lang = data.source_lang
+            if data.raw_ingredients_text:
+                product.raw_ingredients_text = data.raw_ingredients_text
+
+            product.field_provenance = current_prov
+            product.enrichment_status = data.enrichment_status
+            if data.data_quality is not None:
+                product.data_quality = Decimal(str(data.data_quality))
+
+            await self._session.flush()
+
+        if can_update_field("ingredients") and data.ingredients:
+            await self._products.delete_product_ingredients(product.id)
+            new_ingredients = [
+                ProductIngredient(
+                    product_id=product.id,
+                    position=pos,
+                    raw_text=raw_text,
+                    ingredient_id=ing_id,
+                )
+                for pos, raw_text, ing_id in data.ingredients
+            ]
+            self._session.add_all(new_ingredients)
+            current_prov["ingredients"] = data.field_provenance.get(
+                "ingredients", {"source": data.source.value, "updated_at": now_iso}
+            )
+            product.field_provenance = current_prov
+            product.score_dirty = True
+            await self._session.flush()
 
         loaded = await self._products.get_by_id(product.id)
         return loaded or product

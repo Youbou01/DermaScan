@@ -28,6 +28,7 @@ from app.modules.catalog.schemas import (
     ProductCardOut,
     ProductDetail,
     ProductIngredientOut,
+    ProductUpsert,
 )
 from app.modules.catalog.service import CatalogService
 from app.modules.ingredients.service import IngredientService
@@ -53,6 +54,7 @@ __all__ = [
     "ProductDetail",
     "ProductIngredientOut",
     "ProductNotFoundError",
+    "ProductUpsert",
     "SectionNotFoundError",
     "catalog_router",
     "categories_router",

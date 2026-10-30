@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.modules.catalog.category_service import CategoryService
+from app.modules.catalog.enums import EnrichmentStatus
 from app.modules.enrichment.llm.client import LLMResult
 from app.modules.enrichment.llm.router import LLMRouter
 from app.modules.enrichment.prompts.alias_adjudication import (
@@ -16,16 +18,28 @@ from app.modules.enrichment.prompts.ingredient_rating import (
     INGREDIENT_RATING_SYSTEM_PROMPT,
     build_ingredient_rating_prompt,
 )
+from app.modules.enrichment.prompts.product_enrichment import (
+    PRODUCT_ENRICHMENT_SYSTEM_PROMPT,
+    build_product_enrichment_prompt,
+)
 from app.modules.enrichment.repository import EnrichmentRepository
 from app.modules.enrichment.schemas import (
     AliasAdjudicationResult,
+    EnrichmentOutcome,
     IngredientRatingBatchResult,
+    ProductEnrichmentResult,
 )
 from app.modules.enrichment.validator import (
     compute_consensus_rating,
     validate_and_clean_plain_text,
 )
-from app.modules.ingredients import AliasSource, IngredientService, RatingSource
+from app.modules.ingredients import (
+    AliasSource,
+    IngredientService,
+    RatingSource,
+    normalize,
+    parse_ingredient_label,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -72,6 +86,103 @@ class EnrichmentService:
 
     async def get_cached(self, key: str) -> dict[str, Any] | None:
         return await self.repo.get_cached(key)
+
+    async def enrich_product(
+        self,
+        mapped: dict[str, Any],
+        raw_payload: dict[str, Any] | None = None,
+    ) -> EnrichmentOutcome:
+        """Enrich a mapped product record using the LLM gateway with deterministic validation."""
+        category_nodes = await CategoryService(self.session).get_tree(locale="en")
+        valid_categories: list[dict[str, str]] = []
+
+        def collect_nodes(nodes: list[Any]) -> None:
+            for n in nodes:
+                valid_categories.append({"slug": n.slug, "name": n.name})
+                if n.children:
+                    collect_nodes(n.children)
+
+        collect_nodes(category_nodes)
+
+        prompt = build_product_enrichment_prompt(mapped, valid_categories)
+        chain = self.router.get_chain("enrich")
+
+        try:
+            res, _ = await self.generate_json(
+                task="enrich",
+                system=PRODUCT_ENRICHMENT_SYSTEM_PROMPT,
+                prompt=prompt,
+                schema=ProductEnrichmentResult,
+                provider_chain=chain,
+            )
+        except Exception as exc:
+            logger.error("product_enrichment_llm_failed", error=str(exc))
+            return EnrichmentOutcome(status=EnrichmentStatus.FAILED, reason=f"llm_error: {exc}")
+
+        # Post-LLM Deterministic Validation (Section 8.2)
+        # 1. Skincare confirmation
+        if not res.is_skincare or res.is_skincare_confidence < 0.6:
+            return EnrichmentOutcome(
+                status=EnrichmentStatus.FAILED, reason="not_skincare", result=res
+            )
+
+        # 2. Ingredient count bounds
+        if len(res.ingredients_inci) < 2:
+            return EnrichmentOutcome(
+                status=EnrichmentStatus.QUARANTINED, reason="insufficient_ingredients", result=res
+            )
+        if len(res.ingredients_inci) > 120:
+            return EnrichmentOutcome(
+                status=EnrichmentStatus.QUARANTINED, reason="too_many_ingredients", result=res
+            )
+
+        # 3. Item length constraint
+        if any(
+            len(item.original) > 120 or (item.inci and len(item.inci) > 120)
+            for item in res.ingredients_inci
+        ):
+            return EnrichmentOutcome(
+                status=EnrichmentStatus.QUARANTINED, reason="item_too_long", result=res
+            )
+
+        # 4. Token Jaccard check with label parser
+        raw_text = str(mapped.get("raw_ingredients_text") or "")
+        parser_parsed = parse_ingredient_label(raw_text)
+        parser_tokens = {normalize(item.text) for item in parser_parsed if normalize(item.text)}
+        llm_tokens = {
+            normalize(item.inci or item.original)
+            for item in res.ingredients_inci
+            if normalize(item.inci or item.original)
+        }
+
+        if parser_tokens and llm_tokens:
+            jaccard = len(parser_tokens & llm_tokens) / len(parser_tokens | llm_tokens)
+            if jaccard < 0.5:
+                return EnrichmentOutcome(
+                    status=EnrichmentStatus.QUARANTINED, reason="parser_llm_disagree", result=res
+                )
+
+        # 5. Field confidence thresholding
+        min_conf = self.settings.llm_min_confidence
+        clean_brand = res.brand if (res.brand_confidence >= min_conf) else None
+        clean_category = res.category_slug if (res.category_confidence >= min_conf) else None
+
+        clean_result = ProductEnrichmentResult(
+            is_skincare=res.is_skincare,
+            is_skincare_confidence=res.is_skincare_confidence,
+            brand=clean_brand,
+            brand_confidence=res.brand_confidence,
+            name_clean=res.name_clean,
+            name_i18n=res.name_i18n,
+            source_lang=res.source_lang,
+            category_slug=clean_category,
+            category_confidence=res.category_confidence,
+            ingredients_inci=res.ingredients_inci,
+            ingredients_confidence=res.ingredients_confidence,
+            flags=res.flags,
+        )
+
+        return EnrichmentOutcome(status=EnrichmentStatus.DONE, reason=None, result=clean_result)
 
     async def rate_ingredients(
         self,
