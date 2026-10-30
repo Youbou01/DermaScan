@@ -1,6 +1,27 @@
 {
   "components": {
     "schemas": {
+      "Body_contributions_submit_photo_contribution": {
+        "properties": {
+          "barcode": {
+            "description": "Product barcode (GTIN-8, GTIN-12, or GTIN-13)",
+            "title": "Barcode",
+            "type": "string"
+          },
+          "photo": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Photo of product packaging ingredient label",
+            "title": "Photo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "barcode",
+          "photo"
+        ],
+        "title": "Body_contributions_submit_photo_contribution",
+        "type": "object"
+      },
       "CategoryNodeOut": {
         "description": "A category in the browse tree (top-level or child).",
         "properties": {
@@ -47,6 +68,35 @@
           "name"
         ],
         "title": "CategoryOut",
+        "type": "object"
+      },
+      "ContributionResponse": {
+        "properties": {
+          "barcode": {
+            "title": "Barcode",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "barcode",
+          "status",
+          "message"
+        ],
+        "title": "ContributionResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -668,6 +718,47 @@
         "summary": "List the category tree",
         "tags": [
           "categories"
+        ]
+      }
+    },
+    "/api/v1/contributions": {
+      "post": {
+        "operationId": "contributions_submit_photo_contribution",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_contributions_submit_photo_contribution"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Photo Contribution",
+        "tags": [
+          "contributions"
         ]
       }
     },

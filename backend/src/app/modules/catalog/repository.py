@@ -103,3 +103,25 @@ class ProductRepository:
             delete(ProductIngredient).where(ProductIngredient.product_id == product_id)
         )
         await self._session.flush()
+
+    async def find_similar_products(
+        self,
+        query: str,
+        limit: int = 5,
+        min_similarity: float = 0.4,
+    ) -> list[tuple[Product, float]]:
+        sim = func.similarity(Product.name_normalized, query)
+        stmt = (
+            self._with_detail_loaded()
+            .add_columns(sim.label("similarity"))
+            .where(sim >= min_similarity)
+            .order_by(sim.desc())
+            .limit(limit)
+        )
+        res = await self._session.execute(stmt)
+        results: list[tuple[Product, float]] = []
+        for row in res.all():
+            prod = cast(Product, row[0])
+            score = float(row[1])
+            results.append((prod, score))
+        return results

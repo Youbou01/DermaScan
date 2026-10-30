@@ -19,6 +19,7 @@ from app.modules.enrichment.schemas import (
     IngredientAliasItem,
     IngredientInciItem,
     IngredientRatingBatchResult,
+    OcrIngredientsResult,
     ProductEnrichmentResult,
     SingleIngredientRating,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "LLMRateLimitError",
     "LLMResult",
     "LLMRouter",
+    "OcrIngredientsResult",
     "OpenAICompatClient",
     "ProductEnrichmentResult",
     "SingleIngredientRating",

@@ -129,3 +129,14 @@ class ProductUpsert(BaseModel):
     field_provenance: dict[str, Any] = Field(default_factory=dict)
     enrichment_status: EnrichmentStatus = EnrichmentStatus.DONE
     data_quality: float | None = None
+
+
+class DeduplicationResult(BaseModel):
+    """Result of cross-source deduplication and canonical / fuzzy matching."""
+
+    model_config = ConfigDict(frozen=True)
+
+    match_status: str  # "exact_barcode" | "fuzzy_match" | "ambiguous" | "new"
+    product_id: uuid.UUID | None = None
+    similarity: float | None = None
+    candidate_matches: list[tuple[uuid.UUID, str, float]] = Field(default_factory=list)

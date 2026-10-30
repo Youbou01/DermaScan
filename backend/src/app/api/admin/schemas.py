@@ -11,3 +11,26 @@ class SetCuratedRatingInput(BaseModel):
     concern_note: str | None = Field(
         default=None, description="Plain language concern rationale if flagged"
     )
+
+
+class ScrapeUrlsInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    urls: list[str] = Field(min_length=1, max_length=500)
+    site_config: str | None = None
+
+
+class ScrapeSitemapInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    sitemap_url: str
+    site_config: str | None = None
+    url_pattern: str | None = None
+    limit: int = Field(default=100, ge=1, le=1000)
+
+
+class ObfRunInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    barcodes: list[str] | None = None
+    limit: int = Field(default=50, ge=1, le=500)

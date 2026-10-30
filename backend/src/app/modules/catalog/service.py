@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE, resolve_product_name
 from app.modules.catalog.category_repository import CategoryRepository
-from app.modules.catalog.enums import EnrichmentStatus, ImageStatus
+from app.modules.catalog.enums import EnrichmentStatus, ImageStatus, ProductSource
 from app.modules.catalog.exceptions import ProductNotFoundError
 from app.modules.catalog.gtin import normalize_gtin
 from app.modules.catalog.miss_repository import BarcodeMissRepository
@@ -23,6 +23,7 @@ from app.modules.catalog.repository import ProductRepository
 from app.modules.catalog.schemas import (
     CategoryOut,
     CreateProductInput,
+    DeduplicationResult,
     ProductDetail,
     ProductIngredientOut,
     ProductUpsert,
@@ -236,6 +237,18 @@ class CatalogService:
         if product is None:
             product = await self._products.get_by_barcode(data.barcode)
 
+        # Secondary fuzzy deduplication if not matched by exact barcode or source
+        if product is None:
+            dedupe = await self.resolve_or_deduplicate(
+                barcode=data.barcode,
+                name=data.name,
+                brand_name=data.brand_name,
+                source=data.source,
+                source_id=data.source_id,
+            )
+            if dedupe.match_status == "fuzzy_match" and dedupe.product_id:
+                product = await self._products.get_by_id(dedupe.product_id)
+
         if product is None:
             product = Product(
                 barcode=data.barcode,
@@ -359,6 +372,18 @@ class CatalogService:
         product = await self._products.get_by_source(data.source, data.source_id)
         if product is None:
             product = await self._products.get_by_barcode(data.barcode)
+
+        # Secondary fuzzy deduplication if not matched by exact barcode or source
+        if product is None:
+            dedupe = await self.resolve_or_deduplicate(
+                barcode=data.barcode,
+                name=data.name,
+                brand_name=data.brand_name,
+                source=data.source,
+                source_id=data.source_id,
+            )
+            if dedupe.match_status == "fuzzy_match" and dedupe.product_id:
+                product = await self._products.get_by_id(dedupe.product_id)
 
         now_iso = datetime.now(UTC).isoformat()
         current_prov: dict[str, Any] = dict(product.field_provenance or {}) if product else {}
@@ -493,6 +518,74 @@ class CatalogService:
         if image_quality is not None:
             prod.image_quality = image_quality
         await self._session.flush()
+
+    async def resolve_or_deduplicate(
+        self,
+        barcode: str | None,
+        name: str,
+        brand_name: str | None = None,
+        size: str | None = None,
+        source: ProductSource | None = None,
+        source_id: str | None = None,
+    ) -> DeduplicationResult:
+        """Resolve product by canonical GTIN-13 barcode, source identity,
+        or secondary pg_trgm fuzzy matching.
+        """
+        # 1. Canonical matching by GTIN-13 barcode
+        if barcode:
+            try:
+                gtin = normalize_gtin(barcode)
+                prod = await self._products.get_by_barcode(gtin)
+                if prod is not None:
+                    return DeduplicationResult(
+                        match_status="exact_barcode",
+                        product_id=prod.id,
+                        similarity=1.0,
+                    )
+            except Exception:  # noqa: S110
+                pass
+
+        # 2. Source identity matching
+        if source and source_id:
+            prod = await self._products.get_by_source(source, source_id)
+            if prod is not None:
+                return DeduplicationResult(
+                    match_status="exact_barcode",
+                    product_id=prod.id,
+                    similarity=1.0,
+                )
+
+        # 3. Secondary fuzzy matching via pg_trgm
+        query_text = normalize_name(f"{name} {size or ''}".strip())
+        if len(query_text) < 3:
+            return DeduplicationResult(match_status="new")
+
+        similar_rows = await self._products.find_similar_products(
+            query=query_text,
+            limit=5,
+            min_similarity=0.50,
+        )
+        if not similar_rows:
+            return DeduplicationResult(match_status="new")
+
+        best_prod, best_score = similar_rows[0]
+        candidates = [(p.id, p.name, round(score, 3)) for p, score in similar_rows]
+
+        # High confidence (>= 0.80): auto-merge
+        if best_score >= 0.80:
+            return DeduplicationResult(
+                match_status="fuzzy_match",
+                product_id=best_prod.id,
+                similarity=round(best_score, 3),
+                candidate_matches=candidates,
+            )
+        # Ambiguous match (0.50 to 0.80): queue for review
+        return DeduplicationResult(
+            match_status="ambiguous",
+            product_id=best_prod.id,
+            similarity=round(best_score, 3),
+            candidate_matches=candidates,
+        )
 
 
 def _ingredient_out(

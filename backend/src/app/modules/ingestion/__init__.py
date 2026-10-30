@@ -24,14 +24,20 @@ from app.modules.ingestion.schemas import (
 from app.modules.ingestion.seed_categories import load_category_seed, seed_categories
 from app.modules.ingestion.service import IngestionService
 from app.modules.ingestion.sources import (
+    GenericScraperAdapter,
     OBFSourceAdapter,
     RawRecord,
+    SiteConfig,
+    SiteSelectors,
     SourceAdapter,
     compute_content_hash,
+    load_site_config,
+    parse_sitemap_xml,
     store_raw_product,
 )
 
 __all__ = [
+    "GenericScraperAdapter",
     "ImportReport",
     "IngestionRunAdmin",
     "IngestionRunOut",
@@ -46,13 +52,17 @@ __all__ = [
     "RawProductOut",
     "RawProductSource",
     "RawRecord",
+    "SiteConfig",
+    "SiteSelectors",
     "SourceAdapter",
     "compute_content_hash",
     "fetch_remote_product_by_barcode",
     "handle_barcode_miss_fallback",
     "import_product_record",
     "load_category_seed",
+    "load_site_config",
     "map_obf_record",
+    "parse_sitemap_xml",
     "resolve_category_slug",
     "seed_categories",
     "store_raw_product",

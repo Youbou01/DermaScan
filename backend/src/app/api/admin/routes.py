@@ -1,11 +1,17 @@
 import uuid
 from typing import Annotated, Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.auth import verify_admin_key
-from app.api.admin.schemas import SetCuratedRatingInput
+from app.api.admin.schemas import (
+    ObfRunInput,
+    ScrapeSitemapInput,
+    ScrapeUrlsInput,
+    SetCuratedRatingInput,
+)
 from app.core.dependencies import get_session
 from app.core.jobs import enqueue_job
 from app.modules.catalog import CatalogService
@@ -14,6 +20,7 @@ from app.modules.ingestion import (
     IngestionService,
     QuarantineItemOut,
     QuarantineStatus,
+    parse_sitemap_xml,
 )
 from app.modules.ingredients import IngredientService, RatingSource
 
@@ -112,3 +119,92 @@ async def list_ingestion_runs(
 ) -> list[IngestionRunOut]:
     service = IngestionService(session)
     return await service.list_runs(limit=limit, offset=offset)
+
+
+@router.post("/ingestion/urls")
+async def trigger_urls_scrape(
+    data: ScrapeUrlsInput,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, Any]:
+    service = IngestionService(session)
+    run = await service.create_run(source="scrape")
+    enqueued = 0
+    for url in data.urls:
+        await enqueue_job(
+            session,
+            queue="default",
+            task_name="scrape_url",
+            payload={
+                "url": url,
+                "site_config": data.site_config,
+                "run_id": str(run.id),
+            },
+        )
+        enqueued += 1
+
+    return {"run_id": str(run.id), "enqueued": enqueued}
+
+
+@router.post("/ingestion/sitemap")
+async def trigger_sitemap_scrape(
+    data: ScrapeSitemapInput,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, Any]:
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            res = await client.get(data.sitemap_url, follow_redirects=True)
+            if res.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to fetch sitemap: HTTP {res.status_code}",
+                )
+            xml_text = res.text
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sitemap fetch error: {exc}",
+        ) from exc
+
+    urls = parse_sitemap_xml(xml_text, pattern=data.url_pattern, limit=data.limit)
+    if not urls:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No URLs found matching pattern in sitemap",
+        )
+
+    service = IngestionService(session)
+    run = await service.create_run(source=f"sitemap:{data.sitemap_url}")
+    for url in urls:
+        await enqueue_job(
+            session,
+            queue="default",
+            task_name="scrape_url",
+            payload={
+                "url": url,
+                "site_config": data.site_config,
+                "run_id": str(run.id),
+            },
+        )
+
+    return {"run_id": str(run.id), "found_urls": len(urls), "enqueued": len(urls)}
+
+
+@router.post("/ingestion/obf/run")
+async def trigger_obf_run(
+    data: ObfRunInput,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, Any]:
+    service = IngestionService(session)
+    run = await service.create_run(source="open_beauty_facts")
+    count = 0
+    if data.barcodes:
+        for barcode in data.barcodes[: data.limit]:
+            await enqueue_job(
+                session,
+                queue="default",
+                task_name="import_obf_barcode",
+                payload={"barcode": barcode, "run_id": str(run.id)},
+            )
+            count += 1
+
+    return {"run_id": str(run.id), "status": "started", "count": count}

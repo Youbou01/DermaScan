@@ -60,7 +60,15 @@ class FakeLLMClient(LLMClient):
         elif self._default_response is not None:
             raw = self._default_response
         else:
-            raw = {"status": "ok"}
+            schema_title = (schema or {}).get("title", "")
+            if schema_title == "OcrIngredientsResult":
+                raw = {
+                    "ingredients_text": "Aqua, Glycerin, Niacinamide, Sodium Hyaluronate",
+                    "confidence": 0.95,
+                    "is_readable": True,
+                }
+            else:
+                raw = {"status": "ok"}
 
         if isinstance(raw, Exception):
             raise raw

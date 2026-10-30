@@ -118,3 +118,20 @@ class IngestionService:
     async def list_runs(self, limit: int = 50, offset: int = 0) -> list[IngestionRunOut]:
         runs = await self._repo.list_runs(limit=limit, offset=offset)
         return [_to_run_out(r) for r in runs]
+
+    async def stage_scrape(
+        self,
+        url: str,
+        status: str,
+        content_hash: str,
+        extracted_json: dict[str, Any],
+        run_id: uuid.UUID | None = None,
+    ) -> uuid.UUID:
+        staging = await self._repo.stage_scrape(
+            url=url,
+            status=status,
+            content_hash=content_hash,
+            extracted_json=extracted_json,
+            run_id=run_id,
+        )
+        return staging.id

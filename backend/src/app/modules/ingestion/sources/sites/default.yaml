@@ -1,0 +1,12 @@
+name: "default"
+base_url: ""
+user_agent: "Mozilla/5.0 (compatible; DermaScanBot/1.0; +https://dermascan.org/bot)"
+rate_limit_rps: 1.0
+respect_robots: false
+selectors:
+  name: "h1.product-title, h1.product_title, h1"
+  brand: ".product-brand, .brand, [itemprop='brand']"
+  barcode: "[itemprop='gtin13'], [itemprop='sku'], .barcode, .sku"
+  ingredients: ".ingredients-content, #ingredients, .product-ingredients, .ingredients"
+  image: "meta[property='og:image'], .product-image img, .gallery-item img"
+  category: ".breadcrumb, .product-category"

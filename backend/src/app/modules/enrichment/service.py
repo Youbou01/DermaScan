@@ -27,6 +27,7 @@ from app.modules.enrichment.schemas import (
     AliasAdjudicationResult,
     EnrichmentOutcome,
     IngredientRatingBatchResult,
+    OcrIngredientsResult,
     ProductEnrichmentResult,
 )
 from app.modules.enrichment.validator import (
@@ -395,3 +396,29 @@ class EnrichmentService:
                     accepted_count += 1
 
         return accepted_count
+
+    async def ocr_ingredients(self, image_data: bytes) -> OcrIngredientsResult:
+        """Extract ingredient list text from a product packaging photo using vision LLM."""
+        import base64
+
+        b64_image = base64.b64encode(image_data).decode("utf-8")
+        system_prompt = (
+            "You are a computer vision specialist in skincare products. "
+            "Your task is to transcribe the ingredient list printed on the "
+            "product packaging label accurately and verbatim. "
+            "Return JSON conforming to the schema."
+        )
+        prompt = (
+            "Transcribe the ingredients list printed on this product package image. "
+            "Ignore marketing claims, directions of use, and warnings. "
+            "Return ingredients_text, confidence (0.0 to 1.0), and is_readable (true/false)."
+        )
+        validated, _ = await self.router.generate_json(
+            task="ocr_ingredients",
+            system=system_prompt,
+            prompt=prompt,
+            schema=OcrIngredientsResult,
+            session=self.session,
+            images=[b64_image],
+        )
+        return validated

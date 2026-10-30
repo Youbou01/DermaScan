@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.ingestion.enums import QuarantineStatus, RawProductSource
-from app.modules.ingestion.models import IngestionRun, QuarantineItem, RawProduct
+from app.modules.ingestion.models import IngestionRun, QuarantineItem, RawProduct, ScrapeStaging
 
 
 class IngestionRepository:
@@ -105,3 +105,22 @@ class IngestionRepository:
         )
         res = await self._session.execute(stmt)
         return res.scalars().all()
+
+    async def stage_scrape(
+        self,
+        url: str,
+        status: str,
+        content_hash: str,
+        extracted_json: dict[str, Any],
+        run_id: uuid.UUID | None = None,
+    ) -> ScrapeStaging:
+        staging = ScrapeStaging(
+            url=url,
+            status=status,
+            content_hash=content_hash,
+            extracted_json=extracted_json,
+            run_id=run_id,
+        )
+        self._session.add(staging)
+        await self._session.flush()
+        return staging

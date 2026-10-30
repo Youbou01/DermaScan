@@ -57,6 +57,16 @@ class AliasAdjudicationResult(BaseModel):
     adjudications: list[AliasAdjudicationItem] = Field(default_factory=list)
 
 
+class OcrIngredientsResult(BaseModel):
+    ingredients_text: str = Field(
+        description="Raw ingredients list transcribed from the product photo"
+    )
+    confidence: float = Field(
+        ge=0.0, le=1.0, description="Confidence of the transcription between 0 and 1"
+    )
+    is_readable: bool = Field(description="Whether the ingredient label is legible and complete")
+
+
 @dataclass(slots=True, frozen=True)
 class EnrichmentOutcome:
     status: EnrichmentStatus
