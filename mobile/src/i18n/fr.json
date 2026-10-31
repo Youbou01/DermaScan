@@ -32,6 +32,15 @@
     "enter_barcode": "Saisissez un code-barres pour continuer.",
     "scan_button": "Scanner un produit"
   },
+  "search": {
+    "title": "Recherche",
+    "entry_button": "Rechercher un produit",
+    "input_label": "Rechercher un produit",
+    "placeholder": "Nom du produit ou marque",
+    "submit": "Rechercher",
+    "min_chars_hint": "Saisissez au moins 2 caractères.",
+    "recent_title": "Recherches récentes"
+  },
   "common": {
     "retry": "Réessayer",
     "cancel": "Annuler",
