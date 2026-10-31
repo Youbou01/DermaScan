@@ -29,6 +29,15 @@
     "enter_barcode": "Enter a barcode to continue.",
     "scan_button": "Scan a product"
   },
+  "search": {
+    "title": "Search",
+    "entry_button": "Search products",
+    "input_label": "Search for a product",
+    "placeholder": "Product name or brand",
+    "submit": "Search",
+    "min_chars_hint": "Type at least 2 characters.",
+    "recent_title": "Recent searches"
+  },
   "common": {
     "retry": "Try again",
     "cancel": "Cancel",
