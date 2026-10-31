@@ -18,7 +18,7 @@ export class ApiContractUnavailableError extends Error {
   }
 }
 
-async function requireData<T>(result: {
+export async function requireData<T>(result: {
   data?: T;
   error?: unknown;
   response: Response;

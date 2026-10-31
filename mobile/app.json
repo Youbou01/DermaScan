@@ -4,7 +4,7 @@
     "slug": "skincare",
     "scheme": "skincare",
     "version": "0.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": false

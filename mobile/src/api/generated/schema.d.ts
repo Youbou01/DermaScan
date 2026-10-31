@@ -96,6 +96,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/products/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search products by name (accent-insensitive, typo-tolerant) */
+    get: operations['products_search_products'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/products/filter': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Filter scored products, best score first */
+    get: operations['products_filter_products'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/products/by-barcode/{barcode}': {
     parameters: {
       query?: never;
@@ -203,6 +237,16 @@ export interface components {
       /**
        * Next Cursor
        * @description Opaque cursor for the next page, or null.
+       */
+      next_cursor: string | null;
+    };
+    /** Page[ProductSummary] */
+    Page_ProductSummary_: {
+      /** Items */
+      items: components['schemas']['ProductSummary'][];
+      /**
+       * Next Cursor
+       * @description Pass it as `cursor` to get the next page. Null on the last page.
        */
       next_cursor: string | null;
     };
@@ -322,6 +366,32 @@ export interface components {
        * @description Why it is rated this way, in the response language.
        */
       rationale: string | null;
+    };
+    /** ProductSummary */
+    ProductSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Barcode
+       * @description GTIN-13.
+       */
+      barcode: string;
+      /** Name */
+      name: string;
+      /** Brand */
+      brand: string | null;
+      /** Image Url */
+      image_url: string | null;
+      /**
+       * Score
+       * @description 0-100, or null when the product is not scored.
+       */
+      score: number | null;
+      /** @description 'unknown' means insufficient data, NOT safe. */
+      score_band: components['schemas']['RiskLevel'];
     };
     /**
      * RiskLevel
@@ -507,6 +577,86 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  products_search_products: {
+    parameters: {
+      query: {
+        /** @description Name to look for. */
+        q: string;
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Page_ProductSummary_'];
+        };
+      };
+      /** @description Invalid query, cursor or score range. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  products_filter_products: {
+    parameters: {
+      query?: {
+        /** @description Category slug; child categories are included. */
+        category?: string | null;
+        /** @description One or more score bands. */
+        band?: components['schemas']['RiskLevel'][] | null;
+        min_score?: number | null;
+        max_score?: number | null;
+        /** @description Must contain all of these. */
+        include?: string[] | null;
+        /** @description Must contain none of these. */
+        exclude?: string[] | null;
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Page_ProductSummary_'];
+        };
+      };
+      /** @description Invalid query, cursor or score range. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
         };
       };
     };
