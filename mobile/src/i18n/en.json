@@ -75,6 +75,21 @@
     "body-wash": "Body wash",
     "lip-care": "Lip care"
   },
+  "filters": {
+    "title": "Filters",
+    "category": "Category",
+    "category_all": "All categories",
+    "band": "Risk indicator",
+    "score_range": "Score range",
+    "min_score": "Minimum score",
+    "max_score": "Maximum score",
+    "score_range_invalid": "The minimum score must not be higher than the maximum score.",
+    "apply": "Show results",
+    "include_title": "Must contain",
+    "exclude_title": "Must not contain",
+    "ingredient_input": "Search an ingredient",
+    "remove": "Remove"
+  },
   "errors": {
     "offline_banner": "You are offline. Some information may be unavailable.",
     "generic_title": "Something went wrong",
