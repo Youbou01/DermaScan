@@ -310,12 +310,15 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
     minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: radii.pill,
   },
   footerText: {
+    textAlign: 'center',
     fontSize: typography.size.md,
     lineHeight: typography.lineHeight.md,
     fontWeight: typography.weight.semibold,
