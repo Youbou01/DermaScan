@@ -78,6 +78,17 @@
     "body-wash": "Gel douche",
     "lip-care": "Soin des lèvres"
   },
+  "filters": {
+    "title": "Filtres",
+    "category": "Catégorie",
+    "category_all": "Toutes les catégories",
+    "band": "Indicateur de risque",
+    "score_range": "Plage de score",
+    "min_score": "Score minimum",
+    "max_score": "Score maximum",
+    "score_range_invalid": "Le score minimum ne doit pas dépasser le score maximum.",
+    "apply": "Afficher les résultats"
+  },
   "errors": {
     "offline_banner": "Vous êtes hors ligne. Certaines informations peuvent être indisponibles.",
     "generic_title": "Une erreur s’est produite",
