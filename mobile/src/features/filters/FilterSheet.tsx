@@ -16,7 +16,15 @@ import type { CategoryNode, RiskLevel } from '@/api/types';
 import { getLocalizedCategory } from '@/i18n/category';
 import { useTranslation } from '@/i18n/useTranslation';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
-import { clearAll, isScoreRangeValid, toggleBand, type FilterState } from './filter-state';
+import {
+  addIngredient,
+  clearAll,
+  isScoreRangeValid,
+  removeIngredient,
+  toggleBand,
+  type FilterState,
+} from './filter-state';
+import { IngredientChips } from './IngredientChips';
 
 const BANDS: readonly RiskLevel[] = ['low', 'moderate', 'high', 'unknown'];
 
@@ -190,6 +198,18 @@ function FilterSheetModal({
                 {t('filters.score_range_invalid')}
               </Text>
             )}
+            <IngredientChips
+              names={draft.include}
+              onAdd={(name) => setDraft(addIngredient(draft, 'include', name))}
+              onRemove={(name) => setDraft(removeIngredient(draft, 'include', name))}
+              title={t('filters.include_title')}
+            />
+            <IngredientChips
+              names={draft.exclude}
+              onAdd={(name) => setDraft(addIngredient(draft, 'exclude', name))}
+              onRemove={(name) => setDraft(removeIngredient(draft, 'exclude', name))}
+              title={t('filters.exclude_title')}
+            />
           </ScrollView>
           <View style={styles.footer}>
             <Pressable

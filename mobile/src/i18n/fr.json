@@ -87,7 +87,11 @@
     "min_score": "Score minimum",
     "max_score": "Score maximum",
     "score_range_invalid": "Le score minimum ne doit pas dépasser le score maximum.",
-    "apply": "Afficher les résultats"
+    "apply": "Afficher les résultats",
+    "include_title": "Doit contenir",
+    "exclude_title": "Ne doit pas contenir",
+    "ingredient_input": "Rechercher un ingrédient",
+    "remove": "Retirer"
   },
   "errors": {
     "offline_banner": "Vous êtes hors ligne. Certaines informations peuvent être indisponibles.",
