@@ -108,6 +108,7 @@ async def submit_photo_contribution(
                 task_name="enrich_raw_product",
                 payload={"raw_product_id": str(raw_id)},
             )
+        await session.commit()
         return {
             "id": file_id,
             "barcode": norm_barcode,
@@ -127,6 +128,7 @@ async def submit_photo_contribution(
             "image_url": image_url,
         },
     )
+    await session.commit()
     return {
         "id": file_id,
         "barcode": norm_barcode,

@@ -50,6 +50,7 @@ async def approve_quarantine_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quarantine item not found",
         )
+    await session.commit()
     return {"status": "approved", "id": str(item_id)}
 
 
@@ -65,6 +66,7 @@ async def reject_quarantine_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quarantine item not found",
         )
+    await session.commit()
     return {"status": "rejected", "id": str(item_id)}
 
 
@@ -102,6 +104,7 @@ async def set_curated_rating(
         payload={"batch_size": 100},
     )
 
+    await session.commit()
     return {
         "status": "updated",
         "ingredient_id": str(ingredient_id),
@@ -142,6 +145,7 @@ async def trigger_urls_scrape(
         )
         enqueued += 1
 
+    await session.commit()
     return {"run_id": str(run.id), "enqueued": enqueued}
 
 
@@ -186,6 +190,7 @@ async def trigger_sitemap_scrape(
             },
         )
 
+    await session.commit()
     return {"run_id": str(run.id), "found_urls": len(urls), "enqueued": len(urls)}
 
 
@@ -207,6 +212,7 @@ async def trigger_obf_run(
             )
             count += 1
 
+    await session.commit()
     return {"run_id": str(run.id), "status": "started", "count": count}
 
 

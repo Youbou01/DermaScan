@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Task E1: Open Beauty Facts Data-Source Spike."""
 
-# ruff: noqa: S108, S310, T201
+# ruff: noqa: S310, T201
 import gzip
 import json
 import urllib.request
@@ -9,7 +9,7 @@ from collections import Counter
 from pathlib import Path
 
 DUMP_URL = "https://static.openbeautyfacts.org/data/openbeautyfacts-products.jsonl.gz"
-DUMP_PATH = Path("/tmp/openbeautyfacts-products.jsonl.gz")
+DUMP_PATH = Path("openbeautyfacts-products.jsonl.gz")
 
 
 def main() -> None:

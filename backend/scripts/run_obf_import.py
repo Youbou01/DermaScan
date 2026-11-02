@@ -1,4 +1,4 @@
-# ruff: noqa: E402, S108, ASYNC240
+# ruff: noqa: E402, ASYNC240
 import argparse
 import asyncio
 import gzip
@@ -19,7 +19,7 @@ from app.modules.ingredients.service import IngredientService
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_DUMP_PATH = Path("/tmp/openbeautyfacts-products.jsonl.gz")
+DEFAULT_DUMP_PATH = Path("openbeautyfacts-products.jsonl.gz")
 COMMIT_EVERY = 100
 
 
