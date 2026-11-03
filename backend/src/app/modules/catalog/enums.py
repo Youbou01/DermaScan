@@ -12,6 +12,7 @@ class ProductSource(StrEnum):
 
 class EnrichmentStatus(StrEnum):
     PENDING = "pending"
+    IN_PROGRESS = "in_progress"
     DONE = "done"
     QUARANTINED = "quarantined"
     FAILED = "failed"

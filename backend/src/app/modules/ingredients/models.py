@@ -53,9 +53,10 @@ class Ingredient(UUIDPrimaryKeyMixin, Base):
             "risk_level NOT IN ('moderate', 'high') OR source_ref IS NOT NULL",
             name="flagged_requires_source",
         ),
+        Index("uq_ingredient_inci_name_lower", text("lower(inci_name)"), unique=True),
     )
 
-    inci_name: Mapped[str] = mapped_column(Text, unique=True)
+    inci_name: Mapped[str] = mapped_column(Text)
     risk_level: Mapped[RiskLevel] = mapped_column(
         enum_type(RiskLevel),
         default=RiskLevel.UNKNOWN,

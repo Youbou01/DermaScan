@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 import structlog
@@ -38,11 +39,21 @@ from app.modules.ingredients import (
     AliasSource,
     IngredientService,
     RatingSource,
+    ReviewStatus,
     normalize,
     parse_ingredient_label,
 )
 
 logger = structlog.get_logger(__name__)
+
+RatingDivergenceHook = Callable[[AsyncSession, dict[str, Any]], Awaitable[None]]
+_divergence_hooks: list[RatingDivergenceHook] = []
+
+
+def register_divergence_hook(hook: RatingDivergenceHook) -> None:
+    if hook not in _divergence_hooks:
+        _divergence_hooks.append(hook)
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -315,6 +326,20 @@ class EnrichmentService:
                 if ok:
                     total_rated += 1
 
+                if review_status == ReviewStatus.NEEDS_REVIEW:
+                    for hook in _divergence_hooks:
+                        await hook(
+                            self.session,
+                            {
+                                "ingredient_id": str(ing_id),
+                                "inci_name": inci,
+                                "rating": float(final_rating),
+                                "confidence": float(final_conf),
+                                "summary": summary_i18n,
+                                "concern_note": concern_i18n,
+                            },
+                        )
+
                 # Proposed aliases
                 for alias in p_item.aliases:
                     if alias.name and len(alias.name) <= 120:
@@ -422,3 +447,68 @@ class EnrichmentService:
             images=[b64_image],
         )
         return validated
+
+    async def fetch_web_context_for_product(
+        self, barcode: str | None, name: str | None
+    ) -> dict[str, str]:
+        if self.settings.app_env == "test":
+            return {}
+        import re
+        import urllib.parse
+
+        import httpx
+
+        query_parts = [p for p in (barcode, name, "ingredients INCI composition") if p]
+        if not query_parts:
+            return {}
+        q = urllib.parse.quote_plus(" ".join(query_parts))
+        snippets: list[str] = []
+        image_candidate: str | None = None
+
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            if barcode and barcode.isdigit():
+                for host in (
+                    "https://world.openbeautyfacts.org",
+                    "https://world.openfoodfacts.org",
+                ):
+                    try:
+                        r = await client.get(f"{host}/api/v2/product/{barcode}.json")
+                        if r.status_code == 200:
+                            prod = r.json().get("product") or {}
+                            if prod.get("ingredients_text"):
+                                snippets.append(f"OBF Ingredients: {prod['ingredients_text']}")
+                            if prod.get("brands"):
+                                snippets.append(f"OBF Brand: {prod['brands']}")
+                            if prod.get("image_front_url") or prod.get("image_url"):
+                                image_candidate = prod.get("image_front_url") or prod.get(
+                                    "image_url"
+                                )
+                    except httpx.HTTPError:
+                        pass
+
+            try:
+                headers = {
+                    "User-Agent": (
+                        "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+                    )
+                }
+                r = await client.get(f"https://html.duckduckgo.com/html/?q={q}", headers=headers)
+                if r.status_code == 200:
+                    text_blocks = re.findall(
+                        r'class="result__snippet"[^>]*>(.*?)</a>',
+                        r.text,
+                        flags=re.S,
+                    )
+                    for block in text_blocks[:5]:
+                        clean = re.sub(r"<[^>]+>", " ", block).strip()
+                        if clean:
+                            snippets.append(clean)
+            except httpx.HTTPError:
+                pass
+
+        result: dict[str, str] = {}
+        if snippets:
+            result["web_snippets"] = "\n".join(snippets)
+        if image_candidate:
+            result["web_image_url"] = image_candidate
+        return result

@@ -23,7 +23,7 @@ from app.modules.enrichment.schemas import (
     ProductEnrichmentResult,
     SingleIngredientRating,
 )
-from app.modules.enrichment.service import EnrichmentService
+from app.modules.enrichment.service import EnrichmentService, register_divergence_hook
 
 __all__ = [
     "AliasAdjudicationItem",
@@ -46,4 +46,5 @@ __all__ = [
     "OpenAICompatClient",
     "ProductEnrichmentResult",
     "SingleIngredientRating",
+    "register_divergence_hook",
 ]

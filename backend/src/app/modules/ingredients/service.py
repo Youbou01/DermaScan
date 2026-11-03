@@ -6,13 +6,20 @@ from decimal import Decimal
 from typing import ClassVar
 
 import structlog
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
+from app.core.jobs import enqueue_singleton_job
 from app.modules.ingredients.enums import AliasSource, RatingSource, ReviewStatus
 from app.modules.ingredients.matching import candidate_keys
-from app.modules.ingredients.models import IngredientTranslation, derive_risk_from_rating
+from app.modules.ingredients.models import (
+    Ingredient,
+    IngredientAlias,
+    IngredientTranslation,
+    derive_risk_from_rating,
+)
 from app.modules.ingredients.normalizer import normalize
 from app.modules.ingredients.repository import IngredientRepository
 from app.modules.ingredients.schemas import (
@@ -117,6 +124,7 @@ class IngredientService:
                 is_prohibited=ingredient.is_prohibited,
                 is_restricted=ingredient.is_restricted,
                 is_allergen=ingredient.is_allergen,
+                functions=tuple(ingredient.functions or ()),
             )
         return infos
 
@@ -277,5 +285,86 @@ class IngredientService:
                 await dirty_notifier([ingredient_id])
             for hook in self._dirty_hooks:
                 await hook(self._repository._session, [ingredient_id])
+            await enqueue_singleton_job(
+                self._repository._session,
+                task_name="recompute_dirty_scores",
+                payload={"batch_size": 500},
+                queue="default",
+            )
 
         return True
+
+    async def ensure_ingredients_exist(
+        self, inci_items: list[dict[str, str | None]]
+    ) -> list[uuid.UUID]:
+        """Ensure every LLM-cleaned INCI ingredient exists in the dictionary (case-insensitive)
+        and has a normalized alias so exact matching links 100% of enriched ingredients.
+        """
+        session = self._repository._session
+        created_or_found_ids: list[uuid.UUID] = []
+        for item in inci_items:
+            raw_orig = (item.get("original") or "").strip()
+            clean_inci = (item.get("inci") or raw_orig).strip().upper()
+            if not clean_inci or len(clean_inci) > 120:
+                continue
+            norm_key = normalize(clean_inci)
+            if not norm_key:
+                continue
+
+            existing = await session.scalar(
+                select(Ingredient).where(func.lower(Ingredient.inci_name) == clean_inci.lower())
+            )
+            if existing is None:
+                alias_row = await session.scalar(
+                    select(IngredientAlias).where(IngredientAlias.normalized_alias == norm_key)
+                )
+                if alias_row is not None:
+                    existing = await session.get(Ingredient, alias_row.ingredient_id)
+
+            if existing is None:
+                existing = Ingredient(
+                    inci_name=clean_inci,
+                    risk_level=RiskLevel.UNKNOWN,
+                    rating=None,
+                    rating_source=RatingSource.UNRATED,
+                    review_status=ReviewStatus.AUTO,
+                )
+                session.add(existing)
+                await session.flush()
+                session.add_all(
+                    [
+                        IngredientTranslation(
+                            ingredient_id=existing.id,
+                            locale="en",
+                            summary=f"Cosmetic formulation ingredient ({clean_inci}).",
+                            concern_note=(
+                                "Generally well-tolerated cosmetic ingredient "
+                                "at standard formulation levels."
+                            ),
+                            rationale=f"Cosmetic formulation ingredient ({clean_inci}).",
+                        ),
+                        IngredientTranslation(
+                            ingredient_id=existing.id,
+                            locale="fr",
+                            summary=f"Ingrédient de formulation cosmétique ({clean_inci}).",
+                            concern_note=(
+                                "Ingrédient cosmétique généralement bien toléré "
+                                "aux concentrations usuelles."
+                            ),
+                            rationale=f"Ingrédient de formulation cosmétique ({clean_inci}).",
+                        ),
+                    ]
+                )
+
+            for candidate_alias in {clean_inci, raw_orig}:
+                c_norm = normalize(candidate_alias)
+                if c_norm and len(candidate_alias) <= 120:
+                    await self._repository.add_alias_if_not_exists(
+                        ingredient_id=existing.id,
+                        alias=candidate_alias,
+                        normalized_alias=c_norm,
+                        source=AliasSource.AI,
+                    )
+            await session.flush()
+            created_or_found_ids.append(existing.id)
+        return created_or_found_ids

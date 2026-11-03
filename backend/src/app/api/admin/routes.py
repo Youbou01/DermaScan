@@ -13,7 +13,7 @@ from app.api.admin.schemas import (
     SetCuratedRatingInput,
 )
 from app.core.dependencies import get_session
-from app.core.jobs import count_jobs_by_status, enqueue_job
+from app.core.jobs import count_jobs_by_status, enqueue_job, enqueue_singleton_job
 from app.modules.catalog import CatalogService
 from app.modules.ingestion import (
     IngestionRunOut,
@@ -44,12 +44,46 @@ async def approve_quarantine_item(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, str]:
     service = IngestionService(session)
-    ok = await service.approve_quarantine(item_id, reviewed_by="admin")
-    if not ok:
+    item = await service.get_quarantine_item(item_id)
+    if item is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quarantine item not found",
         )
+    await service.approve_quarantine(item_id, reviewed_by="admin")
+
+    if item.stage == "rating_divergence" and "ingredient_id" in item.payload:
+        ing_id = uuid.UUID(str(item.payload["ingredient_id"]))
+        rating_val = item.payload.get("rating")
+        conf_val = item.payload.get("confidence", 1.0)
+        summary_i18n = item.payload.get("summary")
+        concern_i18n = item.payload.get("concern_note")
+        ing_service = IngredientService(session)
+        await ing_service.set_rating(
+            ingredient_id=ing_id,
+            rating=rating_val,
+            confidence=conf_val,
+            source=RatingSource.CURATED,
+            source_ref="admin-quarantine-approved",
+            summary_i18n=summary_i18n,
+            concern_note_i18n=concern_i18n,
+        )
+        catalog_service = CatalogService(session)
+        await catalog_service.mark_products_dirty_for_ingredients([ing_id])
+        await enqueue_singleton_job(
+            session,
+            task_name="recompute_dirty_scores",
+            payload={"batch_size": 500},
+            queue="default",
+        )
+    elif item.raw_product_id is not None:
+        await enqueue_job(
+            session,
+            queue="enrichment",
+            task_name="enrich_raw_product",
+            payload={"raw_product_id": str(item.raw_product_id), "force_publish": True},
+        )
+
     await session.commit()
     return {"status": "approved", "id": str(item_id)}
 
@@ -60,12 +94,18 @@ async def reject_quarantine_item(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict[str, str]:
     service = IngestionService(session)
-    ok = await service.reject_quarantine(item_id, reviewed_by="admin")
-    if not ok:
+    item = await service.get_quarantine_item(item_id)
+    if item is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quarantine item not found",
         )
+    await service.reject_quarantine(item_id, reviewed_by="admin")
+
+    if item.payload.get("barcode"):
+        barcode_str = str(item.payload["barcode"])
+        await CatalogService(session).mark_enrichment_failed_by_barcode(barcode_str)
+
     await session.commit()
     return {"status": "rejected", "id": str(item_id)}
 
@@ -97,7 +137,7 @@ async def set_curated_rating(
     catalog_service = CatalogService(session)
     dirty_count = await catalog_service.mark_products_dirty_for_ingredients([ingredient_id])
 
-    await enqueue_job(
+    await enqueue_singleton_job(
         session,
         queue="default",
         task_name="recompute_dirty_scores",
@@ -145,6 +185,7 @@ async def trigger_urls_scrape(
         )
         enqueued += 1
 
+    await service.increment_run_counter(run.id, "enqueued", enqueued)
     await session.commit()
     return {"run_id": str(run.id), "enqueued": enqueued}
 
@@ -190,6 +231,7 @@ async def trigger_sitemap_scrape(
             },
         )
 
+    await service.increment_run_counter(run.id, "enqueued", len(urls))
     await session.commit()
     return {"run_id": str(run.id), "found_urls": len(urls), "enqueued": len(urls)}
 
@@ -212,6 +254,7 @@ async def trigger_obf_run(
             )
             count += 1
 
+    await service.increment_run_counter(run.id, "enqueued", count)
     await session.commit()
     return {"run_id": str(run.id), "status": "started", "count": count}
 

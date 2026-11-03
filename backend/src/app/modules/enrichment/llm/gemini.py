@@ -9,6 +9,7 @@ from app.modules.enrichment.llm.client import (
     LLMInvalidResponseError,
     LLMRateLimitError,
     LLMResult,
+    detect_image_mime_type,
 )
 
 
@@ -19,7 +20,7 @@ class GeminiClient(LLMClient):
         self,
         api_key: str,
         model: str = "gemini-1.5-flash",
-        timeout: float = 60.0,
+        timeout: float = 180.0,
     ) -> None:
         self._provider = "gemini"
         self._model = model
@@ -52,7 +53,7 @@ class GeminiClient(LLMClient):
                 parts.append(
                     {
                         "inlineData": {
-                            "mimeType": "image/jpeg",
+                            "mimeType": detect_image_mime_type(img),
                             "data": img,
                         }
                     }

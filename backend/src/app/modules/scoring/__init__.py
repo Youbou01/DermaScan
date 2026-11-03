@@ -6,7 +6,9 @@ Output: score, band, confidence, is_estimated.
 
 from app.modules.scoring.engine import (
     DEFAULT_SCORING_PARAMS,
+    GOOD_MIN_SCORE,
     INTERIM_RISK_TO_RATING,
+    MODERATE_MIN_SCORE,
     SCORING_VERSION,
     IngredientPositionInput,
     IngredientScoreInput,
@@ -16,12 +18,15 @@ from app.modules.scoring.engine import (
     ScoringParams,
     calculate_score,
     get_position_weight,
+    resolve_effective_rating_and_confidence,
 )
 from app.modules.scoring.service import get_current_scoring_version
 
 __all__ = [
     "DEFAULT_SCORING_PARAMS",
+    "GOOD_MIN_SCORE",
     "INTERIM_RISK_TO_RATING",
+    "MODERATE_MIN_SCORE",
     "SCORING_VERSION",
     "IngredientPositionInput",
     "IngredientScoreInput",
@@ -32,4 +37,5 @@ __all__ = [
     "calculate_score",
     "get_current_scoring_version",
     "get_position_weight",
+    "resolve_effective_rating_and_confidence",
 ]

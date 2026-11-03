@@ -3,6 +3,11 @@
 Owns no tables in sprint 1. Writes products only through the catalog public interface.
 """
 
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.enrichment import register_divergence_hook
 from app.modules.ingestion.admin import (
     IngestionRunAdmin,
     QuarantineItemAdmin,
@@ -35,6 +40,19 @@ from app.modules.ingestion.sources import (
     parse_sitemap_xml,
     store_raw_product,
 )
+
+
+async def _quarantine_rating_divergence(session: AsyncSession, payload: dict[str, Any]) -> None:
+    svc = IngestionService(session)
+    await svc.quarantine(
+        raw_product_id=None,
+        stage="rating_divergence",
+        reason="model_disagreement",
+        payload=payload,
+    )
+
+
+register_divergence_hook(_quarantine_rating_divergence)
 
 __all__ = [
     "GenericScraperAdapter",

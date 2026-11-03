@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 import structlog
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -189,17 +189,18 @@ class CatalogService:
                         if info.rating_confidence is not None
                         else (0.0 if rating is None else 1.0)
                     )
-                    is_proh = info.is_prohibited
                 else:
                     rating = None
                     conf = 0.0
-                    is_proh = False
                 score_inputs.append(
                     IngredientScoreInput(
                         position=pi.position,
                         rating=rating,
                         confidence=conf,
-                        is_prohibited=is_proh,
+                        is_prohibited=info.is_prohibited if info else False,
+                        is_restricted=info.is_restricted if info else False,
+                        is_allergen=info.is_allergen if info else False,
+                        functions=info.functions if info else (),
                     )
                 )
 
@@ -315,17 +316,18 @@ class CatalogService:
                     if info.rating_confidence is not None
                     else (0.0 if rating is None else 1.0)
                 )
-                is_proh = info.is_prohibited
             else:
                 rating = None
                 conf = 0.0
-                is_proh = False
             score_inputs.append(
                 IngredientScoreInput(
                     position=pos,
                     rating=rating,
                     confidence=conf,
-                    is_prohibited=is_proh,
+                    is_prohibited=info.is_prohibited if info else False,
+                    is_restricted=info.is_restricted if info else False,
+                    is_allergen=info.is_allergen if info else False,
+                    functions=info.functions if info else (),
                 )
             )
 
@@ -347,15 +349,17 @@ class CatalogService:
         A lower-precedence source never overwrites a higher-precedence field.
         """
         source_precedence: dict[str, int] = {
-            "curated": 4,
-            "manual": 4,
-            "retailer": 3,
-            "brand": 3,
-            "scrape": 3,
-            "open_beauty_facts": 2,
-            "obf": 2,
-            "ai": 1,
-            "ai-guess": 1,
+            "unrated": 0,
+            "obf": 1,
+            "open_beauty_facts": 1,
+            "user_photo": 2,
+            "ai": 3,
+            "ai-guess": 3,
+            "scrape": 4,
+            "retailer": 4,
+            "brand": 4,
+            "curated": 5,
+            "manual": 5,
         }
 
         brand_id: uuid.UUID | None = None
@@ -388,8 +392,10 @@ class CatalogService:
         now_iso = datetime.now(UTC).isoformat()
         current_prov: dict[str, Any] = dict(product.field_provenance or {}) if product else {}
 
-        def can_update_field(field_name: str) -> bool:
+        def can_update_field(field_name: str, current_value: object = None) -> bool:
             if product is None:
+                return True
+            if current_value is None or current_value == "":
                 return True
             old_source = str(
                 current_prov.get(field_name, {}).get("source", product.source.value)
@@ -433,7 +439,7 @@ class CatalogService:
             self._session.add(product)
             await self._session.flush()
         else:
-            if can_update_field("name"):
+            if can_update_field("name", product.name):
                 product.name = data.name
                 product.name_normalized = normalize_name(data.name)
                 if data.name_i18n:
@@ -441,17 +447,22 @@ class CatalogService:
                 if "name" in data.field_provenance:
                     current_prov["name"] = data.field_provenance["name"]
 
-            if can_update_field("brand") and brand_id is not None:
+            if can_update_field("brand", product.brand_id) and brand_id is not None:
                 product.brand_id = brand_id
                 if "brand" in data.field_provenance:
                     current_prov["brand"] = data.field_provenance["brand"]
 
-            if can_update_field("category") and category_id is not None:
+            if (
+                can_update_field("category", product.primary_category_id)
+                and category_id is not None
+            ):
                 product.primary_category_id = category_id
                 if "category" in data.field_provenance:
                     current_prov["category"] = data.field_provenance["category"]
 
-            if can_update_field("image") and (data.image_url or data.image_source_url):
+            if can_update_field("image", product.image_url) and (
+                data.image_url or data.image_source_url
+            ):
                 if data.image_url:
                     product.image_url = data.image_url
                 if data.image_source_url:
@@ -471,7 +482,10 @@ class CatalogService:
 
             await self._session.flush()
 
-        if can_update_field("ingredients") and data.ingredients:
+        if (
+            can_update_field("ingredients", product.raw_ingredients_text if product else None)
+            and data.ingredients
+        ):
             await self._products.delete_product_ingredients(product.id)
             new_ingredients = [
                 ProductIngredient(
@@ -586,6 +600,63 @@ class CatalogService:
             similarity=round(best_score, 3),
             candidate_matches=candidates,
         )
+
+    async def mark_enrichment_failed_by_barcode(self, barcode: str) -> None:
+        try:
+            norm_bc = normalize_gtin(barcode)
+        except Exception:
+            norm_bc = barcode
+        prod = await self._products.get_by_barcode(norm_bc)
+        if prod is not None:
+            prod.enrichment_status = EnrichmentStatus.FAILED
+            await self._session.flush()
+
+    async def has_dirty_or_stale_products(self) -> bool:
+        items = await self._products.find_dirty_or_stale_products(
+            batch_size=1, min_scoring_version=SCORING_VERSION
+        )
+        return len(items) > 0
+
+    async def claim_products_for_backfill(self, batch_size: int = 200) -> list[dict[str, Any]]:
+        """Find products needing enrichment (pending, missing brand/category, or unknown band)
+        that are not already in_progress/quarantined/failed, mark them in_progress,
+        and return dicts.
+        """
+        stmt = (
+            select(Product)
+            .where(
+                Product.enrichment_status.notin_(
+                    [
+                        EnrichmentStatus.IN_PROGRESS,
+                        EnrichmentStatus.QUARANTINED,
+                        EnrichmentStatus.FAILED,
+                    ]
+                ),
+                (Product.enrichment_status == EnrichmentStatus.PENDING)
+                | (Product.primary_category_id.is_(None))
+                | (Product.brand_id.is_(None))
+                | (Product.score_band == RiskLevel.UNKNOWN),
+            )
+            .order_by(Product.id.asc())
+            .limit(batch_size)
+        )
+        prods = (await self._session.execute(stmt)).scalars().all()
+        claimed: list[dict[str, Any]] = []
+        for p in prods:
+            p.enrichment_status = EnrichmentStatus.IN_PROGRESS
+            claimed.append(
+                {
+                    "id": p.id,
+                    "barcode": p.barcode,
+                    "name": p.name,
+                    "source": p.source.value,
+                    "raw_ingredients_text": p.raw_ingredients_text or "",
+                    "image_url": p.image_source_url or p.image_url,
+                    "image_status": p.image_status,
+                }
+            )
+        await self._session.flush()
+        return claimed
 
 
 def _ingredient_out(

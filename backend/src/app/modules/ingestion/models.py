@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -56,6 +57,13 @@ class QuarantineItem(UUIDPrimaryKeyMixin, Base):
     __table_args__ = (
         enum_check("status", QuarantineStatus),
         Index("ix_quarantine_item_status_created_at", "status", "created_at"),
+        Index(
+            "uq_quarantine_pending_raw_stage",
+            "raw_product_id",
+            "stage",
+            unique=True,
+            postgresql_where=text("raw_product_id IS NOT NULL AND status = 'pending'"),
+        ),
     )
 
     raw_product_id: Mapped[uuid.UUID | None] = mapped_column(

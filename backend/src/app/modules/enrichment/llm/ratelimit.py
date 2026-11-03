@@ -90,4 +90,5 @@ async def increment_usage(
             },
         )
     )
-    await session.execute(stmt)
+    async with session.begin_nested():
+        await session.execute(stmt)

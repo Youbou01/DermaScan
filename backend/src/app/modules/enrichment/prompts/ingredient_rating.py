@@ -11,7 +11,8 @@ INGREDIENT_RATING_SYSTEM_PROMPT = (
     "CRITICAL COMMUNICATION RULES:\n"
     "- Never use the words: safe, unsafe, toxic, harmful, dangerous.\n"
     "- summary (en, fr): explain what it does in <= 20 words at grade-6 reading level.\n"
-    "- concern_note (en, fr): required ONLY if rating < 7.0 in <= 30 plain words. Null if >= 7.0.\n"
+    "- concern_note (en, fr): always provided in 'en' and 'fr' in <= 30 plain words "
+    "(for rating >= 7.0, provide a concise plain-language note explaining why it is low concern).\n"
     "- aliases: provide common synonyms, E-numbers, or popular names.\n"
     "- Output ONLY valid JSON adhering strictly to the schema.\n"
 )

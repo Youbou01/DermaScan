@@ -13,6 +13,8 @@ sys.path.append(str(BACKEND_DIR))
 
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
+from app.core.jobs import enqueue_job
+from app.modules.ingestion import OBFSourceAdapter, store_raw_product
 from app.modules.ingestion.importer import import_product_record
 from app.modules.ingredients.service import IngredientService
 
@@ -62,6 +64,7 @@ async def main(dump_path: Path, limit: int | None) -> int:
 
     async with session_factory() as db:
         ingredient_service = IngredientService(db)
+        obf_adapter = OBFSourceAdapter()
 
         with gzip.open(dump_path, "rt", encoding="utf-8", errors="ignore") as f:
             non_blank = ((n, ln) for n, ln in enumerate(f, start=1) if ln.strip())
@@ -71,6 +74,15 @@ async def main(dump_path: Path, limit: int | None) -> int:
                     # Use a savepoint so a single failed row rolls back cleanly
                     async with db.begin_nested():
                         success = await import_product_record(db, row, ingredient_service)
+                        if success:
+                            raw_id = await store_raw_product(db, obf_adapter.to_raw(row))
+                            if raw_id is not None:
+                                await enqueue_job(
+                                    db,
+                                    queue="enrichment",
+                                    task_name="enrich_raw_product",
+                                    payload={"raw_product_id": str(raw_id)},
+                                )
 
                     if success:
                         imported_count += 1

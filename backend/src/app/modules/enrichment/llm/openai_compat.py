@@ -9,6 +9,7 @@ from app.modules.enrichment.llm.client import (
     LLMInvalidResponseError,
     LLMRateLimitError,
     LLMResult,
+    detect_image_mime_type,
 )
 
 
@@ -21,7 +22,7 @@ class OpenAICompatClient(LLMClient):
         model: str,
         base_url: str,
         api_key: str | None = None,
-        timeout: float = 60.0,
+        timeout: float = 180.0,
     ) -> None:
         self._provider = provider
         self._model = model
@@ -51,9 +52,21 @@ class OpenAICompatClient(LLMClient):
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
+        if images:
+            user_parts: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+            for img_b64 in images:
+                mime = detect_image_mime_type(img_b64)
+                url_val = (
+                    img_b64 if img_b64.startswith("data:") else f"data:{mime};base64,{img_b64}"
+                )
+                user_parts.append({"type": "image_url", "image_url": {"url": url_val}})
+            user_content: str | list[dict[str, Any]] = user_parts
+        else:
+            user_content = prompt
+
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": user_content},
         ]
 
         payload: dict[str, Any] = {

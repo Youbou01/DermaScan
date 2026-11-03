@@ -14,7 +14,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.append(str(BACKEND_DIR))
 
 # ruff: noqa: E402
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -178,7 +178,9 @@ async def import_cosing_inventory(
 
     # Load existing ingredients and aliases to avoid duplicates
     existing_inci_res = await db.execute(select(Ingredient.inci_name, Ingredient.id))
-    existing_by_inci: dict[str, uuid.UUID] = {row[0]: row[1] for row in existing_inci_res.all()}
+    existing_by_inci: dict[str, uuid.UUID] = {
+        row[0].strip().upper(): row[1] for row in existing_inci_res.all()
+    }
 
     existing_aliases_res = await db.execute(select(IngredientAlias.normalized_alias))
     known_normalized_aliases: set[str] = {row[0] for row in existing_aliases_res.all()}
@@ -190,7 +192,7 @@ async def import_cosing_inventory(
 
     for row in reader:
         cosing_ref = row.get("COSING Ref No", "").strip()
-        inci = row.get("INCI name", "").strip()
+        inci = row.get("INCI name", "").strip().upper()
         if not inci:
             continue
 
@@ -312,7 +314,7 @@ async def load_seed_data(db: AsyncSession) -> int:
 
     count = 0
     for row in reader:
-        inci = row["inci_name"].strip()
+        inci = row["inci_name"].strip().upper()
         risk_str = row.get("risk_level", "unknown").strip().lower()
         risk_level = RiskLevel(risk_str)
         source_ref = row.get("source_ref", "").strip() or None
@@ -329,7 +331,9 @@ async def load_seed_data(db: AsyncSession) -> int:
         else:
             rating = None
 
-        res = await db.execute(select(Ingredient).where(Ingredient.inci_name == inci))
+        res = await db.execute(
+            select(Ingredient).where(func.lower(Ingredient.inci_name) == inci.lower())
+        )
         ing = res.scalar_one_or_none()
         if not ing:
             ing = Ingredient(

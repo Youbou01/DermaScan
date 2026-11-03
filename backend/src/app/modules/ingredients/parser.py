@@ -23,6 +23,14 @@ _PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+_DISCLAIMER_PATTERNS = re.compile(
+    r"(?:please be aware that ingredient|les listes d['\u2019]ingr[ée]dients entrant|"
+    r"cette liste d['\u2019]ingr[ée]dients peut faire l['\u2019]objet|"
+    r"for the most up-to-date ingredient|"
+    r"avant d['\u2019]utiliser un produit de notre marque|refer to the product packaging).*$",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _BLOCK_PREFIX = re.compile(
     r"(?:^|[\n./;]|\s[-\u2013\u2014]\s)\s*(?P<tag>"
     + _PREFIX_WORDS
@@ -222,7 +230,8 @@ def _replace_extended_separators(text: str) -> str:
 
 def parse_ingredient_label(raw: str, preferred_lang: str | None = None) -> list[ParsedIngredient]:
     """Turn a label text into ordered ingredients. Never raises; returns [] for junk."""
-    text = unicodedata.normalize("NFKC", raw)
+    text = _DISCLAIMER_PATTERNS.sub("", raw).strip()
+    text = unicodedata.normalize("NFKC", text)
     text = _extract_best_language_block(text, preferred_lang)
     text = _PREFIX.sub("", text, count=1)
 
@@ -239,10 +248,26 @@ def parse_ingredient_label(raw: str, preferred_lang: str | None = None) -> list[
     text = text.replace("\n", " " if "," in text else ",")
     text = _CHEMICAL_COMMA.sub(_CHEMICAL_PLACEHOLDER, text)
 
+    raw_items: list[str] = _split_top_level(text)
+    candidate_items: list[str] = []
+    for chunk in raw_items:
+        if len(chunk) > 120:
+            subparts = re.split(r"(?:[\n;•·]|\.\s+(?=[A-Z\u00C0-\u00DC]))", chunk)
+            for sp in subparts:
+                sp_clean = sp.strip()
+                if len(sp_clean) > 120:
+                    continue
+                if sp_clean:
+                    candidate_items.append(sp_clean)
+        else:
+            candidate_items.append(chunk)
+
     items: list[ParsedIngredient] = []
-    for chunk in _split_top_level(text):
+    for chunk in candidate_items:
         cleaned, percentage = _clean_item(chunk)
         if cleaned:
+            if len(cleaned) > 120:
+                continue
             items.append(ParsedIngredient(len(items) + 1, cleaned, percentage))
     return items
 

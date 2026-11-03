@@ -19,6 +19,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,6 +43,15 @@ class Job(UUIDPrimaryKeyMixin, Base):
     __table_args__ = (
         enum_check("status", JobStatus),
         Index("ix_job_queue_status_scheduled_at", "queue", "status", "scheduled_at"),
+        Index(
+            "uq_job_pending_singleton_tasks",
+            "task_name",
+            unique=True,
+            postgresql_where=text(
+                "status = 'pending' AND task_name IN "
+                "('recompute_dirty_scores', 'backfill_pending_products', 'rate_ingredients')"
+            ),
+        ),
     )
 
     queue: Mapped[str] = mapped_column(
@@ -109,6 +120,33 @@ async def enqueue_job(
     return job.id
 
 
+async def enqueue_singleton_job(
+    session: AsyncSession,
+    task_name: str,
+    payload: dict[str, Any] | None = None,
+    queue: str = "default",
+) -> None:
+    """Idempotently enqueue a singleton maintenance task
+    (relies on uq_job_pending_singleton_tasks).
+    """
+    stmt = (
+        pg_insert(Job)
+        .values(
+            id=uuid.uuid7(),
+            queue=queue,
+            task_name=task_name,
+            payload=payload or {},
+            status=JobStatus.PENDING,
+            attempts=0,
+            max_attempts=3,
+            scheduled_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing()
+    )
+    async with session.begin_nested():
+        await session.execute(stmt)
+
+
 async def fetch_and_lock_next_job(session: AsyncSession, queue: str = "default") -> Job | None:
     """Fetch next available pending job using SELECT ... FOR UPDATE SKIP LOCKED."""
     now = datetime.now(UTC)
@@ -138,13 +176,17 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
     handler = _TASK_REGISTRY.get(job.task_name)
     now = datetime.now(UTC)
     start_t = time.perf_counter()
+    job_id = job.id
+    queue_name = job.queue
+    task_name = job.task_name
+    attempts = job.attempts
     if handler is None:
         job.status = JobStatus.FAILED
         job.finished_at = now
-        job.error = f"No handler registered for task '{job.task_name}'"
+        job.error = f"No handler registered for task '{task_name}'"
         await session.flush()
-        record_job_execution(job.queue, job.task_name, "failed", time.perf_counter() - start_t)
-        logger.error("job_no_handler", task=job.task_name, job_id=str(job.id))
+        record_job_execution(queue_name, task_name, "failed", time.perf_counter() - start_t)
+        logger.error("job_no_handler", task=task_name, job_id=str(job_id))
         return False
 
     try:
@@ -153,35 +195,47 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
         job.finished_at = datetime.now(UTC)
         job.error = None
         await session.flush()
-        record_job_execution(job.queue, job.task_name, "completed", time.perf_counter() - start_t)
-        logger.info("job_completed", task=job.task_name, job_id=str(job.id))
+        record_job_execution(queue_name, task_name, "completed", time.perf_counter() - start_t)
+        logger.info("job_completed", task=task_name, job_id=str(job_id))
         return True
     except Exception as exc:
-        job.error = str(exc)
+        await session.rollback()
+        db_job = await session.get(Job, job_id)
+        if db_job is None:
+            db_job = job
+            session.add(db_job)
+        db_job.attempts = attempts
+        db_job.error = f"{type(exc).__name__}: {exc!r}"
         duration_s = time.perf_counter() - start_t
-        if job.attempts < job.max_attempts:
-            backoff_secs = 2**job.attempts * 5
-            job.status = JobStatus.PENDING
-            job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)
-            record_job_execution(job.queue, job.task_name, "retrying", duration_s)
+        non_retryable = isinstance(exc, (ValueError, KeyError, IntegrityError))
+        if not non_retryable and db_job.attempts < db_job.max_attempts:
+            backoff_secs = 2**db_job.attempts * 5
+            db_job.status = JobStatus.PENDING
+            db_job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)
+            record_job_execution(queue_name, task_name, "retrying", duration_s)
             logger.warning(
                 "job_failed_retrying",
-                task=job.task_name,
-                job_id=str(job.id),
-                attempt=job.attempts,
-                error=str(exc),
+                task=task_name,
+                job_id=str(job_id),
+                attempt=db_job.attempts,
+                error=db_job.error,
             )
         else:
-            job.status = JobStatus.FAILED
-            job.finished_at = datetime.now(UTC)
-            record_job_execution(job.queue, job.task_name, "failed", duration_s)
+            db_job.status = JobStatus.FAILED
+            db_job.finished_at = datetime.now(UTC)
+            record_job_execution(queue_name, task_name, "failed", duration_s)
             logger.error(
                 "job_failed_exhausted",
-                task=job.task_name,
-                job_id=str(job.id),
-                attempts=job.attempts,
-                error=str(exc),
+                task=task_name,
+                job_id=str(job_id),
+                attempts=db_job.attempts,
+                error=db_job.error,
             )
+        job.status = db_job.status
+        job.attempts = db_job.attempts
+        job.error = db_job.error
+        job.scheduled_at = db_job.scheduled_at
+        job.finished_at = db_job.finished_at
         await session.flush()
         return False
 

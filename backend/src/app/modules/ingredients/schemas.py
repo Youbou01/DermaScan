@@ -38,6 +38,7 @@ class IngredientInfo(BaseModel):
     is_prohibited: bool = False
     is_restricted: bool = False
     is_allergen: bool = False
+    functions: tuple[str, ...] = ()
 
 
 class IngredientSuggestion(BaseModel):

@@ -146,3 +146,6 @@ class IngestionService:
             run_id=run_id,
         )
         return staging.id
+
+    async def increment_run_counter(self, run_id: uuid.UUID, key: str, delta: int = 1) -> None:
+        await self._repo.increment_run_counter(run_id, key=key, delta=delta)

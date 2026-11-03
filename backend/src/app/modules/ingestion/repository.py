@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.ingestion.enums import QuarantineStatus, RawProductSource
@@ -36,6 +36,20 @@ class IngestionRepository:
         reason: str,
         payload: dict[str, Any],
     ) -> QuarantineItem:
+        if raw_product_id is not None:
+            existing_stmt = select(QuarantineItem).where(
+                QuarantineItem.raw_product_id == raw_product_id,
+                QuarantineItem.stage == stage,
+                QuarantineItem.status == QuarantineStatus.PENDING,
+            )
+            existing = (await self._session.execute(existing_stmt)).scalar_one_or_none()
+            if existing is not None:
+                existing.reason = reason
+                existing.payload = payload
+                existing.created_at = datetime.now(UTC)
+                await self._session.flush()
+                return existing
+
         item = QuarantineItem(
             raw_product_id=raw_product_id,
             stage=stage,
@@ -121,6 +135,16 @@ class IngestionRepository:
         extracted_json: dict[str, Any],
         run_id: uuid.UUID | None = None,
     ) -> ScrapeStaging:
+        existing_stmt = select(ScrapeStaging).where(ScrapeStaging.url == url)
+        existing = (await self._session.execute(existing_stmt)).scalar_one_or_none()
+        if existing is not None:
+            existing.status = status
+            existing.content_hash = content_hash
+            existing.extracted_json = extracted_json
+            existing.run_id = run_id
+            await self._session.flush()
+            return existing
+
         staging = ScrapeStaging(
             url=url,
             status=status,
@@ -131,3 +155,33 @@ class IngestionRepository:
         self._session.add(staging)
         await self._session.flush()
         return staging
+
+    async def increment_run_counter(self, run_id: uuid.UUID, key: str, delta: int = 1) -> None:
+        stmt = text(
+            """
+            UPDATE ingestion_run
+            SET
+                counters = jsonb_set(
+                    COALESCE(counters, '{}'::jsonb),
+                    ARRAY[CAST(:key AS text)],
+                    to_jsonb(COALESCE((counters->>CAST(:key AS text))::int, 0) + :delta),
+                    true
+                ),
+                finished_at = CASE
+                    WHEN CAST(:key AS text) IN ('published', 'quarantined', 'failed', 'skipped')
+                     AND COALESCE((counters->>'enqueued')::int, 0) > 0
+                     AND (
+                         COALESCE((counters->>'published')::int, 0)
+                         + COALESCE((counters->>'quarantined')::int, 0)
+                         + COALESCE((counters->>'failed')::int, 0)
+                         + COALESCE((counters->>'skipped')::int, 0)
+                         + :delta
+                     ) >= COALESCE((counters->>'enqueued')::int, 0)
+                    THEN now()
+                    ELSE finished_at
+                END
+            WHERE id = :run_id
+            """
+        )
+        await self._session.execute(stmt, {"run_id": run_id, "key": key, "delta": delta})
+        await self._session.flush()

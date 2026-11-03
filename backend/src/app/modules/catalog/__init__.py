@@ -9,6 +9,7 @@ never from `models` or `repository` (enforced by import-linter).
 from app.modules.catalog.admin import ProductAdmin
 from app.modules.catalog.categories_router import router as categories_router
 from app.modules.catalog.category_service import CategorySeedNode, CategoryService
+from app.modules.catalog.enums import EnrichmentStatus, ImageStatus, ProductSource
 from app.modules.catalog.exceptions import (
     InvalidBarcodeError,
     InvalidCursorError,
@@ -16,7 +17,7 @@ from app.modules.catalog.exceptions import (
     ProductNotFoundError,
     SectionNotFoundError,
 )
-from app.modules.catalog.gtin import normalize_gtin
+from app.modules.catalog.gtin import compute_check_digit, normalize_gtin
 from app.modules.catalog.home_router import router as home_router
 from app.modules.catalog.home_service import HomeFeedService
 from app.modules.catalog.router import router as catalog_router
@@ -47,9 +48,11 @@ __all__ = [
     "CategoryService",
     "CreateProductInput",
     "DeduplicationResult",
+    "EnrichmentStatus",
     "HomeFeedOut",
     "HomeFeedService",
     "HomeSectionOut",
+    "ImageStatus",
     "InvalidBarcodeError",
     "InvalidCursorError",
     "InvalidLimitError",
@@ -58,10 +61,12 @@ __all__ = [
     "ProductDetail",
     "ProductIngredientOut",
     "ProductNotFoundError",
+    "ProductSource",
     "ProductUpsert",
     "SectionNotFoundError",
     "catalog_router",
     "categories_router",
+    "compute_check_digit",
     "home_router",
     "normalize_gtin",
 ]

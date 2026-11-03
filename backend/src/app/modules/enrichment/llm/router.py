@@ -43,7 +43,14 @@ class LLMRouter:
         self.settings = settings or get_settings()
         self.clients: dict[str, LLMClient] = dict(clients or {})
 
-    def get_client(self, provider: str) -> LLMClient:
+    def get_client(self, provider: str, task: str = "enrich") -> LLMClient:
+        cache_key = (
+            f"{provider}:{task}"
+            if (provider == "ollama" and task in ("vision", "ocr_ingredients"))
+            else provider
+        )
+        if cache_key in self.clients:
+            return self.clients[cache_key]
         if provider in self.clients:
             return self.clients[provider]
 
@@ -51,14 +58,20 @@ class LLMRouter:
         # In test mode or when no API key / local server configured, default to fake
         if self.settings.app_env == "test":
             client = FakeLLMClient(provider=provider, model="fake-test")
-            self.clients[provider] = client
+            self.clients[cache_key] = client
             return client
 
         if provider == "ollama":
+            model = (
+                self.settings.ollama_vision_model
+                if task in ("vision", "ocr_ingredients")
+                else self.settings.ollama_model
+            )
             client = OpenAICompatClient(
                 provider="ollama",
-                model=self.settings.ollama_model,
+                model=model,
                 base_url=self.settings.ollama_base_url,
+                timeout=self.settings.llm_timeout_seconds,
             )
         elif provider == "groq":
             client = OpenAICompatClient(
@@ -66,16 +79,18 @@ class LLMRouter:
                 model=self.settings.groq_model,
                 base_url="https://api.groq.com/openai/v1",
                 api_key=self.settings.groq_api_key,
+                timeout=self.settings.llm_timeout_seconds,
             )
         elif provider == "gemini":
             client = GeminiClient(
                 api_key=self.settings.gemini_api_key or "",
                 model=self.settings.gemini_model,
+                timeout=self.settings.llm_timeout_seconds,
             )
         else:
             client = FakeLLMClient(provider=provider, model="fallback-fake")
 
-        self.clients[provider] = client
+        self.clients[cache_key] = client
         return client
 
     def get_chain(self, task: str) -> list[str]:
@@ -164,7 +179,7 @@ class LLMRouter:
                 last_error = exc
                 continue
 
-            client = self.get_client(provider)
+            client = self.get_client(provider, task=task)
             current_prompt = prompt
             repair_attempts = 0
             max_retries = self.settings.llm_max_retries

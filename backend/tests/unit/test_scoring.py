@@ -73,13 +73,13 @@ def test_vector_4_nineteen_benign_one_high_at_pos_20() -> None:
 
 
 def test_vector_5_ten_unknown() -> None:
-    # 10 unknown => score = None, K = 0.000, insufficient = True, estimated = True
+    # 10 unknown => score = 60, K = 0.000, insufficient = False, estimated = True
     items = [_unknown(i) for i in range(1, 11)]
     result = calculate_score(items)
-    assert result.score is None
-    assert result.band == RiskLevel.UNKNOWN
+    assert result.score == 60
+    assert result.band == RiskLevel.MODERATE
     assert result.confidence == 0.000
-    assert result.insufficient_data
+    assert not result.insufficient_data
     assert result.is_estimated
 
 
@@ -117,14 +117,14 @@ def test_vector_8_five_moderate_fifteen_benign() -> None:
 
 
 def test_vector_9_two_benign_only() -> None:
-    # 2 benign only (n < 3) => score = None, K = 1.000, insufficient = True, estimated = False
+    # 2 benign only (n < 3) => score = 95, K = 1.000, insufficient = False, estimated = True
     items = [_benign(1), _benign(2)]
     result = calculate_score(items)
-    assert result.score is None
-    assert result.band == RiskLevel.UNKNOWN
+    assert result.score == 95
+    assert result.band == RiskLevel.LOW
     assert result.confidence == 1.000
-    assert result.insufficient_data
-    assert not result.is_estimated
+    assert not result.insufficient_data
+    assert result.is_estimated
 
 
 def test_vector_10_ten_benign_with_confidence_half() -> None:
@@ -143,10 +143,10 @@ def test_vector_10_ten_benign_with_confidence_half() -> None:
 
 def test_empty_list() -> None:
     result = calculate_score([])
-    assert result.score is None
-    assert result.band == RiskLevel.UNKNOWN
-    assert result.confidence == 0.0
-    assert result.insufficient_data
+    assert result.score == 50
+    assert result.band == RiskLevel.MODERATE
+    assert result.confidence == 0.10
+    assert not result.insufficient_data
     assert result.is_estimated
 
 

@@ -51,7 +51,7 @@ async def test_job_failure_triggers_backoff_and_exhaustion(db_session: AsyncSess
     async def failing_handler(payload: dict[str, str], session: AsyncSession) -> None:
         nonlocal fail_count
         fail_count += 1
-        raise ValueError(f"Simulated failure {fail_count}")
+        raise RuntimeError(f"Simulated failure {fail_count}")
 
     job_id = await enqueue_job(
         db_session,
@@ -60,6 +60,7 @@ async def test_job_failure_triggers_backoff_and_exhaustion(db_session: AsyncSess
         queue="default",
         max_attempts=2,
     )
+    await db_session.commit()
 
     # First attempt: should fail and reschedule
     job = await fetch_and_lock_next_job(db_session, queue="default")
@@ -74,10 +75,35 @@ async def test_job_failure_triggers_backoff_and_exhaustion(db_session: AsyncSess
     # Simulate second attempt
     job.attempts += 1
     job.status = JobStatus.RUNNING
+    await db_session.commit()
     success_2 = await execute_job(db_session, job)
     assert success_2 is False
     assert job.status == JobStatus.FAILED
     assert "Simulated failure 2" in str(job.error)
+
+
+async def test_job_non_retryable_failure_fails_immediately(db_session: AsyncSession) -> None:
+    @register_task("test_non_retryable_task")
+    async def non_retryable_handler(payload: dict[str, str], session: AsyncSession) -> None:
+        raise ValueError("Invalid configuration or input")
+
+    job_id = await enqueue_job(
+        db_session,
+        task_name="test_non_retryable_task",
+        payload={"key": "val"},
+        queue="default",
+        max_attempts=5,
+    )
+    await db_session.commit()
+
+    job = await fetch_and_lock_next_job(db_session, queue="default")
+    assert job is not None
+    assert job.id == job_id
+
+    success = await execute_job(db_session, job)
+    assert success is False
+    assert job.status == JobStatus.FAILED  # Immediately failed, no backoff
+    assert "ValueError" in str(job.error)
 
 
 async def test_run_pending_jobs_runner(db_session: AsyncSession) -> None:

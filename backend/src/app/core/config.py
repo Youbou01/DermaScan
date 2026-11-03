@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     groq_daily_request_cap: int = 14400
     llm_min_confidence: float = 0.6
     llm_max_retries: int = 2
+    llm_timeout_seconds: float = 180.0
 
     # --- Storage / CDN ---
     s3_endpoint_url: str | None = None

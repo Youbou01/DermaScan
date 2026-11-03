@@ -104,7 +104,7 @@ async def submit_photo_contribution(
         if raw_id:
             await enqueue_job(
                 session,
-                queue="default",
+                queue="enrichment",
                 task_name="enrich_raw_product",
                 payload={"raw_product_id": str(raw_id)},
             )
