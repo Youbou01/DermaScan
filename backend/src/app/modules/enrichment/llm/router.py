@@ -16,6 +16,7 @@ from app.modules.enrichment.llm.client import (
     LLMChainExhaustedError,
     LLMClient,
     LLMError,
+    LLMInvalidResponseError,
     LLMQuotaExhaustedError,
     LLMRateLimitError,
     LLMResult,
@@ -209,6 +210,9 @@ class LLMRouter:
                     continue
 
                 if res.parsed is None:
+                    last_error = LLMInvalidResponseError(
+                        f"Provider {provider} returned unparseable JSON: {res.content[:200]}"
+                    )
                     repair_attempts += 1
                     logger.info(
                         "repairing_unparseable_json",
@@ -239,6 +243,7 @@ class LLMRouter:
                     record_llm_request(provider, task, "success", max(0.0, res.latency_ms / 1000.0))
                     return validated, res
                 except ValidationError as err:
+                    last_error = err
                     repair_attempts += 1
                     logger.info(
                         "repairing_schema_validation_error",

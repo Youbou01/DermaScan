@@ -4,6 +4,7 @@ Extracts normalized metadata from raw OBF JSON records with exact category match
 brand normalization, preferred image selection, and language negotiation.
 """
 
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -160,17 +161,21 @@ class MappedProduct(BaseModel):
     field_provenance: dict[str, Any] = Field(default_factory=dict)
 
 
-def _clean_brand_token(token: str) -> str:
-    cleaned = token.strip()
-    if cleaned.lower().startswith(("en:", "fr:")):
-        cleaned = cleaned[3:].strip()
+_OBF_LANG_PREFIX_RE = re.compile(r"^[a-zA-Z]{2}:\s*")
+
+
+def _clean_brand_token(token: str, from_tags: bool = False) -> str:
+    cleaned = _OBF_LANG_PREFIX_RE.sub("", token.strip()).strip()
+    if from_tags and cleaned and cleaned.islower():
+        cleaned = cleaned.replace("-", " ").title()
     return cleaned
 
 
 def extract_brands(record: dict[str, Any]) -> tuple[list[str], str | None, str]:
     """Extract ordered non-empty brand tokens and identify primary brand."""
-    raw_brands = record.get("brands_tags") or record.get("brands")
-    source_key = "brands_tags" if record.get("brands_tags") else "brands"
+    raw_brands = record.get("brands") or record.get("brands_tags")
+    from_tags = bool(not record.get("brands") and record.get("brands_tags"))
+    source_key = "brands" if record.get("brands") else "brands_tags"
     brands: list[str] = []
     seen: set[str] = set()
 
@@ -183,7 +188,7 @@ def extract_brands(record: dict[str, Any]) -> tuple[list[str], str | None, str]:
         tokens.extend(raw_brands.split(","))
 
     for tok in tokens:
-        cleaned = _clean_brand_token(tok)
+        cleaned = _clean_brand_token(tok, from_tags=from_tags)
         if not cleaned:
             continue
         norm_key = cleaned.lower()

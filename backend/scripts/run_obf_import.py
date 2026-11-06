@@ -73,16 +73,20 @@ async def main(dump_path: Path, limit: int | None) -> int:
                     row = json.loads(line)
                     # Use a savepoint so a single failed row rolls back cleanly
                     async with db.begin_nested():
-                        success = await import_product_record(db, row, ingredient_service)
-                        if success:
-                            raw_id = await store_raw_product(db, obf_adapter.to_raw(row))
-                            if raw_id is not None:
-                                await enqueue_job(
-                                    db,
-                                    queue="enrichment",
-                                    task_name="enrich_raw_product",
-                                    payload={"raw_product_id": str(raw_id)},
-                                )
+                        raw_id = await store_raw_product(db, obf_adapter.to_raw(row))
+                        success = await import_product_record(
+                            db,
+                            row,
+                            ingredient_service=ingredient_service,
+                            raw_product_id=raw_id,
+                        )
+                        if success and raw_id is not None:
+                            await enqueue_job(
+                                db,
+                                queue="enrichment",
+                                task_name="enrich_raw_product",
+                                payload={"raw_product_id": str(raw_id)},
+                            )
 
                     if success:
                         imported_count += 1

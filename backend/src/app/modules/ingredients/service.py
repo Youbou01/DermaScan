@@ -21,6 +21,7 @@ from app.modules.ingredients.models import (
     derive_risk_from_rating,
 )
 from app.modules.ingredients.normalizer import normalize
+from app.modules.ingredients.parser import is_valid_ingredient_token
 from app.modules.ingredients.repository import IngredientRepository
 from app.modules.ingredients.schemas import (
     IngredientInfo,
@@ -128,8 +129,12 @@ class IngredientService:
             )
         return infos
 
-    async def find_unrated_ingredient_ids(self, limit: int = 100) -> list[uuid.UUID]:
-        return await self._repository.find_unrated_ids(limit=limit)
+    async def find_unrated_ingredient_ids(
+        self, limit: int = 100, only_product_linked: bool = False
+    ) -> list[uuid.UUID]:
+        return await self._repository.find_unrated_ids(
+            limit=limit, only_product_linked=only_product_linked
+        )
 
     async def add_alias(
         self,
@@ -305,7 +310,7 @@ class IngredientService:
         for item in inci_items:
             raw_orig = (item.get("original") or "").strip()
             clean_inci = (item.get("inci") or raw_orig).strip().upper()
-            if not clean_inci or len(clean_inci) > 120:
+            if not clean_inci or len(clean_inci) > 120 or not is_valid_ingredient_token(clean_inci):
                 continue
             norm_key = normalize(clean_inci)
             if not norm_key:

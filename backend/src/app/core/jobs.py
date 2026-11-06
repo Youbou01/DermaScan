@@ -207,8 +207,26 @@ async def execute_job(session: AsyncSession, job: Job) -> bool:
         db_job.attempts = attempts
         db_job.error = f"{type(exc).__name__}: {exc!r}"
         duration_s = time.perf_counter() - start_t
+        is_rate_or_quota = type(exc).__name__ in (
+            "LLMChainExhaustedError",
+            "LLMRateLimitError",
+            "LLMQuotaExhaustedError",
+        )
         non_retryable = isinstance(exc, (ValueError, KeyError, IntegrityError))
-        if not non_retryable and db_job.attempts < db_job.max_attempts:
+        if is_rate_or_quota and db_job.attempts < max(db_job.max_attempts, 6):
+            backoff_secs = min(300, 30 * db_job.attempts)
+            db_job.status = JobStatus.PENDING
+            db_job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)
+            record_job_execution(queue_name, task_name, "retrying", duration_s)
+            logger.warning(
+                "job_rate_limited_retrying",
+                task=task_name,
+                job_id=str(job_id),
+                attempt=db_job.attempts,
+                error=db_job.error,
+                cooldown_secs=backoff_secs,
+            )
+        elif not non_retryable and db_job.attempts < db_job.max_attempts:
             backoff_secs = 2**db_job.attempts * 5
             db_job.status = JobStatus.PENDING
             db_job.scheduled_at = datetime.now(UTC) + timedelta(seconds=backoff_secs)

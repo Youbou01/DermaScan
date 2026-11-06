@@ -14,6 +14,7 @@ from app.modules.ingredients.normalizer import normalize
 from app.modules.ingredients.parser import (
     ParsedIngredient,
     Suspicion,
+    is_valid_ingredient_token,
     looks_like_ingredient_list,
     parse_ingredient_label,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "ReviewStatus",
     "Suspicion",
     "candidate_keys",
+    "is_valid_ingredient_token",
     "looks_like_ingredient_list",
     "normalize",
     "parse_ingredient_label",

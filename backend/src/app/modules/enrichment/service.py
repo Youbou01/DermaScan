@@ -40,6 +40,7 @@ from app.modules.ingredients import (
     IngredientService,
     RatingSource,
     ReviewStatus,
+    is_valid_ingredient_token,
     normalize,
     parse_ingredient_label,
 )
@@ -137,6 +138,15 @@ class EnrichmentService:
             return EnrichmentOutcome(
                 status=EnrichmentStatus.FAILED, reason="not_skincare", result=res
             )
+
+        # Filter out invalid tokens
+        valid_ingredients = [
+            item
+            for item in res.ingredients_inci
+            if is_valid_ingredient_token(item.inci or item.original)
+            and is_valid_ingredient_token(item.original)
+        ]
+        res.ingredients_inci = valid_ingredients
 
         # 2. Ingredient count bounds
         if len(res.ingredients_inci) < 2:
@@ -242,43 +252,45 @@ class EnrichmentService:
 
             prompt = build_ingredient_rating_prompt(to_query)
             chain = self.router.get_chain("rate")
-            primary_provider = chain[0] if chain else "fake"
 
             # 1. Primary model call
-            primary_res, _ = await self.generate_json(
+            primary_res, primary_raw = await self.generate_json(
                 task="rate",
                 system=INGREDIENT_RATING_SYSTEM_PROMPT,
                 prompt=prompt,
                 schema=IngredientRatingBatchResult,
-                provider_chain=[primary_provider],
+                provider_chain=chain,
             )
 
-            primary_map = {item.inci: item for item in primary_res.ingredients}
+            primary_map = {item.inci.strip().upper(): item for item in primary_res.ingredients}
 
             # 2. Second opinion model call (if requested and second provider available)
             second_map: dict[str, Any] = {}
             second_provider: str | None = None
-            if second_opinion and len(chain) > 1:
-                second_provider = chain[1]
+            second_chain = [p for p in chain if p != primary_raw.provider]
+            if second_opinion and second_chain:
                 try:
-                    second_res, _ = await self.generate_json(
+                    second_res, second_raw = await self.generate_json(
                         task="rate",
                         system=INGREDIENT_RATING_SYSTEM_PROMPT,
                         prompt=prompt,
                         schema=IngredientRatingBatchResult,
-                        provider_chain=[second_provider],
+                        provider_chain=second_chain,
                     )
-                    second_map = {item.inci: item for item in second_res.ingredients}
+                    second_provider = second_raw.provider
+                    second_map = {
+                        item.inci.strip().upper(): item for item in second_res.ingredients
+                    }
                 except Exception as exc:
                     logger.warning("second_opinion_rating_failed", error=str(exc))
 
             # 3. Apply consensus, sanitize texts, and record ratings
             for inci, ing_id in id_by_inci.items():
-                p_item = primary_map.get(inci)
+                p_item = primary_map.get(inci.strip().upper())
                 if not p_item:
                     continue
 
-                s_item = second_map.get(inci)
+                s_item = second_map.get(inci.strip().upper())
                 if s_item is not None:
                     final_rating, final_conf, review_status = compute_consensus_rating(
                         r1=p_item.rating,
@@ -286,13 +298,13 @@ class EnrichmentService:
                         r2=s_item.rating,
                         c2=s_item.confidence,
                     )
-                    used_model = f"{primary_provider}+{second_provider}"
+                    used_model = f"{primary_raw.provider}+{second_provider}"
                 else:
                     final_rating, final_conf, review_status = compute_consensus_rating(
                         r1=p_item.rating,
                         c1=p_item.confidence,
                     )
-                    used_model = primary_provider
+                    used_model = primary_raw.provider
 
                 # Plain-language text validation and length limits
                 summary_en = validate_and_clean_plain_text(p_item.summary.get("en"), max_words=20)
@@ -388,14 +400,13 @@ class EnrichmentService:
 
         prompt = build_alias_adjudication_prompt(items_to_adjudicate)
         chain = self.router.get_chain("rate")
-        provider = chain[0] if chain else "fake"
 
         res, _ = await self.generate_json(
             task="adjudicate",
             system=ALIAS_ADJUDICATION_SYSTEM_PROMPT,
             prompt=prompt,
             schema=AliasAdjudicationResult,
-            provider_chain=[provider],
+            provider_chain=chain,
         )
 
         accepted_count = 0

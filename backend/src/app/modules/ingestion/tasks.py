@@ -245,7 +245,14 @@ async def enrich_raw_product_task(payload: dict[str, Any], session: AsyncSession
         matched_ids = [m.ingredient_id for m in matches if m.ingredient_id is not None]
         if matched_ids:
             infos = await ingredient_service.get_many(matched_ids, locale="en")
-            if any(info.rating is None for info in infos.values()):
+            unrated_ids = [str(info.id) for info in infos.values() if info.rating is None]
+            if unrated_ids:
+                await enqueue_job(
+                    session,
+                    queue="enrichment",
+                    task_name="rate_ingredients",
+                    payload={"ingredient_ids": unrated_ids},
+                )
                 await enqueue_singleton_job(
                     session,
                     task_name="rate_ingredients",

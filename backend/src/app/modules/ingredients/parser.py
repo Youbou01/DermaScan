@@ -309,12 +309,41 @@ def _clean_item(chunk: str) -> tuple[str, float | None]:
     return item, percentage
 
 
+_ALPHA_CHARS_RE = re.compile(r"[a-zA-Z\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF]")
+_FIL_OR_BATCH_CODE_RE = re.compile(
+    r"^(?:\(?F\.?I\.?L\.?\b.*|\(?[A-Z]{1,2}\d{2,}[A-Z0-9/]*\)?)$",
+    re.IGNORECASE,
+)
+_DOSAGE_ONLY_RE = re.compile(
+    r"^\d+(?:[.,]\d+)?\s*(?:mg|g|gr|kg|ml|cl|l|oz|fl\.?\s*oz|%|iu|ui)$",
+    re.IGNORECASE,
+)
+_HTML_ENTITY_JUNK_RE = re.compile(r"^(?:&?[lg]t;?|&?quot;?|&?amp;?)$", re.IGNORECASE)
+
+
+def is_valid_ingredient_token(text: str) -> bool:
+    cleaned = text.strip()
+    if len(cleaned) < 2 or len(cleaned) > 120:
+        return False
+    if len(_ALPHA_CHARS_RE.findall(cleaned)) < 2:
+        return False
+    if _FIL_OR_BATCH_CODE_RE.match(cleaned):
+        return False
+    if _DOSAGE_ONLY_RE.match(cleaned):
+        return False
+    return not bool(_HTML_ENTITY_JUNK_RE.match(cleaned))
+
+
 def looks_like_ingredient_list(parsed: Sequence[ParsedIngredient]) -> Suspicion:
     """Pure function inspecting parsed ingredient list for signs of junk or marketing text."""
     reasons: list[str] = []
 
     if len(parsed) < 2:
         reasons.append("fewer_than_2_items")
+
+    invalid_tokens = [p.text for p in parsed if not is_valid_ingredient_token(p.text)]
+    if len(parsed) - len(invalid_tokens) < 2:
+        reasons.append("fewer_than_2_valid_items")
 
     total_chars = 0
     digit_chars = 0

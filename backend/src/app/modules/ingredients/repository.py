@@ -3,7 +3,7 @@
 import uuid
 from collections.abc import Collection
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,15 +79,19 @@ class IngredientRepository:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def find_unrated_ids(self, limit: int = 100) -> list[uuid.UUID]:
-        stmt = (
-            select(Ingredient.id)
-            .where(
-                Ingredient.rating.is_(None),
-                Ingredient.rating_source != RatingSource.CURATED,
-            )
-            .limit(limit)
+    async def find_unrated_ids(
+        self, limit: int = 100, only_product_linked: bool = False
+    ) -> list[uuid.UUID]:
+        linked_expr = text(
+            "EXISTS (SELECT 1 FROM product_ingredient pi WHERE pi.ingredient_id = ingredient.id)"
         )
+        stmt = select(Ingredient.id).where(
+            Ingredient.rating.is_(None),
+            Ingredient.rating_source != RatingSource.CURATED,
+        )
+        if only_product_linked:
+            stmt = stmt.where(linked_expr)
+        stmt = stmt.order_by(desc(linked_expr), Ingredient.id.asc()).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

@@ -7,20 +7,28 @@ import httpx
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.jobs import register_task
+from app.core.jobs import enqueue_singleton_job, register_task
 from app.core.storage import get_storage_client
 from app.modules.catalog import CatalogService
 from app.modules.catalog.enums import ImageStatus
 from app.modules.enrichment.images import standardize_image, validate_image_candidate
 from app.modules.enrichment.service import EnrichmentService
+from app.modules.ingredients import IngredientService
 
 logger = structlog.get_logger(__name__)
 
 
 @register_task("rate_ingredients")
 async def rate_ingredients_task(payload: dict[str, Any], session: AsyncSession) -> None:
-    raw_ids = payload.get("ingredient_ids") or []
-    ingredient_ids = [uuid.UUID(str(i)) for i in raw_ids]
+    raw_ids = payload.get("ingredient_ids")
+    if raw_ids is not None:
+        ingredient_ids = [uuid.UUID(str(i)) for i in raw_ids]
+    else:
+        batch_size = int(payload.get("batch_size") or 50)
+        ingredient_ids = await IngredientService(session).find_unrated_ingredient_ids(
+            limit=batch_size, only_product_linked=True
+        )
+
     if not ingredient_ids:
         logger.info("rate_ingredients_task_empty")
         return
@@ -28,6 +36,25 @@ async def rate_ingredients_task(payload: dict[str, Any], session: AsyncSession) 
     service = EnrichmentService(session)
     count = await service.rate_ingredients(ingredient_ids)
     logger.info("rate_ingredients_task_finished", rated_count=count)
+
+    await enqueue_singleton_job(
+        session,
+        task_name="recompute_dirty_scores",
+        payload={"batch_size": 500},
+        queue="default",
+    )
+
+    remaining = await IngredientService(session).find_unrated_ingredient_ids(
+        limit=1, only_product_linked=True
+    )
+    if remaining:
+        batch_size = int(payload.get("batch_size") or 50)
+        await enqueue_singleton_job(
+            session,
+            task_name="rate_ingredients",
+            payload={"batch_size": batch_size},
+            queue="default",
+        )
 
 
 @register_task("process_product_image")

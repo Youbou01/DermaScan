@@ -14,7 +14,8 @@ def validate_and_clean_plain_text(text: str | None, max_words: int) -> str | Non
     if not text:
         return None
 
-    cleaned = FORBIDDEN_WORDS_RE.sub("concerning", text.strip())
+    cleaned = text.strip().replace("\ufffd", "")
+    cleaned = FORBIDDEN_WORDS_RE.sub("concerning", cleaned)
     words = cleaned.split()
     if len(words) <= max_words:
         return cleaned

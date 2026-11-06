@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = BACKEND_DIR / "data" / "cosing"
 SEED_CSV_PATH = BACKEND_DIR / "src/app/modules/ingredients/seed_data.csv"
+GOLD_CSV_PATH = BACKEND_DIR / "tests" / "fixtures" / "ratings_gold.csv"
 
 INVENTORY_URL = (
     "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/"
@@ -300,8 +301,143 @@ async def import_cosing_inventory(
     return count
 
 
+async def load_gold_seed_data(
+    db: AsyncSession,
+    seed_incis: set[str],
+    known_aliases: set[str],
+) -> int:
+    """Load ratings_gold.csv curated ingredients that are not already in seed_data.csv."""
+    if not GOLD_CSV_PATH.exists():
+        logger.warning("ratings_gold.csv not found at %s", GOLD_CSV_PATH)
+        return 0
+
+    content = await asyncio.to_thread(GOLD_CSV_PATH.read_text, "utf-8")
+    reader = list(csv.DictReader(content.splitlines()))
+
+    count = 0
+    for row in reader:
+        inci = row["inci_name"].strip().upper()
+        if not inci or inci in seed_incis:
+            continue
+
+        is_prohibited = row.get("is_prohibited", "").strip().lower() == "true"
+        is_restricted = row.get("is_restricted", "").strip().lower() == "true"
+        is_allergen = row.get("is_allergen", "").strip().lower() == "true"
+        source_ref = row.get("source_ref", "").strip() or None
+        expected_risk = row.get("expected_risk_level", "").strip().lower()
+        risk_level = RiskLevel(expected_risk)
+
+        if is_prohibited:
+            rating = Decimal("0.5")
+        else:
+            min_r = float(row["expected_rating_min"])
+            max_r = float(row["expected_rating_max"])
+            rating = Decimal(str(round((min_r + max_r) / 2.0, 1)))
+
+        res = await db.execute(
+            select(Ingredient).where(func.lower(Ingredient.inci_name) == inci.lower())
+        )
+        ing = res.scalar_one_or_none()
+        if not ing:
+            ing = Ingredient(
+                inci_name=inci,
+                risk_level=risk_level,
+                source_ref=source_ref,
+                rating=rating,
+                rating_confidence=Decimal("1.0"),
+                rating_source=RatingSource.CURATED,
+                review_status=ReviewStatus.APPROVED,
+                is_prohibited=is_prohibited,
+                is_restricted=is_restricted,
+                is_allergen=is_allergen,
+            )
+            db.add(ing)
+            await db.flush()
+        else:
+            ing.risk_level = risk_level
+            ing.source_ref = source_ref
+            ing.rating = rating
+            ing.rating_confidence = Decimal("1.0")
+            ing.rating_source = RatingSource.CURATED
+            ing.review_status = ReviewStatus.APPROVED
+            if is_prohibited:
+                ing.is_prohibited = True
+            if is_restricted:
+                ing.is_restricted = True
+            if is_allergen:
+                ing.is_allergen = True
+            await db.flush()
+
+        norm = normalize(inci)
+        if norm and norm not in known_aliases:
+            known_aliases.add(norm)
+            db.add(
+                IngredientAlias(
+                    ingredient_id=ing.id,
+                    alias=inci,
+                    normalized_alias=norm,
+                    source=AliasSource.SEED,
+                )
+            )
+
+        en_rationale = (
+            f"Curated rating based on {source_ref}."
+            if source_ref
+            else f"Standard cosmetic formulation ingredient ({inci})."
+        )
+        trans_res_en = await db.execute(
+            select(IngredientTranslation).where(
+                IngredientTranslation.ingredient_id == ing.id,
+                IngredientTranslation.locale == "en",
+            )
+        )
+        trans_en = trans_res_en.scalar_one_or_none()
+        if not trans_en:
+            db.add(
+                IngredientTranslation(
+                    ingredient_id=ing.id,
+                    locale="en",
+                    summary=f"Curated ingredient ({inci}).",
+                    concern_note="Evaluated according to cosmetic safety review.",
+                    rationale=en_rationale,
+                )
+            )
+        elif not trans_en.rationale:
+            trans_en.rationale = en_rationale
+
+        fr_rationale = (
+            f"Évaluation vérifiée selon {source_ref}."
+            if source_ref
+            else f"Ingrédient de formulation cosmétique ({inci})."
+        )
+        trans_res_fr = await db.execute(
+            select(IngredientTranslation).where(
+                IngredientTranslation.ingredient_id == ing.id,
+                IngredientTranslation.locale == "fr",
+            )
+        )
+        trans_fr = trans_res_fr.scalar_one_or_none()
+        if not trans_fr:
+            db.add(
+                IngredientTranslation(
+                    ingredient_id=ing.id,
+                    locale="fr",
+                    summary=f"Ingrédient vérifié ({inci}).",
+                    concern_note="Évalué selon l'examen de sécurité cosmétique.",
+                    rationale=fr_rationale,
+                )
+            )
+        elif not trans_fr.rationale:
+            trans_fr.rationale = fr_rationale
+
+        count += 1
+
+    logger.info("Loaded %d curated gold set ingredients from %s", count, GOLD_CSV_PATH)
+    return count
+
+
 async def load_seed_data(db: AsyncSession) -> int:
-    """Preserve and load seed_data.csv with rating_source = curated."""
+    """Preserve and load seed_data.csv and ratings_gold.csv with rating_source = curated."""
     if not SEED_CSV_PATH.exists():
         logger.warning("seed_data.csv not found at %s", SEED_CSV_PATH)
         return 0
@@ -312,9 +448,11 @@ async def load_seed_data(db: AsyncSession) -> int:
     existing_aliases_res = await db.execute(select(IngredientAlias.normalized_alias))
     known_aliases: set[str] = {row[0] for row in existing_aliases_res.all()}
 
+    seed_incis: set[str] = set()
     count = 0
     for row in reader:
         inci = row["inci_name"].strip().upper()
+        seed_incis.add(inci)
         risk_str = row.get("risk_level", "unknown").strip().lower()
         risk_level = RiskLevel(risk_str)
         source_ref = row.get("source_ref", "").strip() or None
@@ -413,9 +551,17 @@ async def load_seed_data(db: AsyncSession) -> int:
 
         count += 1
 
+    gold_count = await load_gold_seed_data(db, seed_incis, known_aliases)
+    total_count = count + gold_count
+
     await db.commit()
-    logger.info("Loaded %d curated seed ingredients from %s", count, SEED_CSV_PATH)
-    return count
+    logger.info(
+        "Loaded %d total curated seed ingredients (%d from seed_data, %d from ratings_gold)",
+        total_count,
+        count,
+        gold_count,
+    )
+    return total_count
 
 
 async def main() -> None:

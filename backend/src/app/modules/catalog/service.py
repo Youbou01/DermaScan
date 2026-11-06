@@ -29,12 +29,17 @@ from app.modules.catalog.schemas import (
     ProductUpsert,
 )
 from app.modules.catalog.search_text import normalize_name
-from app.modules.ingredients import IngredientInfo, IngredientService
+from app.modules.ingredients import (
+    IngredientInfo,
+    IngredientService,
+    is_valid_ingredient_token,
+)
 from app.modules.scoring import (
     INTERIM_RISK_TO_RATING,
     SCORING_VERSION,
     IngredientScoreInput,
     calculate_score,
+    resolve_effective_rating_and_confidence,
 )
 
 logger = structlog.get_logger(__name__)
@@ -287,6 +292,14 @@ class CatalogService:
             await self._session.flush()
 
         await self._products.delete_product_ingredients(product.id)
+        valid_ingredients = [
+            (raw_text, ing_id)
+            for _, raw_text, ing_id in data.ingredients
+            if is_valid_ingredient_token(raw_text)
+        ]
+        indexed_ingredients = [
+            (idx + 1, raw_text, ing_id) for idx, (raw_text, ing_id) in enumerate(valid_ingredients)
+        ]
         new_ingredients: list[ProductIngredient] = [
             ProductIngredient(
                 product_id=product.id,
@@ -294,16 +307,16 @@ class CatalogService:
                 raw_text=raw_text,
                 ingredient_id=ing_id,
             )
-            for pos, raw_text, ing_id in data.ingredients
+            for pos, raw_text, ing_id in indexed_ingredients
         ]
         self._session.add_all(new_ingredients)
         await self._session.flush()
 
-        all_ing_ids = {ing_id for _, _, ing_id in data.ingredients if ing_id is not None}
+        all_ing_ids = {ing_id for _, _, ing_id in indexed_ingredients if ing_id is not None}
         infos = await self._ingredients.get_many(all_ing_ids, locale="en") if all_ing_ids else {}
 
         score_inputs: list[IngredientScoreInput] = []
-        for pos, _, ing_id in data.ingredients:
+        for pos, _, ing_id in indexed_ingredients:
             info = infos.get(ing_id) if ing_id else None
             if info is not None:
                 rating = (
@@ -486,6 +499,15 @@ class CatalogService:
             can_update_field("ingredients", product.raw_ingredients_text if product else None)
             and data.ingredients
         ):
+            valid_ingredients = [
+                (raw_text, ing_id)
+                for _, raw_text, ing_id in data.ingredients
+                if is_valid_ingredient_token(raw_text)
+            ]
+            indexed_ingredients = [
+                (idx + 1, raw_text, ing_id)
+                for idx, (raw_text, ing_id) in enumerate(valid_ingredients)
+            ]
             await self._products.delete_product_ingredients(product.id)
             new_ingredients = [
                 ProductIngredient(
@@ -494,7 +516,7 @@ class CatalogService:
                     raw_text=raw_text,
                     ingredient_id=ing_id,
                 )
-                for pos, raw_text, ing_id in data.ingredients
+                for pos, raw_text, ing_id in indexed_ingredients
             ]
             self._session.add_all(new_ingredients)
             current_prov["ingredients"] = data.field_provenance.get(
@@ -674,16 +696,43 @@ def _ingredient_out(
             summary=None,
             confidence=None,
         )
+
+    eff_rating = info.rating
+    eff_conf = info.rating_confidence
+    eff_risk = info.risk_level
+
+    if eff_rating is None:
+        derived_rating, derived_conf = resolve_effective_rating_and_confidence(
+            IngredientScoreInput(
+                position=position,
+                rating=None,
+                confidence=0.0,
+                is_prohibited=info.is_prohibited,
+                is_restricted=info.is_restricted,
+                is_allergen=info.is_allergen,
+                functions=info.functions,
+            )
+        )
+        if derived_rating is not None:
+            eff_rating = derived_rating
+            eff_conf = derived_conf
+            if derived_rating >= 7.0:
+                eff_risk = RiskLevel.LOW
+            elif derived_rating >= 4.0:
+                eff_risk = RiskLevel.MODERATE
+            else:
+                eff_risk = RiskLevel.HIGH
+
     return ProductIngredientOut(
         position=position,
         name=raw_text,
         inci_name=info.inci_name,
         matched=True,
-        risk_level=info.risk_level,
+        risk_level=eff_risk,
         rationale=info.rationale,
-        rating=info.rating,
+        rating=eff_rating,
         summary=info.summary,
-        confidence=info.rating_confidence,
+        confidence=eff_conf,
     )
 
 

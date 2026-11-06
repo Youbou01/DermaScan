@@ -1,5 +1,6 @@
 """SQL for the catalog module. Private: the outside world uses `CatalogService`."""
 
+import re
 import uuid
 from collections.abc import Collection
 from typing import Any, cast
@@ -87,7 +88,7 @@ class ProductRepository:
         )
 
     async def get_or_create_brand(self, brand_name: str) -> Brand:
-        clean = brand_name.strip()
+        clean = re.sub(r"^[a-zA-Z]{2}:\s*", "", brand_name.strip()).strip()
         existing = await self._session.scalar(
             select(Brand).where(func.lower(Brand.name) == func.lower(clean))
         )

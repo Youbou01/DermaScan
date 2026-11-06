@@ -10,8 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.catalog import CatalogService, CreateProductInput
 from app.modules.catalog.enums import ProductSource
 from app.modules.ingestion.mapper import map_obf_record
+from app.modules.ingestion.service import IngestionService
 from app.modules.ingredients import (
     IngredientService,
+    ParsedIngredient,
+    is_valid_ingredient_token,
     looks_like_ingredient_list,
     parse_ingredient_label,
 )
@@ -37,6 +40,7 @@ async def import_product_record(
     ingredient_service: IngredientService | None = None,
     catalog_service: CatalogService | None = None,
     report: ImportReport | None = None,
+    raw_product_id: uuid.UUID | None = None,
 ) -> bool:
     """Import a single raw OBF product record strictly via catalog and ingredients services."""
     if report is None:
@@ -69,7 +73,22 @@ async def import_product_record(
         logger.warning("obf_record_no_ingredients_parsed", barcode=mapped.barcode)
         return False
 
-    suspicion = looks_like_ingredient_list(parsed_items)
+    valid_items = [
+        ParsedIngredient(position=idx + 1, text=item.text, percentage=item.percentage)
+        for idx, item in enumerate(p for p in parsed_items if is_valid_ingredient_token(p.text))
+    ]
+    if len(valid_items) < 2:
+        report.record_skip("fewer_than_2_valid_ingredients")
+        report.quarantined += 1
+        await IngestionService(db).quarantine(
+            raw_product_id=raw_product_id,
+            stage="obf_import",
+            reason="insufficient_valid_ingredients",
+            payload=row,
+        )
+        return False
+
+    suspicion = looks_like_ingredient_list(valid_items)
     if suspicion.is_suspicious:
         critical_reasons = {
             "contains_marketing_or_instruction_sentences",
@@ -79,6 +98,12 @@ async def import_product_record(
         if any(r in critical_reasons for r in suspicion.reasons):
             report.quarantined += 1
             report.record_skip("quarantined_suspicious")
+            await IngestionService(db).quarantine(
+                raw_product_id=raw_product_id,
+                stage="obf_import",
+                reason="suspicious_ingredients",
+                payload={"row": row, "reasons": suspicion.reasons},
+            )
             logger.warning(
                 "obf_record_quarantined",
                 barcode=mapped.barcode,
@@ -91,11 +116,11 @@ async def import_product_record(
     if catalog_service is None:
         catalog_service = CatalogService(db)
 
-    raw_tokens = [item.text for item in parsed_items]
+    raw_tokens = [item.text for item in valid_items]
     matches = await ingredient_service.match(raw_tokens)
 
     ingredients_data: list[tuple[int, str, uuid.UUID | None]] = []
-    for item, match in zip(parsed_items, matches, strict=True):
+    for item, match in zip(valid_items, matches, strict=True):
         ingredients_data.append((item.position, item.text, match.ingredient_id))
 
     input_data = CreateProductInput(
