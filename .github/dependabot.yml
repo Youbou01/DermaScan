@@ -30,3 +30,7 @@ updates:
       - dependency-name: "@types/react"
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "glob"
+        # Blocked transitively by Expo SDK 58 tooling (@expo/cli -> @expo/config -> glob ^13),
+        # and Dependabot cannot reach the first fixed version (14.0.2) until an SDK upgrade.
+        # Ignore for now so the Dependabot workflow doesn't fail on an impossible security bump.
