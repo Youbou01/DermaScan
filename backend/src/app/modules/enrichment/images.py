@@ -68,10 +68,7 @@ def validate_image_candidate(image_bytes: bytes) -> tuple[bool, str | None]:
 
             ratio = w / h
             if ratio < MIN_ASPECT_RATIO or ratio > MAX_ASPECT_RATIO:
-                msg = (
-                    f"invalid_aspect_ratio: {ratio:.2f} "
-                    f"not in [{MIN_ASPECT_RATIO}, {MAX_ASPECT_RATIO}]"
-                )
+                msg = f"invalid_aspect_ratio: {ratio:.2f} not in [{MIN_ASPECT_RATIO}, {MAX_ASPECT_RATIO}]"
                 return False, msg
 
             # Check if nearly empty or solid image (extrema check)

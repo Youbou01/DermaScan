@@ -88,27 +88,23 @@ def upgrade() -> None:
     )
 
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status "
-        "CHECK (enrichment_status IN ('pending', 'done', 'quarantined', 'failed'))"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status CHECK (enrichment_status IN ('pending', 'done', 'quarantined', 'failed'))"
     )
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_image_status "
-        "CHECK (image_status IN ('none', 'candidate', 'processed', 'failed'))"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_image_status CHECK (image_status IN ('none', 'candidate', 'processed', 'failed'))"
     )
 
     # Update source check constraint to include new sources
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_source")
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_source "
-        "CHECK (source IN ('open_beauty_facts', 'scrape', 'user_photo', 'manual'))"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_source CHECK (source IN ('open_beauty_facts', 'scrape', 'user_photo', 'manual'))"
     )
 
 
 def downgrade() -> None:
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_source")
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_source "
-        "CHECK (source IN ('open_beauty_facts', 'manual'))"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_source CHECK (source IN ('open_beauty_facts', 'manual'))"
     )
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_image_status")
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_enrichment_status")

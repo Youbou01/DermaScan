@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.catalog.enums import EnrichmentStatus
 
@@ -11,6 +11,7 @@ class IngredientInciItem(BaseModel):
 
 
 class ProductEnrichmentResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     is_skincare: bool
     is_skincare_confidence: float = Field(ge=0.0, le=1.0)
     brand: str | None = None
@@ -43,6 +44,7 @@ class SingleIngredientRating(BaseModel):
 
 
 class IngredientRatingBatchResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     ingredients: list[SingleIngredientRating] = Field(default_factory=list)
 
 
@@ -54,10 +56,12 @@ class AliasAdjudicationItem(BaseModel):
 
 
 class AliasAdjudicationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     adjudications: list[AliasAdjudicationItem] = Field(default_factory=list)
 
 
 class OcrIngredientsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     ingredients_text: str = Field(
         description="Raw ingredients list transcribed from the product photo"
     )

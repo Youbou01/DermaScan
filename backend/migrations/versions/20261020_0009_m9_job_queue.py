@@ -60,8 +60,7 @@ def upgrade() -> None:
         unique=False,
     )
     op.execute(
-        "ALTER TABLE job ADD CONSTRAINT ck_job_status "
-        "CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled'))"
+        "ALTER TABLE job ADD CONSTRAINT ck_job_status CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled'))"
     )
 
 

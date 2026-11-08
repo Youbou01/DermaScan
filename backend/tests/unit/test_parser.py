@@ -114,10 +114,7 @@ def test_newlines_separate_items_when_there_are_no_commas() -> None:
 
 
 def test_a_realistic_french_label() -> None:
-    raw = (
-        "Ingrédients : Aqua (Eau), Glycerin, Cetearyl Alcohol, Parfum (Fragrance), "
-        "Phenoxyethanol, Tocopherol*, Citric Acid. +/- CI 77891"
-    )
+    raw = "Ingrédients : Aqua (Eau), Glycerin, Cetearyl Alcohol, Parfum (Fragrance), Phenoxyethanol, Tocopherol*, Citric Acid. +/- CI 77891"
     assert texts(raw) == [
         "Aqua (Eau)",
         "Glycerin",
@@ -195,8 +192,7 @@ def test_suspicion_detector_flags_anomalies() -> None:
 
     # Spanish modo de empleo
     es_usage = parse_ingredient_label(
-        "SPRAY PROTECTOR SOLAR SPF 50 KIDS. "
-        "MODO DE EMPLEO: Producto para uso corporal. Agitar antes de usar."
+        "SPRAY PROTECTOR SOLAR SPF 50 KIDS. MODO DE EMPLEO: Producto para uso corporal. Agitar antes de usar."
     )
     susp_es = looks_like_ingredient_list(es_usage)
     assert susp_es.is_suspicious

@@ -27,6 +27,8 @@ services:
     profiles: ["app"]
     build: .
     command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
     environment: &app-env
       APP_ENV: local
       # Inside the compose network the database host is "db", not localhost.
@@ -38,6 +40,8 @@ services:
   api:
     profiles: ["app"]
     build: .
+    env_file:
+      - .env
     environment: *app-env
     ports:
       - "127.0.0.1:8000:8000"
@@ -49,6 +53,8 @@ services:
     profiles: ["app"]
     build: .
     command: ["python", "-m", "app.worker"]
+    env_file:
+      - .env
     environment: *app-env
     depends_on:
       migrate:

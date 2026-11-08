@@ -69,30 +69,24 @@ def upgrade() -> None:
     op.create_index("ix_ingredient_taxonomy_id", "ingredient", ["taxonomy_id"], unique=False)
 
     op.execute(
-        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_rating_source "
-        "CHECK (rating_source IN ('regulatory', 'curated', 'ai', 'unrated'))"
+        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_rating_source CHECK (rating_source IN ('regulatory', 'curated', 'ai', 'unrated'))"
     )
     op.execute(
-        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_review_status "
-        "CHECK (review_status IN ('auto', 'needs_review', 'approved'))"
+        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_review_status CHECK (review_status IN ('auto', 'needs_review', 'approved'))"
     )
     op.execute(
-        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_rating_range "
-        "CHECK (rating IS NULL OR (rating >= 0 AND rating <= 10))"
+        "ALTER TABLE ingredient ADD CONSTRAINT ck_ingredient_rating_range CHECK (rating IS NULL OR (rating >= 0 AND rating <= 10))"
     )
 
     # Backfill ratings for existing ingredients to satisfy rating_risk_level_sync
     op.execute(
-        "UPDATE ingredient SET rating = 9.0, rating_source = 'curated' "
-        "WHERE risk_level = 'low' AND rating IS NULL"
+        "UPDATE ingredient SET rating = 9.0, rating_source = 'curated' WHERE risk_level = 'low' AND rating IS NULL"
     )
     op.execute(
-        "UPDATE ingredient SET rating = 5.5, rating_source = 'curated' "
-        "WHERE risk_level = 'moderate' AND rating IS NULL"
+        "UPDATE ingredient SET rating = 5.5, rating_source = 'curated' WHERE risk_level = 'moderate' AND rating IS NULL"
     )
     op.execute(
-        "UPDATE ingredient SET rating = 2.0, rating_source = 'curated' "
-        "WHERE risk_level = 'high' AND rating IS NULL"
+        "UPDATE ingredient SET rating = 2.0, rating_source = 'curated' WHERE risk_level = 'high' AND rating IS NULL"
     )
     op.execute("UPDATE ingredient SET rating_source = 'unrated' WHERE rating IS NULL")
 

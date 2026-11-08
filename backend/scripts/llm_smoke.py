@@ -31,10 +31,7 @@ class SmokeTestSchema(BaseModel):
 async def test_provider(client: LLMClient) -> None:
     logger.info("Testing provider: %s (model: %s)", client.provider, client.model)
     system = "You are a skincare product classifier. Respond strictly in JSON."
-    prompt = (
-        "Classify this product: 'La Roche-Posay Anthelios UVMune 400 Invisible Fluid SPF50+ 50ml'. "
-        "Return is_skincare, brand, name_clean, and confidence."
-    )
+    prompt = "Classify this product: 'La Roche-Posay Anthelios UVMune 400 Invisible Fluid SPF50+ 50ml'. Return is_skincare, brand, name_clean, and confidence."
     schema = SmokeTestSchema.model_json_schema()
 
     start = time.monotonic()

@@ -343,8 +343,7 @@ class IngredientService:
                             locale="en",
                             summary=f"Cosmetic formulation ingredient ({clean_inci}).",
                             concern_note=(
-                                "Generally well-tolerated cosmetic ingredient "
-                                "at standard formulation levels."
+                                "Generally well-tolerated cosmetic ingredient at standard formulation levels."
                             ),
                             rationale=f"Cosmetic formulation ingredient ({clean_inci}).",
                         ),
@@ -353,8 +352,7 @@ class IngredientService:
                             locale="fr",
                             summary=f"Ingrédient de formulation cosmétique ({clean_inci}).",
                             concern_note=(
-                                "Ingrédient cosmétique généralement bien toléré "
-                                "aux concentrations usuelles."
+                                "Ingrédient cosmétique généralement bien toléré aux concentrations usuelles."
                             ),
                             rationale=f"Ingrédient de formulation cosmétique ({clean_inci}).",
                         ),

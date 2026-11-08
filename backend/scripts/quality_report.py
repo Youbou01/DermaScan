@@ -229,8 +229,7 @@ async def generate_quality_report(db: AsyncSession, output_path: Path) -> str:
         f"- **Stale / Dirty Scores Remaining**: {stale_scores:,} (target: 0)",
         f"- **Ingredient Items > 120 Characters**: {long_items:,}",
         (
-            f"- **Unknown Band Share (Products >= 5 Ingredients)**: "
-            f"{pct_unknown_5_plus:.1f}% ({unknown_among_5_plus:,}/{with_5_plus_ingredients:,})"
+            f"- **Unknown Band Share (Products >= 5 Ingredients)**: {pct_unknown_5_plus:.1f}% ({unknown_among_5_plus:,}/{with_5_plus_ingredients:,})"
         ),
         "",
         "### Score Bands Distribution",

@@ -31,8 +31,7 @@ def upgrade() -> None:
         ),
     )
     op.execute(
-        "ALTER TABLE ingredient_alias ADD CONSTRAINT ck_ingredient_alias_source "
-        "CHECK (source IN ('seed', 'cosing', 'taxonomy', 'ai', 'manual'))"
+        "ALTER TABLE ingredient_alias ADD CONSTRAINT ck_ingredient_alias_source CHECK (source IN ('seed', 'cosing', 'taxonomy', 'ai', 'manual'))"
     )
 
 

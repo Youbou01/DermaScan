@@ -31,18 +31,9 @@ DATA_DIR = BACKEND_DIR / "data" / "cosing"
 SEED_CSV_PATH = BACKEND_DIR / "src/app/modules/ingredients/seed_data.csv"
 GOLD_CSV_PATH = BACKEND_DIR / "tests" / "fixtures" / "ratings_gold.csv"
 
-INVENTORY_URL = (
-    "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/"
-    "COSING_Ingredients-Fragrance.Inventory_v2.csv"
-)
-ANNEX_II_URL = (
-    "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/"
-    "COSING_Annex.II_v2.csv"
-)
-ANNEX_III_URL = (
-    "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/"
-    "COSING_Annex.III_v2.csv"
-)
+INVENTORY_URL = "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/COSING_Ingredients-Fragrance.Inventory_v2.csv"
+ANNEX_II_URL = "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/COSING_Annex.II_v2.csv"
+ANNEX_III_URL = "https://raw.githubusercontent.com/openfoodfacts/openbeautyfacts/master/cosing/COSING_Annex.III_v2.csv"
 
 EU_FRAGRANCE_ALLERGENS = {
     "AMYL CINNAMAL",

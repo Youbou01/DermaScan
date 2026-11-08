@@ -42,10 +42,7 @@ class GeminiClient(LLMClient):
         schema: dict[str, Any] | None = None,
         images: list[str] | None = None,
     ) -> LLMResult:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self._model}:generateContent?key={self._api_key}"
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:generateContent?key={self._api_key}"
 
         parts: list[dict[str, Any]] = [{"text": prompt}]
         if images:

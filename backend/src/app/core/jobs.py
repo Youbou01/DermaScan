@@ -48,8 +48,7 @@ class Job(UUIDPrimaryKeyMixin, Base):
             "task_name",
             unique=True,
             postgresql_where=text(
-                "status = 'pending' AND task_name IN "
-                "('recompute_dirty_scores', 'backfill_pending_products', 'rate_ingredients')"
+                "status = 'pending' AND task_name IN ('recompute_dirty_scores', 'backfill_pending_products', 'rate_ingredients')"
             ),
         ),
     )

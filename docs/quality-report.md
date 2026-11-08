@@ -1,66 +1,70 @@
 # DermaScan Quality and Health Report
 
-*Generated on: 2026-11-06 14:21:39 UTC*
+*Generated on: 2026-11-08 16:52:25 UTC*
 
 ## 1. Catalog Coverage Overview
 
-- **Total Products**: 18,032
-- **With Category**: 2,412 (13.4%)
-- **With Brand**: 16,317 (90.5%)
+- **Total Products**: 15,912
+- **With Category**: 2,273 (14.3%)
+- **With Brand**: 14,743 (92.7%)
 - **With Image**: 3 (0.0%)
-- **With >= 5 Parsed Ingredients**: 17,172 (95.2%)
+- **With >= 5 Parsed Ingredients**: 15,226 (95.7%)
 
 ## 2. Risk Band & Scoring Quality (Phase 0 Targets)
 
 - **Stale / Dirty Scores Remaining**: 0 (target: 0)
 - **Ingredient Items > 120 Characters**: 0
-- **Unknown Band Share (Products >= 5 Ingredients)**: 0.0% (0/17,172)
+- **Unknown Band Share (Products >= 5 Ingredients)**: 0.0% (0/15,226)
 
 ### Score Bands Distribution
 
 | Risk Level | Count | Share |
 |---|---|---|
-| `low` | 859 | 4.8% |
-| `moderate` | 5,057 | 28.0% |
-| `high` | 12,116 | 67.2% |
+| `low` | 606 | 3.8% |
+| `moderate` | 4,495 | 28.2% |
+| `high` | 10,811 | 67.9% |
 | `unknown` | 0 | 0.0% |
 
 ### Numerical Score Buckets (0-100)
 
 | Range | Count | Share (of total) |
 |---|---|---|
-| 80 - 100 (Safe/Clean) | 216 | 1.2% |
-| 60 - 79 | 5,131 | 28.5% |
-| 40 - 59 | 647 | 3.6% |
-| 20 - 39 | 11,960 | 66.3% |
-| 0 - 19 (High concern) | 78 | 0.4% |
+| 80 - 100 (Safe/Clean) | 109 | 0.7% |
+| 60 - 79 | 4,451 | 28.0% |
+| 40 - 59 | 582 | 3.7% |
+| 20 - 39 | 10,725 | 67.4% |
+| 0 - 19 (High concern) | 45 | 0.3% |
 | Unscored (`None`) | 0 | 0.0% |
 
 ## 3. Ingestion & Pipeline Staging (Phase 1 & 2)
 
-- **Raw Products Total**: 14
-- **Ingestion Runs Total**: 1
-- **Quarantine Items Total**: 1,063
+- **Raw Products Total**: 19
+- **Ingestion Runs Total**: 5
+- **Quarantine Items Total**: 748
 
 ### Raw Products By Source
 
 | Source | Count |
 |---|---|
-| `open_beauty_facts` | 9 |
-| `scrape` | 5 |
+| `open_beauty_facts` | 11 |
+| `scrape` | 7 |
+| `user_photo` | 1 |
 
 ### Quarantine Items By Status
 
 | Status | Count |
 |---|---|
-| `pending` | 1,063 |
+| `approved` | 2 |
+| `pending` | 744 |
+| `rejected` | 2 |
 
 ### Quarantine Items By Reason
 
 | Reason | Count |
 |---|---|
-| `ambiguous_duplicate` | 1 |
-| `insufficient_valid_ingredients` | 1,054 |
+| `ambiguous_duplicate` | 5 |
+| `insufficient_valid_ingredients` | 734 |
+| `not_skincare` | 1 |
 | `parser_llm_disagree` | 8 |
 
 ## 4. Product Enrichment & Media Pipeline
@@ -69,36 +73,38 @@
 
 | Status | Count |
 |---|---|
-| `done` | 4 |
-| `pending` | 18,028 |
+| `done` | 6 |
+| `pending` | 15,906 |
 
 ### Product Image Status
 
 | Image Status | Count |
 |---|---|
-| `none` | 18,029 |
+| `none` | 15,909 |
 | `processed` | 3 |
 
 ## 5. Ingredient Intelligence & Ratings
 
-- **Total Ingredients in Dictionary**: 24,020
+- **Total Ingredients in Dictionary**: 24,008
 
 ### Ratings By Source
 
 | Rating Source | Count |
 |---|---|
-| `curated` | 391 |
-| `regulatory` | 851 |
-| `unrated` | 22,778 |
+| `ai` | 2,747 |
+| `curated` | 173 |
+| `regulatory` | 872 |
+| `unrated` | 20,216 |
 
 ## 6. PostgreSQL Job Queue Status
 
-- **Total Jobs Tracked**: 58
+- **Total Jobs Tracked**: 2,386
 
 | Job Status | Count |
 |---|---|
-| `completed` | 57 |
-| `failed` | 1 |
+| `completed` | 2,377 |
+| `failed` | 6 |
+| `pending` | 3 |
 
 ## 7. Overhaul Verification Summary
 

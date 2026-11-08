@@ -84,6 +84,7 @@ select = [
     "DTZ",      # no naive datetimes
     "C4", "SIM", "PT", "RUF", "T20",
 ]
+ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "ANN"]           # asserts and untyped fixtures are fine in tests

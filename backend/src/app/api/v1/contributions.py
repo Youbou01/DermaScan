@@ -134,7 +134,6 @@ async def submit_photo_contribution(
         "barcode": norm_barcode,
         "status": "quarantined",
         "message": (
-            "Photo received, but ingredient label was low confidence or unreadable. "
-            "Queued for human review."
+            "Photo received, but ingredient label was low confidence or unreadable. Queued for human review."
         ),
     }

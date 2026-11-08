@@ -78,10 +78,7 @@ def _sign_s3_v4(
     k_signing = _hmac(k_service, "aws4_request")
     signature = hmac.new(k_signing, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
 
-    auth_header = (
-        f"{algorithm} Credential={access_key}/{credential_scope}, "
-        f"SignedHeaders={signed_headers_str}, Signature={signature}"
-    )
+    auth_header = f"{algorithm} Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers_str}, Signature={signature}"
     return {
         **headers,
         "x-amz-date": amz_date,

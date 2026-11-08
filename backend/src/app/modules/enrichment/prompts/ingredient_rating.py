@@ -22,5 +22,5 @@ def build_ingredient_rating_prompt(ingredients: list[dict[str, Any]]) -> str:
     return (
         "Assess the following batch of cosmetic ingredients:\n\n"
         f"Ingredients:\n{json.dumps(ingredients, ensure_ascii=False, indent=2)}\n\n"
-        "Respond with a JSON object matching the IngredientRatingBatchResult schema.\n"
+        "Respond with a JSON object having the exact root key 'ingredients' containing the list of assessed items matching the IngredientRatingBatchResult schema.\n"
     )

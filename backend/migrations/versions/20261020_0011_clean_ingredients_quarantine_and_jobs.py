@@ -189,8 +189,7 @@ def upgrade() -> None:
     # 7. Update ck_product_enrichment_status to include 'in_progress'
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_enrichment_status;")
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status "
-        "CHECK (enrichment_status IN ('pending', 'in_progress', 'done', 'quarantined', 'failed'));"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status CHECK (enrichment_status IN ('pending', 'in_progress', 'done', 'quarantined', 'failed'));"
     )
 
     # 8. Flag products with >120 char ingredient blobs for re-enrichment and delete the >120 char blobs
@@ -276,8 +275,7 @@ def downgrade() -> None:
     )
     op.execute("ALTER TABLE product DROP CONSTRAINT IF EXISTS ck_product_enrichment_status;")
     op.execute(
-        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status "
-        "CHECK (enrichment_status IN ('pending', 'done', 'quarantined', 'failed'));"
+        "ALTER TABLE product ADD CONSTRAINT ck_product_enrichment_status CHECK (enrichment_status IN ('pending', 'done', 'quarantined', 'failed'));"
     )
     op.drop_index("uq_ingredient_inci_name_lower", table_name="ingredient")
     op.create_unique_constraint("uq_ingredient_inci_name", "ingredient", ["inci_name"])

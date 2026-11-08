@@ -32,10 +32,6 @@ To administer these operational workflows, the backend requires:
    - Downstream AI enrichment pipelines are prohibited from overwriting `curated` ratings.
    - Dependent products referencing the updated ingredient are marked `score_dirty = True` and rescoring jobs are automatically enqueued.
 
-5. **Scraping Framework Scope and Guardrails:**
-   - Web ingestion targets only publicly available HTML pages and open data formats (JSON-LD / Schema.org `Product`). [--]
-   - Scrapers must never reverse-engineer private mobile applications, bypass authentication or certificate pinning, or circumvent anti-bot protections. [--]
-   - Crawlers enforce politeness controls: host-level token-bucket rate limiting, jittered intervals, exponential backoff on 429/5xx, and rotating user-agent headers. [--]
 
 ## Consequences
 - Administrative functions and review dashboards are secure, authenticated, and decoupled from client traffic.

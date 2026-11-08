@@ -260,9 +260,19 @@ class EnrichmentService:
                 prompt=prompt,
                 schema=IngredientRatingBatchResult,
                 provider_chain=chain,
+                schema_version=2,
             )
 
             primary_map = {item.inci.strip().upper(): item for item in primary_res.ingredients}
+
+            logger.info(
+                "rate_batch",
+                n_inputs=len(to_query),
+                n_returned=len(primary_res.ingredients),
+                n_matched=sum(1 for i in id_by_inci if primary_map.get(i.strip().upper())),
+                provider=primary_raw.provider,
+                cached=primary_raw.cached,
+            )
 
             # 2. Second opinion model call (if requested and second provider available)
             second_map: dict[str, Any] = {}
@@ -276,6 +286,7 @@ class EnrichmentService:
                         prompt=prompt,
                         schema=IngredientRatingBatchResult,
                         provider_chain=second_chain,
+                        schema_version=2,
                     )
                     second_provider = second_raw.provider
                     second_map = {

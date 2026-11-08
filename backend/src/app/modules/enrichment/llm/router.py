@@ -203,10 +203,7 @@ class LLMRouter:
                     logger.warning("provider_error_retry", provider=provider, error=str(exc))
                     last_error = exc
                     repair_attempts += 1
-                    current_prompt = (
-                        f"{prompt}\n\nYour previous response encountered an error. "
-                        f"Output only valid JSON satisfying the schema."
-                    )
+                    current_prompt = f"{prompt}\n\nYour previous response encountered an error. Output only valid JSON satisfying the schema."
                     continue
 
                 if res.parsed is None:
@@ -219,10 +216,7 @@ class LLMRouter:
                         provider=provider,
                         attempt=repair_attempts,
                     )
-                    current_prompt = (
-                        f"{prompt}\n\nYour response was not valid JSON. "
-                        f"Return ONLY a valid JSON object matching the schema."
-                    )
+                    current_prompt = f"{prompt}\n\nYour response was not valid JSON. Return ONLY a valid JSON object matching the schema."
                     continue
 
                 try:
@@ -251,10 +245,7 @@ class LLMRouter:
                         attempt=repair_attempts,
                         error=str(err),
                     )
-                    current_prompt = (
-                        f"{prompt}\n\nYour JSON was invalid: {err}. "
-                        f"Correct the fields and return ONLY valid JSON matching the schema."
-                    )
+                    current_prompt = f"{prompt}\n\nYour JSON was invalid: {err}. Correct the fields and return ONLY valid JSON matching the schema."
 
         record_llm_request("chain", task, "exhausted", 0.0)
         raise LLMChainExhaustedError(

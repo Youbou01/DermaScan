@@ -15,10 +15,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "barcode",
-          "photo"
-        ],
+        "required": ["barcode", "photo"],
         "title": "Body_contributions_submit_photo_contribution",
         "type": "object"
       },
@@ -43,10 +40,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug",
-          "name"
-        ],
+        "required": ["slug", "name"],
         "title": "CategoryNodeOut",
         "type": "object"
       },
@@ -63,10 +57,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug",
-          "name"
-        ],
+        "required": ["slug", "name"],
         "title": "CategoryOut",
         "type": "object"
       },
@@ -90,12 +81,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "barcode",
-          "status",
-          "message"
-        ],
+        "required": ["id", "barcode", "status", "message"],
         "title": "ContributionResponse",
         "type": "object"
       },
@@ -122,9 +108,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "sections"
-        ],
+        "required": ["sections"],
         "title": "HomeFeedOut",
         "type": "object"
       },
@@ -172,13 +156,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "type",
-          "title",
-          "items",
-          "next_cursor"
-        ],
+        "required": ["id", "type", "title", "items", "next_cursor"],
         "title": "HomeSectionOut",
         "type": "object"
       },
@@ -204,10 +182,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "Page[ProductSummary]",
         "type": "object"
       },
@@ -275,11 +250,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
+        "required": ["type", "title", "status"],
         "title": "ProblemDetails",
         "type": "object"
       },
@@ -358,15 +329,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "brand",
-          "image_url",
-          "score",
-          "score_band",
-          "category_slug"
-        ],
+        "required": ["id", "name", "brand", "image_url", "score", "score_band", "category_slug"],
         "title": "ProductCardOut",
         "type": "object"
       },
@@ -558,14 +521,7 @@
             "title": "Summary"
           }
         },
-        "required": [
-          "position",
-          "name",
-          "inci_name",
-          "matched",
-          "risk_level",
-          "rationale"
-        ],
+        "required": ["position", "name", "inci_name", "matched", "risk_level", "rationale"],
         "title": "ProductIngredientOut",
         "type": "object"
       },
@@ -624,26 +580,13 @@
             "description": "'unknown' means insufficient data, NOT safe."
           }
         },
-        "required": [
-          "id",
-          "barcode",
-          "name",
-          "brand",
-          "image_url",
-          "score",
-          "score_band"
-        ],
+        "required": ["id", "barcode", "name", "brand", "image_url", "score", "score_band"],
         "title": "ProductSummary",
         "type": "object"
       },
       "RiskLevel": {
         "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe.",
-        "enum": [
-          "low",
-          "moderate",
-          "high",
-          "unknown"
-        ],
+        "enum": ["low", "moderate", "high", "unknown"],
         "title": "RiskLevel",
         "type": "string"
       },
@@ -679,11 +622,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError",
         "type": "object"
       }
@@ -716,9 +655,7 @@
           }
         },
         "summary": "List the category tree",
-        "tags": [
-          "categories"
-        ]
+        "tags": ["categories"]
       }
     },
     "/api/v1/contributions": {
@@ -757,9 +694,7 @@
           }
         },
         "summary": "Submit Photo Contribution",
-        "tags": [
-          "contributions"
-        ]
+        "tags": ["contributions"]
       }
     },
     "/api/v1/home": {
@@ -813,9 +748,7 @@
           }
         },
         "summary": "Home feed sections",
-        "tags": [
-          "home"
-        ]
+        "tags": ["home"]
       }
     },
     "/api/v1/home/sections/{section_id}": {
@@ -905,9 +838,7 @@
           }
         },
         "summary": "Load more items for one home section",
-        "tags": [
-          "home"
-        ]
+        "tags": ["home"]
       }
     },
     "/api/v1/products/by-barcode/{barcode}": {
@@ -958,9 +889,7 @@
           }
         },
         "summary": "Get a product by scanning its barcode",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/filter": {
@@ -1142,9 +1071,7 @@
           }
         },
         "summary": "Filter scored products, best score first",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/search": {
@@ -1220,9 +1147,7 @@
           }
         },
         "summary": "Search products by name (accent-insensitive, typo-tolerant)",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/{product_id}": {
@@ -1273,9 +1198,7 @@
           }
         },
         "summary": "Get a product by id",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/health/live": {
@@ -1298,9 +1221,7 @@
           }
         },
         "summary": "Live",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/health/ready": {
@@ -1323,9 +1244,7 @@
           }
         },
         "summary": "Ready",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     }
   }
