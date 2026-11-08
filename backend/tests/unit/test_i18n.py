@@ -17,7 +17,8 @@ from app.core.i18n import pick_translation, resolve_locale
         ("en;q=0.5,fr;q=0.9", "fr"),  # quality beats order
         ("de,fr;q=0.5", "fr"),  # first unsupported language is skipped
         ("de", "en"),
-        ("ar", "en"),  # not supported yet: falls back until "ar" is added
+        ("es", "en"),  # unsupported language falls back to en
+        ("ar", "ar"),  # supported optional locale per ADR-0016
         ("fr;q=0,en", "en"),  # q=0 means "not acceptable"
         ("*", "en"),
         ("fr;q=abc", "en"),  # malformed quality is ignored, never an error

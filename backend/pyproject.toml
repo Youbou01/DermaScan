@@ -7,8 +7,17 @@ requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
     "asyncpg>=0.32.0",
+    "extruct>=0.18.0",
     "fastapi>=0.143.2",
+    "httpx>=0.28.1",
+    "itsdangerous>=2.2.0",
+    "pillow>=13.0.0",
+    "prometheus-client>=0.26.0",
     "pydantic-settings>=2.16.0",
+    "python-multipart>=0.0.32",
+    "pyyaml>=6.0.3",
+    "scipy>=1.18.1",
+    "sqladmin>=0.32.0",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
@@ -25,12 +34,15 @@ packages = ["src/app"]
 dev = [
     "httpx>=0.28.1",
     "import-linter>=2.15",
+    "locust>=2.47.0",
     "mypy>=2.4.0",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.17.1",
     "testcontainers[postgres]>=4.15.0",
+    "types-pillow>=10.2.0.20240822",
+    "types-pyyaml>=6.0.12.20261030",
 ]
 
 # ---------------------------------------------------------------- Alembic
@@ -72,6 +84,7 @@ select = [
     "DTZ",      # no naive datetimes
     "C4", "SIM", "PT", "RUF", "T20",
 ]
+ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "ANN"]           # asserts and untyped fixtures are fine in tests
@@ -102,10 +115,10 @@ type = "layers"
 layers = ["app.main", "app.api", "app.modules", "app.core"]
 
 [[tool.importlinter.contracts]]
-name = "Modules: ingestion > catalog > ingredients | scoring (no cycles, no sideways imports)"
+name = "Modules: ingestion > enrichment > catalog > ingredients | scoring (no cycles, no sideways imports)"
 type = "layers"
 containers = ["app.modules"]
-layers = ["ingestion", "catalog", "ingredients | scoring"]
+layers = ["ingestion", "enrichment", "catalog", "ingredients | scoring"]
 
 # Each module's internals (models, repository) are private: only the module itself
 # may import them. Everyone else goes through the module's public interface.
@@ -121,3 +134,15 @@ name = "catalog internals are private"
 type = "protected"
 protected_modules = ["app.modules.catalog.models"]
 allowed_importers = ["app.modules.catalog"]
+
+[[tool.importlinter.contracts]]
+name = "enrichment internals are private"
+type = "protected"
+protected_modules = ["app.modules.enrichment.models"]
+allowed_importers = ["app.modules.enrichment"]
+
+[[tool.importlinter.contracts]]
+name = "ingestion internals are private"
+type = "protected"
+protected_modules = ["app.modules.ingestion.models", "app.modules.ingestion.repository"]
+allowed_importers = ["app.modules.ingestion"]

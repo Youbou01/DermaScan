@@ -73,8 +73,8 @@ async def test_seed_categories_is_idempotent(db_session: AsyncSession) -> None:
 
     assert first > 0
     assert second == 0
-    assert cats_1 == cats_2 == 15
-    assert tr_1 == tr_2 == 30
+    assert cats_1 == cats_2 == 19
+    assert tr_1 == tr_2 == 38
 
 
 async def test_seeded_tree_structure_via_api(

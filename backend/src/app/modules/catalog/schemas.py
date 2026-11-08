@@ -2,10 +2,12 @@
 changing a field name or type is a breaking API change (mention it in the PR)."""
 
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import RiskLevel
+from app.modules.catalog.enums import EnrichmentStatus, ProductSource
 
 
 class CategoryOut(BaseModel):
@@ -36,6 +38,9 @@ class ProductIngredientOut(BaseModel):
     matched: bool = Field(description="False when we do not recognize this ingredient yet.")
     risk_level: RiskLevel = Field(description="'unknown' when not recognized or not rated.")
     rationale: str | None = Field(description="Why it is rated this way, in the response language.")
+    rating: float | None = Field(default=None, description="0.0-10.0 scale, 10 = least concern.")
+    summary: str | None = Field(default=None, description="Plain-language function summary.")
+    confidence: float | None = Field(default=None, description="Rating confidence 0.0-1.0.")
 
 
 class ProductDetail(BaseModel):
@@ -50,6 +55,7 @@ class ProductDetail(BaseModel):
     score: int | None = Field(description="0-100, or null when the product is not scored.")
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_coverage: float | None = Field(description="Share (0-1) of ingredients we could rate.")
+    score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     ingredients: list[ProductIngredientOut] = Field(description="In label order.")
 
 
@@ -66,6 +72,7 @@ class ProductCardOut(BaseModel):
     score_band: RiskLevel | None = Field(
         description="Null when the product has no score; 'unknown' means insufficient data."
     )
+    score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     category_slug: str | None
 
 
@@ -83,3 +90,53 @@ class HomeFeedOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sections: list[HomeSectionOut]
+
+
+class CreateProductInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    barcode: str
+    name: str
+    source: ProductSource = ProductSource.OPEN_BEAUTY_FACTS
+    source_id: str
+    brand_name: str | None = None
+    category_slug: str | None = None
+    image_url: str | None = None
+    raw_ingredients_text: str = ""
+    source_lang: str | None = None
+    name_i18n: dict[str, str] = Field(default_factory=dict)
+    field_provenance: dict[str, Any] = Field(default_factory=dict)
+    ingredients: list[tuple[int, str, uuid.UUID | None]] = Field(default_factory=list)
+
+
+class ProductUpsert(BaseModel):
+    """Canonical DTO for publishing enriched or curated products into the catalog."""
+
+    model_config = ConfigDict(frozen=True)
+
+    barcode: str
+    name: str
+    source: ProductSource = ProductSource.OPEN_BEAUTY_FACTS
+    source_id: str
+    source_lang: str | None = None
+    name_i18n: dict[str, str] = Field(default_factory=dict)
+    brand_name: str | None = None
+    category_slug: str | None = None
+    image_url: str | None = None
+    image_source_url: str | None = None
+    raw_ingredients_text: str = ""
+    ingredients: list[tuple[int, str, uuid.UUID | None]] = Field(default_factory=list)
+    field_provenance: dict[str, Any] = Field(default_factory=dict)
+    enrichment_status: EnrichmentStatus = EnrichmentStatus.DONE
+    data_quality: float | None = None
+
+
+class DeduplicationResult(BaseModel):
+    """Result of cross-source deduplication and canonical / fuzzy matching."""
+
+    model_config = ConfigDict(frozen=True)
+
+    match_status: str  # "exact_barcode" | "fuzzy_match" | "ambiguous" | "new"
+    product_id: uuid.UUID | None = None
+    similarity: float | None = None
+    candidate_matches: list[tuple[uuid.UUID, str, float]] = Field(default_factory=list)

@@ -60,8 +60,7 @@ PRODUCTS: list[tuple[str, str, str, str]] = [
         "619000000001",
         "Soft Day Cream",
         "Demo Brand",
-        "Ingredients: Aqua (Water), Glycerin, Cetearyl Alcohol, Parfum (Fragrance), "
-        "Tocopherol*, Citric Acid. +/- CI 77891",
+        "Ingredients: Aqua (Water), Glycerin, Cetearyl Alcohol, Parfum (Fragrance), Tocopherol*, Citric Acid. +/- CI 77891",
     ),
     (
         "619000000002",
@@ -115,13 +114,11 @@ async def seed(session: AsyncSession) -> None:
 
         if len(ingredient_ids) > 1:
             raise ValueError(
-                f"Demo ingredient {inci!r} aliases belong to multiple ingredients; "
-                "resolve the dictionary collision before seeding."
+                f"Demo ingredient {inci!r} aliases belong to multiple ingredients; resolve the dictionary collision before seeding."
             )
         if canonical is not None and ingredient_ids and canonical.id not in ingredient_ids:
             raise ValueError(
-                f"Demo ingredient {inci!r} conflicts with an existing alias owner; "
-                "resolve the dictionary collision before seeding."
+                f"Demo ingredient {inci!r} conflicts with an existing alias owner; resolve the dictionary collision before seeding."
             )
 
         if canonical is None and ingredient_ids:

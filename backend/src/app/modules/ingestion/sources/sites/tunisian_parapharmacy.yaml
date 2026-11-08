@@ -1,0 +1,12 @@
+name: "tunisian_parapharmacy"
+base_url: "https://example-parapharmacie.tn"
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+rate_limit_rps: 0.5
+respect_robots: false
+selectors:
+  name: "h1.h1.page-title, h1.product-name"
+  brand: ".product-manufacturer a, .manufacturer"
+  barcode: ".product-reference span, [itemprop='sku']"
+  ingredients: "#description .ingredients, .tab-ingredients, .product-ingredients"
+  image: ".product-cover img, .js-qv-product-cover"
+  category: ".breadcrumb ol li:nth-last-child(2)"

@@ -1,14 +1,27 @@
 """The ingredients module's public service."""
 
 import uuid
-from collections.abc import Collection, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
+from decimal import Decimal
+from typing import ClassVar
 
+import structlog
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.i18n import DEFAULT_LOCALE
+from app.core.jobs import enqueue_singleton_job
+from app.modules.ingredients.enums import AliasSource, RatingSource, ReviewStatus
 from app.modules.ingredients.matching import candidate_keys
+from app.modules.ingredients.models import (
+    Ingredient,
+    IngredientAlias,
+    IngredientTranslation,
+    derive_risk_from_rating,
+)
 from app.modules.ingredients.normalizer import normalize
+from app.modules.ingredients.parser import is_valid_ingredient_token
 from app.modules.ingredients.repository import IngredientRepository
 from app.modules.ingredients.schemas import (
     IngredientInfo,
@@ -17,8 +30,21 @@ from app.modules.ingredients.schemas import (
     MatchType,
 )
 
+logger = structlog.get_logger(__name__)
+
 
 class IngredientService:
+    _dirty_hooks: ClassVar[
+        list[Callable[[AsyncSession, Collection[uuid.UUID]], Awaitable[int]]]
+    ] = []
+
+    @classmethod
+    def register_dirty_hook(
+        cls, hook: Callable[[AsyncSession, Collection[uuid.UUID]], Awaitable[int]]
+    ) -> None:
+        if hook not in cls._dirty_hooks:
+            cls._dirty_hooks.append(hook)
+
     def __init__(self, session: AsyncSession) -> None:
         self._repository = IngredientRepository(session)
 
@@ -73,23 +99,60 @@ class IngredientService:
         translations = await self._repository.get_translations(
             ingredients.keys(), {locale, DEFAULT_LOCALE}
         )
-        by_ingredient: dict[uuid.UUID, dict[str, str]] = {}
+        by_ingredient: dict[uuid.UUID, dict[str, IngredientTranslation]] = {}
         for translation in translations:
             by_ingredient.setdefault(translation.ingredient_id, {})[translation.locale] = (
-                translation.rationale
+                translation
             )
 
         infos: dict[uuid.UUID, IngredientInfo] = {}
         for ingredient_id, ingredient in ingredients.items():
-            texts = by_ingredient.get(ingredient_id, {})
+            trans_map = by_ingredient.get(ingredient_id, {})
+            trans = trans_map.get(locale) or trans_map.get(DEFAULT_LOCALE)
             infos[ingredient_id] = IngredientInfo(
                 id=ingredient_id,
                 inci_name=ingredient.inci_name,
                 risk_level=RiskLevel(ingredient.risk_level),
-                rationale=texts.get(locale) or texts.get(DEFAULT_LOCALE),
+                rationale=trans.rationale if trans else None,
                 source_ref=ingredient.source_ref,
+                rating=float(ingredient.rating) if ingredient.rating is not None else None,
+                rating_confidence=(
+                    float(ingredient.rating_confidence)
+                    if ingredient.rating_confidence is not None
+                    else None
+                ),
+                summary=trans.summary if trans else None,
+                is_prohibited=ingredient.is_prohibited,
+                is_restricted=ingredient.is_restricted,
+                is_allergen=ingredient.is_allergen,
+                functions=tuple(ingredient.functions or ()),
             )
         return infos
+
+    async def find_unrated_ingredient_ids(
+        self, limit: int = 100, only_product_linked: bool = False
+    ) -> list[uuid.UUID]:
+        return await self._repository.find_unrated_ids(
+            limit=limit, only_product_linked=only_product_linked
+        )
+
+    async def add_alias(
+        self,
+        ingredient_id: uuid.UUID,
+        alias: str,
+        language: str | None = None,
+        source: AliasSource = AliasSource.AI,
+    ) -> bool:
+        normalized = normalize(alias)
+        if not normalized:
+            return False
+        return await self._repository.add_alias_if_not_exists(
+            ingredient_id=ingredient_id,
+            alias=alias,
+            normalized_alias=normalized,
+            language=language,
+            source=source,
+        )
 
     async def suggest(
         self, text: str, *, limit: int = 5, min_similarity: float = 0.4
@@ -117,3 +180,194 @@ class IngredientService:
                     similarity=round(similarity, 3),
                 )
         return list(best.values())[:limit]
+
+    async def set_rating(
+        self,
+        ingredient_id: uuid.UUID,
+        rating: Decimal | float | None,
+        confidence: Decimal | float | None = None,
+        source: RatingSource = RatingSource.AI,
+        source_ref: str | None = None,
+        model: str | None = None,
+        version: int = 1,
+        review_status: ReviewStatus | None = None,
+        functions: list[str] | None = None,
+        summary_i18n: dict[str, str] | None = None,
+        concern_note_i18n: dict[str, str] | None = None,
+        mark_dirty: bool = True,
+        dirty_notifier: Callable[[Collection[uuid.UUID]], Awaitable[int]] | None = None,
+    ) -> bool:
+        """Single authoritative writer of ingredient rating, risk_level, and regulatory state.
+
+        Marks affected catalog products score_dirty = True when rating changes.
+        """
+        ingredient = await self._repository.get(ingredient_id)
+        if not ingredient:
+            return False
+
+        # Protect curated ratings from being overwritten by AI
+        if ingredient.rating_source == RatingSource.CURATED and source != RatingSource.CURATED:
+            logger.info("cannot_overwrite_curated_rating", ingredient_id=str(ingredient_id))
+            return False
+
+        final_rating: Decimal | None
+        final_source: RatingSource
+        final_ref: str | None
+
+        # Regulatory pre-rule: Annex II prohibited forces 0.5 rating and regulatory source
+        if ingredient.is_prohibited:
+            final_rating = Decimal("0.5")
+            final_source = RatingSource.REGULATORY
+            final_ref = source_ref or "EU CosIng Annex II (Prohibited)"
+        else:
+            final_rating = Decimal(str(rating)) if rating is not None else None
+            final_source = source
+            # Annex III / fragrance allergen cap: cannot exceed 8.0
+            if (
+                (ingredient.is_restricted or ingredient.is_allergen)
+                and final_rating is not None
+                and final_rating > Decimal("8.0")
+            ):
+                final_rating = Decimal("8.0")
+            final_ref = source_ref
+
+        # DB constraint requires source_ref when risk is moderate or high
+        if final_rating is not None and final_rating < Decimal("7.0") and not final_ref:
+            final_ref = f"{final_source.value}:{model or 'assessment'}"
+
+        expected_risk = derive_risk_from_rating(final_rating)
+        ingredient.risk_level = expected_risk
+        ingredient.rating = final_rating
+        ingredient.source_ref = final_ref
+        ingredient.rating_source = final_source
+        if confidence is not None:
+            ingredient.rating_confidence = Decimal(str(confidence))
+        ingredient.rating_version = version
+        if model is not None:
+            ingredient.rating_model = model
+        if functions is not None:
+            ingredient.functions = functions
+
+        if review_status is not None:
+            ingredient.review_status = review_status
+        elif (
+            final_rating is not None
+            and final_rating < Decimal("4.0")
+            and final_source == RatingSource.AI
+        ):
+            ingredient.review_status = ReviewStatus.NEEDS_REVIEW
+        else:
+            ingredient.review_status = ReviewStatus.AUTO
+
+        # Translations update
+        locales = set((summary_i18n or {}).keys()) | set((concern_note_i18n or {}).keys())
+        for loc in locales:
+            trans = await self._repository.get_translation(ingredient_id, loc)
+            sum_text = (summary_i18n or {}).get(loc)
+            con_text = (concern_note_i18n or {}).get(loc)
+            if trans is None:
+                rationale = con_text or sum_text or ""
+                new_trans = IngredientTranslation(
+                    ingredient_id=ingredient_id,
+                    locale=loc,
+                    rationale=rationale,
+                    summary=sum_text,
+                    concern_note=con_text,
+                )
+                self._repository._session.add(new_trans)
+            else:
+                if sum_text is not None:
+                    trans.summary = sum_text
+                if con_text is not None:
+                    trans.concern_note = con_text
+                if not trans.rationale and (con_text or sum_text):
+                    trans.rationale = con_text or sum_text or ""
+
+        await self._repository._session.flush()
+
+        if mark_dirty:
+            if dirty_notifier:
+                await dirty_notifier([ingredient_id])
+            for hook in self._dirty_hooks:
+                await hook(self._repository._session, [ingredient_id])
+            await enqueue_singleton_job(
+                self._repository._session,
+                task_name="recompute_dirty_scores",
+                payload={"batch_size": 500},
+                queue="default",
+            )
+
+        return True
+
+    async def ensure_ingredients_exist(
+        self, inci_items: list[dict[str, str | None]]
+    ) -> list[uuid.UUID]:
+        """Ensure every LLM-cleaned INCI ingredient exists in the dictionary (case-insensitive)
+        and has a normalized alias so exact matching links 100% of enriched ingredients.
+        """
+        session = self._repository._session
+        created_or_found_ids: list[uuid.UUID] = []
+        for item in inci_items:
+            raw_orig = (item.get("original") or "").strip()
+            clean_inci = (item.get("inci") or raw_orig).strip().upper()
+            if not clean_inci or len(clean_inci) > 120 or not is_valid_ingredient_token(clean_inci):
+                continue
+            norm_key = normalize(clean_inci)
+            if not norm_key:
+                continue
+
+            existing = await session.scalar(
+                select(Ingredient).where(func.lower(Ingredient.inci_name) == clean_inci.lower())
+            )
+            if existing is None:
+                alias_row = await session.scalar(
+                    select(IngredientAlias).where(IngredientAlias.normalized_alias == norm_key)
+                )
+                if alias_row is not None:
+                    existing = await session.get(Ingredient, alias_row.ingredient_id)
+
+            if existing is None:
+                existing = Ingredient(
+                    inci_name=clean_inci,
+                    risk_level=RiskLevel.UNKNOWN,
+                    rating=None,
+                    rating_source=RatingSource.UNRATED,
+                    review_status=ReviewStatus.AUTO,
+                )
+                session.add(existing)
+                await session.flush()
+                session.add_all(
+                    [
+                        IngredientTranslation(
+                            ingredient_id=existing.id,
+                            locale="en",
+                            summary=f"Cosmetic formulation ingredient ({clean_inci}).",
+                            concern_note=(
+                                "Generally well-tolerated cosmetic ingredient at standard formulation levels."
+                            ),
+                            rationale=f"Cosmetic formulation ingredient ({clean_inci}).",
+                        ),
+                        IngredientTranslation(
+                            ingredient_id=existing.id,
+                            locale="fr",
+                            summary=f"Ingrédient de formulation cosmétique ({clean_inci}).",
+                            concern_note=(
+                                "Ingrédient cosmétique généralement bien toléré aux concentrations usuelles."
+                            ),
+                            rationale=f"Ingrédient de formulation cosmétique ({clean_inci}).",
+                        ),
+                    ]
+                )
+
+            for candidate_alias in {clean_inci, raw_orig}:
+                c_norm = normalize(candidate_alias)
+                if c_norm and len(candidate_alias) <= 120:
+                    await self._repository.add_alias_if_not_exists(
+                        ingredient_id=existing.id,
+                        alias=candidate_alias,
+                        normalized_alias=c_norm,
+                        source=AliasSource.AI,
+                    )
+            await session.flush()
+            created_or_found_ids.append(existing.id)
+        return created_or_found_ids

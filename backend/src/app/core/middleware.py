@@ -15,6 +15,8 @@ import structlog
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.metrics import record_http_request
+
 REQUEST_ID_HEADER = "X-Request-ID"
 # Reject anything odd (log injection, huge values): letters, digits, dot, dash, underscore.
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
@@ -52,13 +54,20 @@ class RequestContextMiddleware:
         try:
             await self.app(scope, receive, send_with_request_id)
         finally:
+            duration_s = time.perf_counter() - started
             path: str = scope["path"]
+            record_http_request(
+                method=scope["method"],
+                endpoint=path,
+                status_code=status_code,
+                duration_s=duration_s,
+            )
             log = logger.debug if path.startswith("/health") else logger.info  # probes are noisy
             log(
                 "request_completed",
                 method=scope["method"],
                 path=path,
                 status_code=status_code,
-                duration_ms=round((time.perf_counter() - started) * 1000, 1),
+                duration_ms=round(duration_s * 1000, 1),
             )
             structlog.contextvars.clear_contextvars()

@@ -20,6 +20,15 @@ Write one when a choice is hard to reverse, surprising to a newcomer, or took a 
 | [0008](0008-engineering-quality-gates.md) | Tooling and quality gates | Accepted |
 | [0009](0009-ingredient-matching.md) | Ingredient matching is exact; fuzzy only suggests | Accepted |
 | [0010](0010-mobile-stack.md) | Mobile stack: Expo SDK 58, Router, generated API client | Accepted |
+| [0011](0011-job-queue.md) | PostgreSQL transactional job queue with SKIP LOCKED | Accepted |
+| [0012](0012-llm-gateway.md) | LLM Gateway and Free Provider Strategy | Accepted |
+| [0013](0013-enrichment-pipeline.md) | AI Enrichment Pipeline and Raw Store Architecture | Accepted |
+| [0014](0014-ingredient-rating-model.md) | Ingredient Rating Model and Consensus Architecture | Accepted |
+| [0015](0015-scoring-v3.md) | Scoring Algorithm v3 (Continuous Power Mean & Shrinkage) | Accepted |
+| [0016](0016-language-and-i18n.md) | Multilingual Product Names and Arabic Support | Accepted |
+| [0017](0017-image-pipeline.md) | Self-Hosted Image Pipeline and Asset Standardization | Accepted |
+| [0018](0018-scraping-and-admin.md) | Admin Review Surface, Authentication, and Scraping Boundaries | Accepted |
+| [0019](0019-observability-caching-and-hardening.md) | Observability, HTTP Caching, and API Hardening | Accepted |
 
 ## Template
 ```markdown

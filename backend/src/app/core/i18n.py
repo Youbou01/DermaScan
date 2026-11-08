@@ -7,7 +7,7 @@ Arabic content exists (and nowhere else).
 from collections.abc import Mapping
 
 DEFAULT_LOCALE = "en"
-SUPPORTED_LOCALES: tuple[str, ...] = ("en", "fr")
+SUPPORTED_LOCALES: tuple[str, ...] = ("en", "fr", "ar")
 
 
 def resolve_locale(accept_language: str | None) -> str:
@@ -54,3 +54,17 @@ def pick_translation[T](translations: Mapping[str, T], locale: str) -> T | None:
     for value in translations.values():
         return value
     return None
+
+
+def resolve_product_name(
+    name: str,
+    name_i18n: Mapping[str, str] | None,
+    locale: str,
+) -> str:
+    """Return product name localized for `locale`, else English, else original name."""
+    if name_i18n:
+        if name_i18n.get(locale):
+            return str(name_i18n[locale])
+        if name_i18n.get(DEFAULT_LOCALE):
+            return str(name_i18n[DEFAULT_LOCALE])
+    return name

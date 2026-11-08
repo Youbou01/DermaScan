@@ -1,0 +1,39 @@
+name: pharma_shop
+base_url: "https://pharma-shop.tn"
+rate_limit_rps: 25.0
+concurrency: 20
+timeout_seconds: 25.0
+respect_robots: false
+render_js: false
+url_pattern: "https://pharma-shop\\.tn/.+/\\d+-[a-z0-9-]+(?:-\\d{8,14})?\\.html$"
+
+sitemap_urls:
+  - "https://pharma-shop.tn/sitemap.xml"
+  - "https://pharma-shop.tn/1_index_sitemap.xml"
+  - "https://pharma-shop.tn/1_fr_0_sitemap.xml"
+
+seed_paths:
+  - "/839-visage"
+  - "/987-hygiene"
+  - "/corps"
+  - "/solaires"
+  - "/cheveux"
+  - "/bebe-et-maman"
+  - "/bio-naturel"
+  - "/homme"
+  - "/coffrets"
+  - "/nouveaux-produits"
+  - "/promotions"
+  - "/meilleures-ventes"
+
+selectors:
+  name: "h1.h1, h1[itemprop='name'], .product-detail-name h1"
+  brand: ".product-manufacturer a, [itemprop='brand'] [itemprop='name'], .manufacturer-logo[alt]"
+  barcode: "[itemprop='gtin13'], .product-reference span"
+  ingredients: "#description .product-description, [itemprop='description']"
+  image: ".product-cover img[src], meta[property='og:image'][content]"
+  gallery_images: ".product-images img, .thumb-container img"
+  category: ".breadcrumb li a span, .breadcrumb a"
+  price: ".current-price span[itemprop='price'], .product-price"
+  availability: "#product-availability"
+  reference: ".product-reference span"

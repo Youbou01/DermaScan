@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
 from app.core.errors import UnprocessableError
+from app.core.i18n import DEFAULT_LOCALE, resolve_product_name
 from app.core.keyset import InvalidCursorError, Page, paginate
 from app.modules.catalog.models import Product
 from app.modules.catalog.search_repository import (
@@ -28,11 +29,11 @@ class InvalidScoreRangeError(UnprocessableError):
     title = "min_score must not exceed max_score"
 
 
-def _summary(product: Product) -> ProductSummary:
+def _summary(product: Product, locale: str = DEFAULT_LOCALE) -> ProductSummary:
     return ProductSummary(
         id=product.id,
         barcode=product.barcode,
-        name=product.name,
+        name=resolve_product_name(product.name, product.name_i18n, locale),
         brand=product.brand.name if product.brand else None,
         image_url=product.image_url,
         score=product.score,

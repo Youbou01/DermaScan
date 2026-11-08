@@ -126,7 +126,7 @@ async def test_database_rejects_values_outside_the_enum_even_via_raw_sql(
     db_session.add(make_ingredient(inci_name="GLYCERIN"))
     await db_session.flush()
 
-    with pytest.raises(DBAPIError, match="ck_ingredient_risk_level"):
+    with pytest.raises(DBAPIError, match=r"ck_ingredient_(risk_level|rating_risk_level_sync)"):
         await db_session.execute(
             text("UPDATE ingredient SET risk_level = 'safe' WHERE inci_name = 'GLYCERIN'")
         )

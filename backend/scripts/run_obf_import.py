@@ -1,4 +1,4 @@
-# ruff: noqa: E402, S108, ASYNC240
+# ruff: noqa: E402, ASYNC240
 import argparse
 import asyncio
 import gzip
@@ -13,13 +13,15 @@ sys.path.append(str(BACKEND_DIR))
 
 from app.core.config import Settings
 from app.core.database import create_engine, create_session_factory
+from app.core.jobs import enqueue_job
+from app.modules.ingestion import OBFSourceAdapter, store_raw_product
 from app.modules.ingestion.importer import import_product_record
 from app.modules.ingredients.service import IngredientService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_DUMP_PATH = Path("/tmp/openbeautyfacts-products.jsonl.gz")
+DEFAULT_DUMP_PATH = Path("openbeautyfacts-products.jsonl.gz")
 COMMIT_EVERY = 100
 
 
@@ -62,6 +64,7 @@ async def main(dump_path: Path, limit: int | None) -> int:
 
     async with session_factory() as db:
         ingredient_service = IngredientService(db)
+        obf_adapter = OBFSourceAdapter()
 
         with gzip.open(dump_path, "rt", encoding="utf-8", errors="ignore") as f:
             non_blank = ((n, ln) for n, ln in enumerate(f, start=1) if ln.strip())
@@ -70,7 +73,20 @@ async def main(dump_path: Path, limit: int | None) -> int:
                     row = json.loads(line)
                     # Use a savepoint so a single failed row rolls back cleanly
                     async with db.begin_nested():
-                        success = await import_product_record(db, row, ingredient_service)
+                        raw_id = await store_raw_product(db, obf_adapter.to_raw(row))
+                        success = await import_product_record(
+                            db,
+                            row,
+                            ingredient_service=ingredient_service,
+                            raw_product_id=raw_id,
+                        )
+                        if success and raw_id is not None:
+                            await enqueue_job(
+                                db,
+                                queue="enrichment",
+                                task_name="enrich_raw_product",
+                                payload={"raw_product_id": str(raw_id)},
+                            )
 
                     if success:
                         imported_count += 1

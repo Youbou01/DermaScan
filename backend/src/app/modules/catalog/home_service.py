@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.i18n import pick_translation
+from app.core.i18n import DEFAULT_LOCALE, pick_translation, resolve_product_name
 from app.core.pagination import decode_cursor, encode_cursor
 from app.modules.catalog.category_service import CategoryService
 from app.modules.catalog.exceptions import (
@@ -98,7 +98,7 @@ class HomeFeedService:
             id="top_rated",
             type="top_rated",
             title=_title("top_rated", locale),
-            items=[_card(row) for row in page],
+            items=[_card(row, locale) for row in page],
             next_cursor=next_cursor,
         )
 
@@ -114,7 +114,7 @@ class HomeFeedService:
             id="recently_added",
             type="recently_added",
             title=_title("recently_added", locale),
-            items=[_card(row) for row in page],
+            items=[_card(row, locale) for row in page],
             next_cursor=next_cursor,
         )
 
@@ -129,10 +129,10 @@ def _validate_limit(limit: int) -> int:
     return limit
 
 
-def _card(row: ProductCardRow) -> ProductCardOut:
+def _card(row: ProductCardRow, locale: str = DEFAULT_LOCALE) -> ProductCardOut:
     return ProductCardOut(
         id=row.id,
-        name=row.name,
+        name=resolve_product_name(row.name, row.name_i18n, locale),
         brand=row.brand_name,
         image_url=row.image_url,
         score=row.score,

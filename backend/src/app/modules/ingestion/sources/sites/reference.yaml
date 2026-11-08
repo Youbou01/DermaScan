@@ -1,0 +1,12 @@
+name: "reference"
+base_url: "https://reference.skincare.org"
+user_agent: "DermaScan-Ingestion/1.0 (Free Skincare Intelligence)"
+rate_limit_rps: 2.0
+respect_robots: false
+selectors:
+  name: "h1.inci-title, h1.entry-title"
+  brand: ".brand-name"
+  barcode: ".gtin13, .barcode-val"
+  ingredients: ".inci-list, .ingredient-list, #inci"
+  image: ".featured-image img"
+  category: ".category-tag"

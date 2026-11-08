@@ -1,0 +1,131 @@
+I'll start with the repository itself, tracing each symptom you listed back to the code that causes it. First the map of the repo, the data files, and the OBF mapping code:
+
+I read the code behind every symptom you listed, and **I did not run it against your database**. Where I couldn't confirm something without your data, I say so. I'll treat the legal and ethical questions as the team's call, as you asked, and only flag them when they change the engineering. One line I'm holding as an engineering choice: I won't design around defeating authentication on private app APIs. Public pages are fine.
+
+## 1. Verdict
+
+Your diagnosis is right, and it is worse than "OBF is wrong". The backend has four structural problems:
+
+1. **No intelligence layer.** Raw OBF text goes almost straight into the database.
+2. **A rating dictionary of about 24 ingredients.** Nothing can be scored with that.
+3. **Scores computed once at import time and never invalidated.**
+4. **No language model.** Every field is simply "whatever language OBF had".
+
+The importer, the mapper and the fallback are first-draft code. The architecture around them (modules, migrations, tests, CI) is sound and doesn't need redoing.
+
+## 2. Root causes of what you saw
+
+| You saw | Cause (from the code) |
+|---|---|
+| Category unavailable, or wrong | The mapper knows 16 OBF tags. It uses substring matching, so `en:hair-gels` matches `en:gels` and becomes "cleanser". Anything unmatched silently defaults to "moisturizer". |
+| Brand not provided | The importer reads only OBF's `brands` string, takes the part before the first comma, and does nothing else. Empty in OBF means empty for us. |
+| Image missing or unprofessional | It stores OBF's single `image_url` as-is. OBF images are crowd-sourced photos (varying angles, backgrounds, sometimes the wrong side of the pack), hotlinked, never validated. |
+| Ingredients are random text, or a whole list is one item | The importer takes `ingredients_text`, which is in whatever language the contributor typed and often holds marketing text or several languages. Our parser only splits on commas, semicolons, bullets and pipes, and only strips "Ingredients:" and "Ingrédients:". Labels using `.`, ` - `, `/` or "Ingredientes:" stay one blob, so the matching, risk level and rationale for that blob are meaningless. |
+| Vaseline shows only "aqua" | I can't reproduce it without the OBF record. The code stores every parsed item, so either OBF's text really is truncated or odd, or the parser mangled it. A 2-minute check: compare that product's `raw_ingredients_text` with its `product_ingredient` rows. |
+| Many ingredients "insufficient data" | `seed_data.csv` has 24 ingredients. Coverage must reach 70% to get a score, so almost nothing does. |
+| "Insufficient data" even when concerns are flagged correctly | This one is a bug. The ingredient list is rated live on each request, but the product score was computed at import and stored. The recompute job only picks products with an old `scoring_version`, so adding ingredients later never rescores anything. The UI shows fresh ratings next to a stale score. |
+| Rationale too technical | The rationale text is a one-line technical sentence per seed row, with no reading-level requirement. |
+| Language ambiguity | We ignore OBF's `lang`, `product_name_fr/en` and `ingredients_text_fr/en`. Translation tables exist but are nearly empty, and aliases have no language tag. |
+
+**Other defects I found while reading, for the cleanup:**
+- The importer writes brand, category and product tables with raw SQL. That bypasses the catalog module's ownership rule and the ORM.
+- It generates ids with `uuid4` instead of our UUIDv7 convention.
+- It swallows every error (`except: return False`), so rows vanish with no reason logged.
+- The OBF fallback uses blocking `urllib`. That is a problem if it runs inside an async request.
+- The scoring engine has its own copy of the risk enum and a second vocabulary (good/moderate/poor against our low/moderate/high), bridged by a mapping table.
+
+## 3. Your ideas: my judgment
+
+| Idea | Verdict | My refinement |
+|---|---|---|
+| AI middleware before the database | **Yes.** | Raw payload saved first and kept. The AI runs once per distinct input (cached by content hash). It outputs structured JSON with a confidence per field, and low-confidence rows go to a review queue. AI runs at ingestion time, never at request time. |
+| AI decides ingredient scores | **Yes, with guardrails.** | Ingredient science is a long tail, and AI is the only way to cover it. But a model alone will occasionally be confidently wrong. See section 4b. |
+| Ingredient score out of 10 | **Yes.** | Make it the single source of truth, and derive the low/moderate/high level from it so the two can never disagree. |
+| Real math formula for the product | **Yes.** | The current weighted average plus ad-hoc caps is the weak part. Section 4c replaces it. |
+| Scrape sites and apps | **Yes for public web pages.** | This is the biggest quality lever. See 4f. I'm skipping private app APIs because they are fragile and need authentication tricks. |
+| ML to find the formula from scraped scores | **Partly.** | Use it to **calibrate** our formula's constants, not to replace it. A black box trained on a competitor's scores copies their mistakes and can't explain itself to a user. Later phase. |
+| AI translation | **Yes**, with a mapping layer (4d). | |
+| Better or generated images | **Improve, don't invent.** | AI-generated product packaging would show packs that don't exist. Pick the best real photo and standardize it (4e). |
+
+## 4. Decisions
+
+### a. The ingestion pipeline (replaces the importer)
+
+`source → raw store → deterministic mapper → AI enrichment → validation → publish`
+
+1. **Raw store:** every fetched record is saved untouched in a `raw_product` table (source, id, payload, content hash). We can re-run the pipeline on any improvement without re-downloading anything.
+2. **Mapper (the "mou9arna", OBF field to our field):** keep only what we need. I can't query OBF from my sandbox, so verify these field names against a real JSON record first.
+   - Keep: `code`, `lang`, `product_name` and its `_fr`/`_en` variants, `brands`, `categories_tags`, the language-specific `ingredients_text_*`, OBF's own parsed `ingredients` array and `ingredients_tags` (language-independent ids), the image candidates and `selected_images`, `quantity`, `countries_tags`, `completeness`.
+   - Drop the rest.
+3. **AI enrichment (one call per distinct product):** it receives the mapped record plus **our** category list, and returns:
+   - a clean name and brand (inferred from the name or an obvious source when OBF is empty);
+   - one of our category slugs, or null (never a guessed default);
+   - the source language;
+   - the ingredient list cleaned and normalized to English INCI names (marketing text, warnings and duplicate languages removed);
+   - `is_skincare` (rejecting non-skincare products, which OBF contains);
+   - a confidence for every field.
+4. **Validation:** deterministic checks plus a comparison with the old parser. If the AI list and the parser disagree wildly, or confidence is low, the row goes to **quarantine** instead of publishing.
+5. **Publish:** through catalog's service, not raw SQL. Each field records its **source and confidence**. Precedence is curated > retail/brand source > OBF, and a lower source never overwrites a higher one.
+
+**Cost control:** the cache means we pay once per distinct input and once per ingredient. A bulk run over OBF's skincare catalog costs on the order of hundreds of dollars with a Haiku-class model, which is trivial compared with the quality gain. Both the API key and a monthly budget cap come from environment variables.
+
+### b. Ingredient intelligence
+
+- **Build the dictionary from real sources, not by hand:**
+  - the EU **CosIng** export (INCI names, functions, restriction annexes);
+  - OBF's ingredient **taxonomy** (multilingual synonyms, verify availability);
+  - the ingredient frequency across the imported products.
+  Rate the roughly 5,000 most common first; that covers the vast majority of occurrences. Everything else is rated the first time it appears.
+- **Each ingredient gets:** `rating` (0–10, **10 = least concern**), `confidence`, `rating_source` (regulatory, curated or AI), `functions` (preservative, emollient...), a one-sentence plain-language summary, and a plain-language concern note (grade-6 reading level, only when the rating is below 7), all in EN and FR.
+- **AI rates, regulations override:** a substance banned or restricted under the EU annexes gets its rating from that rule, whatever the model says. The model rates the rest, at temperature 0, with a structured output schema, and a second model independently. If the two disagree by more than 2 points, confidence drops and a human sees it.
+- **Evaluate before trusting:** have someone with cosmetic knowledge rate about 150 ingredients once. We measure the AI's agreement with them and stop shipping if it falls below a bar we set. This is the only way to know the AI is "not diverging from accuracy".
+- **Aliases:** AI **proposes** synonyms and adjudicates "is X the same ingredient as Y?" once, and the answer is stored. Runtime matching stays exact and deterministic, so ADR-0009 stands and the AI is never on the request path.
+
+### c. Scoring v3 (replaces the weighted average and the caps)
+
+Per ingredient, concern `d = 1 − rating/10`. Position weight `w = max(0.05, 0.85^(position−1))` (to be calibrated). If OBF gives an estimated percentage, use that instead.
+
+- **Unknown is not dropped:** each ingredient's concern is shrunk toward a pessimistic prior `d_prior = 0.4` by its confidence: `d* = c·d + (1−c)·d_prior`. An unrated ingredient counts as moderately worrying instead of disappearing.
+- **Worst ingredients dominate:** `C = ( Σ w·d*³ / Σ w )^(1/3)`. This power mean replaces the "cap at 49" hack with real math.
+- **Score:** `100 × (1 − C)`. Rules: an EU-banned ingredient caps it at 25.
+- **Confidence:** `K = Σ w·c / Σ w`, which is exposure-weighted coverage. An unknown ingredient in position 1 hurts far more than one in position 25. If K is below 0.35 (or fewer than 3 ingredients are parsed) the answer is "insufficient data", under 0.6 it is shown as "estimated". Bands: 75 and above low concern, 50–74 moderate, below 50 high.
+- **Sanity check by hand:** 20 benign ingredients score about 95. Add one high-concern ingredient (concern 0.8) at position 8 and it drops to about 71, and at position 1 to about 57. That is the behavior we want, with no special case.
+- **Invalidation:** when an ingredient's rating changes, every product containing it is flagged dirty and rescored by a job. This kills the stale-score bug for good.
+- **ML calibration (phase 3):** with a few thousand reference-scored products, fit these constants (decay, exponent, prior, thresholds) by optimization and validate on a held-out set. The structure stays explainable.
+
+### d. Language
+
+- **Identity is language-free:** an ingredient is its INCI name (English, as printed internationally), plus an OBF taxonomy id when one exists. Aliases get a language tag and map every spelling to that one identity.
+- **Product text:** keep the original plus an `i18n` JSON (en, fr, later ar), translated **once** by the AI and flagged `machine_translated`. Fallback chain is requested language, then English.
+- **Ingredient text:** names stay INCI everywhere, and the summaries and notes are generated per language. Arabic is added by adding "ar" to the supported list and generating its texts.
+
+### e. Images
+
+Collect candidates (OBF's selected front image, retailer pages), have a vision model score each ("front of pack, clean, readable, correct product"), remove the background, normalize size and format, and **store it ourselves** on object storage behind a CDN (no hotlinking). A consistent white-background look is what makes it feel professional. If nothing qualifies, show a category illustration, never a fake pack.
+
+### f. Data sources and scraping
+
+OBF stays as one source among several.
+- **Highest yield:** brand and retailer pages, which often carry structured product data with the barcode, a clean INCI list and good photos. Add INCI-focused sites. Add Tunisian parapharmacy e-shops (the 619 prefix is currently under-represented).
+- **One generic adapter:** page, then text extraction, then the same AI enrichment, then staging, then the review queue. Per-site configuration holds selectors, rate limits and proxies.
+- **A Swagger endpoint** to submit URLs or sitemaps, and **SQLAdmin** (a generated admin interface from our models) for the review queue and quarantine. Both are protected by an API key from the environment, never open.
+- **Growth lever for later:** a user photographs an ingredient list, a vision model reads it, and the result enters the same pipeline.
+
+### g. Platform changes
+
+- **Task queue: yes, now.** My earlier "no queue yet" rule (ADR-0002) is superseded: enrichment, scraping and image work are slow background jobs. Use a **Postgres-based queue (Procrastinate)** to avoid adding Redis; verify its current state before adopting.
+- **New `enrichment` module** (LLM client behind an interface, prompts, schemas, cache). Layer order becomes `ingestion > enrichment > catalog > ingredients | scoring > core`. Prompts and schemas are versioned, and CI runs against recorded fixtures, never live LLM calls.
+- **Object storage** for images. Observability: structured logs exist, add error tracking, metrics and job dashboards. HTTP caching (ETag) and load tests before launch.
+
+### h. Cleanup list (the code itself)
+
+Replace the importer (raw SQL, uuid4, swallowed errors) with the pipeline, and the sync fallback with async HTTP, retries and a circuit breaker. Unify the risk vocabulary into one enum. Drop the "moisturizer" default and the substring category match. Every skipped row gets a recorded reason and counter.
+
+## 5. Execution order
+
+| Phase | Contents | Effect you will see |
+|---|---|---|
+| **0. Hotfix (days)** | Dictionary expanded from CosIng and the frequency list; scoring v3 with prior and confidence; dirty-flag rescoring; mapper fixes (no default category, exact tags); language-aware field choice; parser fixes (more separators and prefixes); skip-reason logging | "Insufficient data" mostly disappears, no more stale scores or wrong categories |
+| **1. Foundation** | `raw_product`, LLM client and cache, task queue, ingredient rating (0–10) and plain-language texts, the gold-set evaluation | Credible ratings with readable explanations |
+| **2. Product pipeline** | AI enrichment, image pipeline, language fields, re-import of OBF through it, review UI | Clean names, brands, categories and pictures |
+| **3. Growth** | Scraping adapters and endpoint, photo contribution, ML calibration | Much larger, better catalog |

@@ -7,9 +7,17 @@ PUBLIC INTERFACE: everything exported below. Other modules import ONLY from here
 never from `models` or `repository` (enforced by import-linter).
 """
 
+from app.modules.ingredients.admin import IngredientAdmin
+from app.modules.ingredients.enums import AliasSource, RatingSource, ReviewStatus
 from app.modules.ingredients.matching import Candidates, candidate_keys
 from app.modules.ingredients.normalizer import normalize
-from app.modules.ingredients.parser import ParsedIngredient, parse_ingredient_label
+from app.modules.ingredients.parser import (
+    ParsedIngredient,
+    Suspicion,
+    is_valid_ingredient_token,
+    looks_like_ingredient_list,
+    parse_ingredient_label,
+)
 from app.modules.ingredients.schemas import (
     IngredientInfo,
     IngredientMatch,
@@ -19,14 +27,21 @@ from app.modules.ingredients.schemas import (
 from app.modules.ingredients.service import IngredientService
 
 __all__ = [
+    "AliasSource",
     "Candidates",
+    "IngredientAdmin",
     "IngredientInfo",
     "IngredientMatch",
     "IngredientService",
     "IngredientSuggestion",
     "MatchType",
     "ParsedIngredient",
+    "RatingSource",
+    "ReviewStatus",
+    "Suspicion",
     "candidate_keys",
+    "is_valid_ingredient_token",
+    "looks_like_ingredient_list",
     "normalize",
     "parse_ingredient_label",
 ]

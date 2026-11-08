@@ -299,6 +299,7 @@ async def test_product_card_shape(client: httpx.AsyncClient, db_session: AsyncSe
         "image_url",
         "score",
         "score_band",
+        "score_is_estimated",
         "category_slug",
     }
     assert card["id"] == str(product.id)

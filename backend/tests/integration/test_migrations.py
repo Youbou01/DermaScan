@@ -15,8 +15,7 @@ async def test_search_extensions_are_installed_by_the_migrations(db_session: Asy
 async def test_trigram_index_exists_on_alias_names(db_session: AsyncSession) -> None:
     definition = await db_session.scalar(
         text(
-            "SELECT indexdef FROM pg_indexes "
-            "WHERE indexname = 'ix_ingredient_alias_normalized_alias_trgm'"
+            "SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_ingredient_alias_normalized_alias_trgm'"
         )
     )
     assert definition is not None

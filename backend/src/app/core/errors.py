@@ -70,3 +70,11 @@ class UpstreamError(AppError):
     status_code = 502
     code = "upstream-error"
     title = "An upstream service failed"
+
+
+class RateLimitExceededError(AppError):
+    """Client has exceeded the allowed request rate."""
+
+    status_code = 429
+    code = "rate-limit-exceeded"
+    title = "Too many requests"

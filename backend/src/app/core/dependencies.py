@@ -14,7 +14,15 @@ from app.core.i18n import resolve_locale
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
-    factory: async_sessionmaker[AsyncSession] = request.app.state.session_factory
+    factory: async_sessionmaker[AsyncSession] | None = getattr(
+        request.app.state, "session_factory", None
+    )
+    if factory is None:
+        parent_app = request.scope.get("app")
+        if parent_app is not None:
+            factory = getattr(parent_app.state, "session_factory", None)
+    if factory is None:
+        raise RuntimeError("No session_factory available in application state")
     async with factory() as session:
         yield session
 
