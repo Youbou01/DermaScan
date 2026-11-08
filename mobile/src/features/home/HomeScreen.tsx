@@ -161,6 +161,18 @@ function HomeHero(): ReactElement {
           {t('scan.scan_button')}
         </Text>
       </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/search' as unknown as Href)}
+        style={({ pressed }) => [
+          styles.scanButton,
+          { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+        ]}
+      >
+        <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+          {t('search.entry_button')}
+        </Text>
+      </Pressable>
     </View>
   );
 }

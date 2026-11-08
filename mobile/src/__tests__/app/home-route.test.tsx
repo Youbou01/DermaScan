@@ -81,6 +81,13 @@ describe('HomeRoute', () => {
     });
   });
 
+  it('opens the search screen from the hero search button', async () => {
+    setHomeResult(homeFixture.en);
+    const screen = await render(renderRoute());
+    await fireEvent.press(screen.getByRole('button', { name: i18n.t('search.entry_button') }));
+    expect(mockPush).toHaveBeenCalledWith('/search');
+  });
+
   it('renders the empty state when the API returns no sections', async () => {
     setHomeResult({ sections: [] });
     const screen = await render(renderRoute());
