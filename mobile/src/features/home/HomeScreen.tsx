@@ -250,9 +250,8 @@ const styles = StyleSheet.create({
   },
   heroActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.xs,
   },
   scanButton: {
     minHeight: 44,

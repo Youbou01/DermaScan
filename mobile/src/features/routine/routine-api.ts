@@ -424,16 +424,45 @@ export function useUpdateRoutineMutation(): UseMutationResult<
         step_order: index + 1,
       }));
       const conflicts = evaluateRoutineConflicts(normalizedSteps);
-      const updated: RoutineData = {
+      const localUpdated: RoutineData = {
         ...routineStore[slot],
         steps: normalizedSteps,
         conflicts,
       };
+
+      if (!env.useMocks) {
+        try {
+          const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept-Language': getActiveApiLocale(),
+            },
+            body: JSON.stringify({ steps: normalizedSteps }),
+          });
+          if (res.ok) {
+            const serverData = (await res.json()) as RoutineData;
+            routineStore = {
+              ...routineStore,
+              [slot]: serverData,
+            };
+            return serverData;
+          }
+          console.warn(
+            `PUT /api/v1/routines/${slot} failed with status ${res.status}; falling back to local routine state.`,
+          );
+        } catch {
+          console.warn(
+            `PUT /api/v1/routines/${slot} network failure; falling back to local routine state.`,
+          );
+        }
+      }
+
       routineStore = {
         ...routineStore,
-        [slot]: updated,
+        [slot]: localUpdated,
       };
-      return updated;
+      return localUpdated;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['routines'] });
@@ -450,20 +479,67 @@ export function useToggleRoutineCompletionMutation(): UseMutationResult<
   return useMutation({
     mutationFn: async (slot: RoutineSlot): Promise<RoutineData> => {
       const current = routineStore[slot];
-      const updated: RoutineData = {
+      const localUpdated: RoutineData = {
         ...current,
         completed_today: !current.completed_today,
       };
+
+      if (!env.useMocks) {
+        try {
+          const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}/complete`, {
+            method: 'POST',
+            headers: {
+              'Accept-Language': getActiveApiLocale(),
+            },
+          });
+          if (res.ok) {
+            const serverData = (await res.json()) as RoutineData;
+            routineStore = {
+              ...routineStore,
+              [slot]: serverData,
+            };
+            return serverData;
+          }
+          console.warn(
+            `POST /api/v1/routines/${slot}/complete failed with status ${res.status}; falling back to local routine state.`,
+          );
+        } catch {
+          console.warn(
+            `POST /api/v1/routines/${slot}/complete network failure; falling back to local routine state.`,
+          );
+        }
+      }
+
       routineStore = {
         ...routineStore,
-        [slot]: updated,
+        [slot]: localUpdated,
       };
-      return updated;
+      return localUpdated;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['routines'] });
     },
   });
+}
+
+export function checkCandidateConflict(
+  candidate: CatalogCandidateProduct,
+  currentSteps: readonly RoutineStepItem[],
+): RoutineConflict | null {
+  const hypotheticalStep: RoutineStepItem = {
+    step_order: currentSteps.length + 1,
+    step_type: candidate.defaultStepType,
+    product: candidate.product,
+    active_ingredients: candidate.activeIngredients,
+  };
+  const allConflicts = evaluateRoutineConflicts([...currentSteps, hypotheticalStep]);
+  return (
+    allConflicts.find(
+      (conflict) =>
+        conflict.product_a_id === candidate.product.id ||
+        conflict.product_b_id === candidate.product.id,
+    ) ?? null
+  );
 }
 
 export function useRoutineRecommendationsQuery(

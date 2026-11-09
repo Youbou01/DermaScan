@@ -17,8 +17,8 @@ jest.mock('expo-router', () => ({
 function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false, gcTime: 0 },
     },
   });
 }
@@ -156,6 +156,23 @@ describe('Chemical Conflict Detection & Alert Modal (US-15)', () => {
 
     const closeButton = screen.getByLabelText(i18n.t('conflicts.close_modal'));
     await fireEvent.press(closeButton);
+  });
+
+  it('displays pre-check conflict warning on conflicting candidate product before addition', async () => {
+    const screen = await render(renderRoutineScreen());
+    await screen.findByText(i18n.t('routine.title'));
+
+    const addGlycolic = screen.getByRole('button', {
+      name: i18n.t('routine.add_step_button', { name: 'Glycolic Acid 7% Resurfacing Toner' }),
+    });
+    await fireEvent.press(addGlycolic);
+    await screen.findByText('Glycolic Acid 7% Resurfacing Toner');
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(new RegExp(i18n.t('conflicts.pre_check_warning'))).length,
+      ).toBeGreaterThan(0);
+    });
   });
 });
 

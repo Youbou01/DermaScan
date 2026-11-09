@@ -7,6 +7,7 @@ import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import { ConflictAlertModal } from './components/ConflictAlertModal';
 import { ConflictWarningBanner } from './components/ConflictWarningBanner';
 import {
+  checkCandidateConflict,
   ROUTINE_CATALOG_CANDIDATES,
   useRoutinesQuery,
   useToggleRoutineCompletionMutation,
@@ -26,6 +27,7 @@ export function RoutineScreen(): ReactElement {
   const routinesQuery = useRoutinesQuery();
   const updateRoutine = useUpdateRoutineMutation();
   const toggleCompletion = useToggleRoutineCompletionMutation();
+  const isMutating = updateRoutine.isPending || toggleCompletion.isPending;
 
   if (routinesQuery.isPending) {
     return (
@@ -138,14 +140,16 @@ export function RoutineScreen(): ReactElement {
               : t('routine.habit_mark_complete')
           }
           accessibilityState={{ checked: currentRoutine.completed_today }}
+          disabled={isMutating}
           onPress={() => {
             void toggleCompletion.mutateAsync(activeSlot);
           }}
-          style={[
+          style={({ pressed }) => [
             styles.habitToggleButton,
             {
               backgroundColor: currentRoutine.completed_today ? colors.lowSurface : colors.primary,
               borderColor: currentRoutine.completed_today ? colors.low : colors.primary,
+              opacity: pressed || isMutating ? 0.6 : 1,
             },
           ]}
         >
@@ -215,11 +219,11 @@ export function RoutineScreen(): ReactElement {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={t('routine.move_up_label', { name: step.product.name })}
-                  disabled={index === 0}
+                  disabled={isMutating || index === 0}
                   onPress={() => handleMoveStep(index, -1)}
                   style={[
                     styles.smallButton,
-                    { borderColor: colors.border, opacity: index === 0 ? 0.4 : 1 },
+                    { borderColor: colors.border, opacity: isMutating || index === 0 ? 0.4 : 1 },
                   ]}
                 >
                   <Text style={{ color: colors.text }}>↑</Text>
@@ -227,13 +231,13 @@ export function RoutineScreen(): ReactElement {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={t('routine.move_down_label', { name: step.product.name })}
-                  disabled={index === steps.length - 1}
+                  disabled={isMutating || index === steps.length - 1}
                   onPress={() => handleMoveStep(index, 1)}
                   style={[
                     styles.smallButton,
                     {
                       borderColor: colors.border,
-                      opacity: index === steps.length - 1 ? 0.4 : 1,
+                      opacity: isMutating || index === steps.length - 1 ? 0.4 : 1,
                     },
                   ]}
                 >
@@ -242,8 +246,12 @@ export function RoutineScreen(): ReactElement {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={t('routine.remove_step_label', { name: step.product.name })}
+                  disabled={isMutating}
                   onPress={() => handleRemoveStep(index)}
-                  style={[styles.removeButton, { borderColor: colors.high }]}
+                  style={[
+                    styles.removeButton,
+                    { borderColor: colors.high, opacity: isMutating ? 0.4 : 1 },
+                  ]}
                 >
                   <Text style={[styles.removeButtonText, { color: colors.high }]}>×</Text>
                 </Pressable>
@@ -257,32 +265,41 @@ export function RoutineScreen(): ReactElement {
         {t('routine.add_product_heading')}
       </Text>
       <View style={styles.candidatesList}>
-        {ROUTINE_CATALOG_CANDIDATES.map((candidate) => (
-          <Pressable
-            key={candidate.product.id}
-            accessibilityRole="button"
-            accessibilityLabel={t('routine.add_step_button', { name: candidate.product.name })}
-            onPress={() => handleAddCandidate(candidate)}
-            style={({ pressed }) => [
-              styles.candidateRow,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
-          >
-            <View style={styles.candidateInfo}>
-              <Text style={[styles.productName, { color: colors.text }]}>
-                + {candidate.product.name}
-              </Text>
-              <Text style={[styles.activesText, { color: colors.textMuted }]}>
-                {candidate.activeIngredients.join(', ')}
-              </Text>
-            </View>
-            <ScoreBadge score={candidate.product.score} band={candidate.product.score_band} />
-          </Pressable>
-        ))}
+        {ROUTINE_CATALOG_CANDIDATES.map((candidate) => {
+          const preConflict = checkCandidateConflict(candidate, steps);
+          return (
+            <Pressable
+              key={candidate.product.id}
+              accessibilityRole="button"
+              accessibilityLabel={t('routine.add_step_button', { name: candidate.product.name })}
+              disabled={isMutating}
+              onPress={() => handleAddCandidate(candidate)}
+              style={({ pressed }) => [
+                styles.candidateRow,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  opacity: pressed || isMutating ? 0.6 : 1,
+                },
+              ]}
+            >
+              <View style={styles.candidateInfo}>
+                {preConflict ? (
+                  <Text style={[styles.preConflictTag, { color: colors.moderate }]}>
+                    ⚠ {t('conflicts.pre_check_warning')} ({preConflict.title})
+                  </Text>
+                ) : null}
+                <Text style={[styles.productName, { color: colors.text }]}>
+                  + {candidate.product.name}
+                </Text>
+                <Text style={[styles.activesText, { color: colors.textMuted }]}>
+                  {candidate.activeIngredients.join(', ')}
+                </Text>
+              </View>
+              <ScoreBadge score={candidate.product.score} band={candidate.product.score_band} />
+            </Pressable>
+          );
+        })}
       </View>
 
       <ConflictAlertModal
@@ -440,5 +457,10 @@ const styles = StyleSheet.create({
   candidateInfo: {
     flex: 1,
     gap: 2,
+  },
+  preConflictTag: {
+    fontSize: typography.size.xs,
+    fontWeight: '600',
+    marginBottom: 2,
   },
 });
