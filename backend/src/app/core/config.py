@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     # --- Security & Rate Limiting ---
     enable_rate_limiting: bool = False
     rate_limit_rpm: int = 120
+    jwt_secret_key: str = "dev-only-insecure-secret-change-me"  # noqa: S105
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_minutes: int = 30
+    jwt_refresh_token_days: int = 14
 
     # --- Scraping ---
     scraper_respect_robots: bool = False

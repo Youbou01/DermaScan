@@ -78,3 +78,11 @@ class RateLimitExceededError(AppError):
     status_code = 429
     code = "rate-limit-exceeded"
     title = "Too many requests"
+
+
+class UnauthorizedError(AppError):
+    """Missing, expired or invalid credentials."""
+
+    status_code = 401
+    code = "unauthorized"
+    title = "Authentication required"
