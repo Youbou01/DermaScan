@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import app.core.jobs
 import app.modules.catalog.models
 import app.modules.enrichment.models
+import app.modules.identity.models
 import app.modules.ingestion.models
 import app.modules.ingredients.models
 from app.core.config import get_settings
@@ -28,6 +29,7 @@ _REGISTERED_MODELS = (
     app.core.jobs,
     app.modules.catalog.models,
     app.modules.enrichment.models,
+    app.modules.identity.models,
     app.modules.ingestion.models,
     app.modules.ingredients.models,
 )
