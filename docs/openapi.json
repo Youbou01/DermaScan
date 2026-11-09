@@ -502,6 +502,19 @@
             "description": "Standard INCI name, when the ingredient is recognized.",
             "title": "Inci Name"
           },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ingredient id when recognized; None when not matched.",
+            "title": "Ingredient Id"
+          },
           "matched": {
             "description": "False when we do not recognize this ingredient yet.",
             "title": "Matched",
