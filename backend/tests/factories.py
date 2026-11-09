@@ -61,9 +61,14 @@ def make_ingredient(
     ingredient = Ingredient(**values)
 
     names = [values["inci_name"], *(aliases or [])]
-    ingredient.aliases = [
-        IngredientAlias(alias=name, normalized_alias=normalize(name)) for name in names
-    ]
+    normalized_aliases: set[str] = set()
+    ingredient.aliases = []
+    for name in names:
+        normalized_alias = normalize(name)
+        if normalized_alias in normalized_aliases:
+            continue
+        normalized_aliases.add(normalized_alias)
+        ingredient.aliases.append(IngredientAlias(alias=name, normalized_alias=normalized_alias))
     ingredient.translations = [
         IngredientTranslation(locale=locale, rationale=text)
         for locale, text in (rationale or {}).items()
