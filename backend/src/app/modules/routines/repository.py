@@ -59,6 +59,7 @@ class RoutineRepository:
             ]
         )
         await self._session.flush()
+        await self._session.refresh(routine, attribute_names=["steps"])
         refreshed = await self.get_for_user_slot(routine.user_id, routine.slot)
         if refreshed is None:  # defensive: a routine cannot disappear within this transaction
             raise RuntimeError("Routine disappeared while replacing its steps")
