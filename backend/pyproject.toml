@@ -148,3 +148,9 @@ name = "ingestion internals are private"
 type = "protected"
 protected_modules = ["app.modules.ingestion.models", "app.modules.ingestion.repository"]
 allowed_importers = ["app.modules.ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "identity internals are private"
+type = "protected"
+protected_modules = ["app.modules.identity.models"]
+allowed_importers = ["app.modules.identity"]
