@@ -41,6 +41,7 @@ INGREDIENT_KEYS = {
     "rating",
     "summary",
     "confidence",
+    "ingredient_id",
 }
 
 
@@ -166,6 +167,7 @@ async def test_unrecognized_ingredients_are_shown_as_unknown_never_as_safe(
         "rating": None,
         "summary": None,
         "confidence": None,
+        "ingredient_id": None,
     }
 
 

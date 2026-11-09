@@ -41,6 +41,9 @@ class ProductIngredientOut(BaseModel):
     rating: float | None = Field(default=None, description="0.0-10.0 scale, 10 = least concern.")
     summary: str | None = Field(default=None, description="Plain-language function summary.")
     confidence: float | None = Field(default=None, description="Rating confidence 0.0-1.0.")
+    ingredient_id: uuid.UUID | None = Field(
+        default=None, description="Ingredient id when recognized; None when not matched."
+    )
 
 
 class ProductDetail(BaseModel):

@@ -733,6 +733,7 @@ def _ingredient_out(
         rating=eff_rating,
         summary=info.summary,
         confidence=eff_conf,
+        ingredient_id=info.id,
     )
 
 
