@@ -56,6 +56,10 @@ class ProductDetail(BaseModel):
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_coverage: float | None = Field(description="Share (0-1) of ingredients we could rate.")
     score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
+    summary: str | None = Field(
+        default=None,
+        description="Localized plain-language product summary. Scored products always have a fallback.",
+    )
     ingredients: list[ProductIngredientOut] = Field(description="In label order.")
 
 
@@ -74,6 +78,20 @@ class ProductCardOut(BaseModel):
     )
     score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     category_slug: str | None
+
+
+class RoutineProductData(BaseModel):
+    """Catalog's routine-facing projection.
+
+    It is deliberately a DTO, rather than an ORM relationship, so the routines
+    module never reaches into catalog tables or repositories.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    product: ProductCardOut
+    category_slug: str | None
+    ingredient_inci_names: tuple[str, ...] = ()
 
 
 class HomeSectionOut(BaseModel):

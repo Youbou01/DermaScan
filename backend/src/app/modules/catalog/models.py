@@ -142,6 +142,9 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     source_lang: Mapped[str | None] = mapped_column(String(2))
     name_i18n: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # LLM-generated product explanation, keyed by locale. A deterministic fallback is
+    # used at read time while this asynchronous enrichment is not available.
+    summary_i18n: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     brand_source: Mapped[str | None] = mapped_column(Text)
     category_source: Mapped[str | None] = mapped_column(Text)
     field_provenance: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
