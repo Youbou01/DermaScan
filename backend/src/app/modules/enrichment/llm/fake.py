@@ -67,6 +67,15 @@ class FakeLLMClient(LLMClient):
                     "confidence": 0.95,
                     "is_readable": True,
                 }
+            elif schema_title == "ProductSummaryResult":
+                raw = {
+                    "summaries": {
+                        "en": "A straightforward skincare formula with familiar cosmetic ingredients. It supports a simple daily care step.",
+                        "fr": "Une formule de soin simple avec des ingrédients cosmétiques connus. Elle accompagne une étape de soin quotidienne.",
+                    }
+                }
+            elif schema_title == "InciNormalizationResult":
+                raw = {"ingredients": []}
             else:
                 raw = {"status": "ok"}
 

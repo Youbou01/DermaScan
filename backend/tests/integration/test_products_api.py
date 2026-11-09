@@ -29,6 +29,7 @@ PRODUCT_KEYS = {
     "score_band",
     "score_coverage",
     "score_is_estimated",
+    "summary",
     "ingredients",
 }
 INGREDIENT_KEYS = {
@@ -98,6 +99,7 @@ async def test_barcode_lookup_returns_the_documented_contract(
     assert body["image_url"] == "https://example.test/cream.jpg"
     assert body["category"] == {"slug": "moisturizer", "name": "Moisturizer"}
     assert (body["score"], body["score_band"], body["score_coverage"]) == (82, "low", 1.0)
+    assert body["summary"] is not None
 
 
 async def test_product_by_id_equals_product_by_barcode(
@@ -123,7 +125,31 @@ async def test_a_bare_product_has_nulls_and_an_unknown_band_never_safe(
     assert body["category"] is None
     assert body["score"] is None
     assert body["score_band"] == "unknown"
+    assert body["summary"] is None
     assert body["ingredients"] == []
+
+
+async def test_product_summary_uses_the_requested_language_with_english_fallback(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    product = await add_product(
+        db_session,
+        score=80,
+        score_band=RiskLevel.LOW,
+        summary_i18n={
+            "en": "A short English product summary. It explains the formula simply.",
+            "fr": "Un court résumé français. Il explique simplement la formule.",
+        },
+    )
+
+    english = await client.get(f"/api/v1/products/{product.id}")
+    french = await client.get(
+        f"/api/v1/products/{product.id}", headers={"Accept-Language": "fr-FR"}
+    )
+
+    assert english.status_code == french.status_code == 200
+    assert english.json()["summary"].startswith("A short English")
+    assert french.json()["summary"].startswith("Un court résumé")
 
 
 # ------------------------------------------------------------------------ ingredients
