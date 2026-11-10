@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.modules.identity.enums import SkinType
+from app.modules.identity.enums import AlertCode, AlertSeverity, SkinType, Verdict
 
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -149,3 +149,28 @@ class BlacklistOut(BaseModel):
 
     product_ids: list[uuid.UUID] = Field(description="Blacklisted product ids.")
     ingredient_ids: list[uuid.UUID] = Field(description="Blacklisted ingredient ids.")
+
+
+class RiskAlertOut(BaseModel):
+    """One personal risk alert on a product."""
+
+    model_config = ConfigDict(frozen=True)
+
+    code: AlertCode = Field(description="Machine-readable alert type.")
+    severity: AlertSeverity = Field(description="'high' or 'medium'.")
+    ingredient_name: str = Field(description="INCI name of the triggering ingredient.")
+    title: str = Field(description="Short alert title in the response language.")
+    detail: str = Field(description="Explanation in the response language.")
+
+
+class SuitabilityOut(BaseModel):
+    """Response of GET /products/{product_id}/suitability."""
+
+    model_config = ConfigDict(frozen=True)
+
+    product_id: uuid.UUID = Field(description="Product the verdict is about.")
+    suits_profile: bool = Field(description="True only when the verdict is 'suitable'.")
+    verdict: Verdict = Field(description="suitable, caution or avoid.")
+    has_risk_alert: bool = Field(description="True when there is an alert or a blacklist match.")
+    is_blacklisted: bool = Field(description="True for a blacklisted product or ingredient.")
+    alerts: list[RiskAlertOut] = Field(description="Alerts, most severe first.")
