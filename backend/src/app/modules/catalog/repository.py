@@ -9,6 +9,7 @@ from sqlalchemy import CursorResult, Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from app.core.enums import RiskLevel
 from app.modules.catalog.enums import ProductSource
 from app.modules.catalog.models import Brand, Category, Product, ProductIngredient
 
@@ -31,6 +32,29 @@ class ProductRepository:
         return await self._session.scalar(
             self._with_detail_loaded().where(Product.id == product_id)
         )
+
+    async def get_by_ids(self, product_ids: Collection[uuid.UUID]) -> list[Product]:
+        """Fetch product detail projections in a bounded, eager-loaded query set."""
+        if not product_ids:
+            return []
+        result = await self._session.scalars(
+            self._with_detail_loaded().where(Product.id.in_(product_ids))
+        )
+        return list(result.unique().all())
+
+    async def list_routine_recommendation_candidates(self, limit: int) -> list[Product]:
+        """Best scored, categorized products for deterministic routine assembly."""
+        result = await self._session.scalars(
+            self._with_detail_loaded()
+            .where(
+                Product.score.is_not(None),
+                Product.score_band != RiskLevel.UNKNOWN,
+                Product.primary_category_id.is_not(None),
+            )
+            .order_by(Product.score.desc(), Product.id.desc())
+            .limit(limit)
+        )
+        return list(result.unique().all())
 
     async def get_by_barcode(self, barcode: str) -> Product | None:
         """`barcode` must already be a normalized GTIN-13."""

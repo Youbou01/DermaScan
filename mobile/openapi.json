@@ -76,6 +76,31 @@
         "title": "BlacklistOut",
         "type": "object"
       },
+      "Body_analysis_analyze_ocr_photo": {
+        "properties": {
+          "photo": {
+            "contentMediaType": "application/octet-stream",
+            "description": "JPEG, PNG, or WebP ingredient-label photo.",
+            "title": "Photo",
+            "type": "string"
+          },
+          "product_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
+          }
+        },
+        "required": ["photo"],
+        "title": "Body_analysis_analyze_ocr_photo",
+        "type": "object"
+      },
       "Body_contributions_submit_photo_contribution": {
         "properties": {
           "barcode": {
@@ -134,6 +159,24 @@
         },
         "required": ["slug", "name"],
         "title": "CategoryOut",
+        "type": "object"
+      },
+      "ConflictCheckOut": {
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineConflictOut"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "has_conflict": {
+            "title": "Has Conflict",
+            "type": "boolean"
+          }
+        },
+        "required": ["has_conflict", "conflicts"],
+        "title": "ConflictCheckOut",
         "type": "object"
       },
       "ContributionResponse": {
@@ -239,6 +282,67 @@
         },
         "required": ["id", "type", "title", "items", "next_cursor"],
         "title": "HomeSectionOut",
+        "type": "object"
+      },
+      "InstantAnalysisOut": {
+        "description": "Synchronous score and ingredient projection for an unlisted product label.",
+        "properties": {
+          "extracted_text": {
+            "description": "Extracted or submitted ingredient text.",
+            "title": "Extracted Text",
+            "type": "string"
+          },
+          "ingredients": {
+            "description": "Parsed ingredient breakdown in label order.",
+            "items": {
+              "$ref": "#/components/schemas/ProductIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Calculated score (0-100), or null if unrateable.",
+            "title": "Score"
+          },
+          "score_band": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "Risk band: low, moderate, high, or unknown."
+          },
+          "score_coverage": {
+            "description": "Share of parsed ingredients recognized by the ingredient reference.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score Coverage",
+            "type": "number"
+          },
+          "score_is_estimated": {
+            "default": false,
+            "title": "Score Is Estimated",
+            "type": "boolean"
+          },
+          "summary": {
+            "description": "Plain-language formulation overview.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extracted_text",
+          "score",
+          "score_band",
+          "score_coverage",
+          "summary",
+          "ingredients"
+        ],
+        "title": "InstantAnalysisOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -523,6 +627,18 @@
             "description": "True when confidence K < 0.60.",
             "title": "Score Is Estimated",
             "type": "boolean"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Localized plain-language product summary. Scored products always have a fallback.",
+            "title": "Summary"
           }
         },
         "required": [
@@ -802,6 +918,31 @@
         "title": "ProfileUpdateIn",
         "type": "object"
       },
+      "RecommendedRoutinesOut": {
+        "properties": {
+          "evening": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepOut"
+            },
+            "title": "Evening",
+            "type": "array"
+          },
+          "morning": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepOut"
+            },
+            "title": "Morning",
+            "type": "array"
+          },
+          "skin_type": {
+            "title": "Skin Type",
+            "type": "string"
+          }
+        },
+        "required": ["skin_type", "morning", "evening"],
+        "title": "RecommendedRoutinesOut",
+        "type": "object"
+      },
       "RefreshRequest": {
         "description": "Body of POST /auth/refresh.",
         "properties": {
@@ -849,11 +990,269 @@
         "title": "RiskLevel",
         "type": "string"
       },
+      "RoutineConflictOut": {
+        "properties": {
+          "code": {
+            "description": "Stable error/warning code, e.g. 'retinoid_x_acid'.",
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "description": "Plain-language chemical reason for the conflict.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "ingredient_a": {
+            "title": "Ingredient A",
+            "type": "string"
+          },
+          "ingredient_b": {
+            "title": "Ingredient B",
+            "type": "string"
+          },
+          "product_a_id": {
+            "format": "uuid",
+            "title": "Product A Id",
+            "type": "string"
+          },
+          "product_a_name": {
+            "title": "Product A Name",
+            "type": "string"
+          },
+          "product_b_id": {
+            "format": "uuid",
+            "title": "Product B Id",
+            "type": "string"
+          },
+          "product_b_name": {
+            "title": "Product B Name",
+            "type": "string"
+          },
+          "resolution": {
+            "description": "Actionable suggestion to resolve the conflict.",
+            "title": "Resolution",
+            "type": "string"
+          },
+          "severity": {
+            "description": "High severity indicates active damage risk; moderate indicates irritation/reduced efficacy.",
+            "enum": ["high", "moderate"],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "description": "Localized warning title.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "product_a_id",
+          "product_b_id",
+          "product_a_name",
+          "product_b_name",
+          "ingredient_a",
+          "ingredient_b",
+          "title",
+          "detail",
+          "resolution"
+        ],
+        "title": "RoutineConflictOut",
+        "type": "object"
+      },
+      "RoutineDataOut": {
+        "properties": {
+          "completed_today": {
+            "title": "Completed Today",
+            "type": "boolean"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineConflictOut"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/RoutineSlot"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": ["id", "slot", "name", "completed_today", "steps", "conflicts"],
+        "title": "RoutineDataOut",
+        "type": "object"
+      },
+      "RoutineSlot": {
+        "enum": ["morning", "evening"],
+        "title": "RoutineSlot",
+        "type": "string"
+      },
+      "RoutineStepIn": {
+        "additionalProperties": false,
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "step_order": {
+            "description": "1-based step position.",
+            "minimum": 1.0,
+            "title": "Step Order",
+            "type": "integer"
+          },
+          "step_type": {
+            "$ref": "#/components/schemas/RoutineStepType",
+            "description": "Category/type: cleanser, toner, serum, moisturizer, sunscreen, treatment."
+          }
+        },
+        "required": ["step_order", "step_type", "product_id"],
+        "title": "RoutineStepIn",
+        "type": "object"
+      },
+      "RoutineStepOut": {
+        "properties": {
+          "active_ingredients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Ingredients",
+            "type": "array"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductCardOut"
+          },
+          "step_order": {
+            "title": "Step Order",
+            "type": "integer"
+          },
+          "step_type": {
+            "$ref": "#/components/schemas/RoutineStepType"
+          }
+        },
+        "required": ["step_order", "step_type", "product"],
+        "title": "RoutineStepOut",
+        "type": "object"
+      },
+      "RoutineStepType": {
+        "enum": ["cleanser", "toner", "serum", "moisturizer", "sunscreen", "treatment"],
+        "title": "RoutineStepType",
+        "type": "string"
+      },
+      "RoutinesListOut": {
+        "properties": {
+          "routines": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineDataOut"
+            },
+            "title": "Routines",
+            "type": "array"
+          }
+        },
+        "required": ["routines"],
+        "title": "RoutinesListOut",
+        "type": "object"
+      },
       "SkinType": {
         "description": "Self-declared skin type stored on the user profile.",
         "enum": ["normal", "dry", "oily", "combination", "sensitive"],
         "title": "SkinType",
         "type": "string"
+      },
+      "TextAnalysisIn": {
+        "additionalProperties": false,
+        "description": "A manually entered ingredient label for immediate, non-persistent analysis.",
+        "properties": {
+          "product_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
+          },
+          "text": {
+            "description": "Raw ingredient label text.",
+            "maxLength": 10000,
+            "minLength": 3,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": ["text"],
+        "title": "TextAnalysisIn",
+        "type": "object"
+      },
+      "UpdateRoutineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "steps": {
+            "description": "Full ordered list of steps to replace existing routine.",
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepIn"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": ["steps"],
+        "title": "UpdateRoutineIn",
+        "type": "object"
       },
       "UserOut": {
         "description": "Public view of a user account.",
@@ -929,6 +1328,156 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/analysis/ocr": {
+      "post": {
+        "description": "Transcribe and analyse an unlisted product label in the request/response cycle.",
+        "operationId": "analysis_analyze_ocr_photo",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analysis_analyze_ocr_photo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstantAnalysisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Analyze Ocr Photo",
+        "tags": ["analysis"]
+      }
+    },
+    "/api/v1/analysis/text": {
+      "post": {
+        "description": "Analyse manually pasted ingredients with the same matching and scoring pipeline.",
+        "operationId": "analysis_analyze_ingredient_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextAnalysisIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstantAnalysisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Analyze Ingredient Text",
+        "tags": ["analysis"]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "auth_login",
@@ -2043,6 +2592,339 @@
         ],
         "summary": "Blacklist a product",
         "tags": ["profile"]
+      }
+    },
+    "/api/v1/routines": {
+      "get": {
+        "operationId": "routines_get_routines",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutinesListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Routines",
+        "tags": ["routines"]
+      }
+    },
+    "/api/v1/routines/recommendations": {
+      "get": {
+        "operationId": "routines_get_recommendations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "skin_type",
+            "required": false,
+            "schema": {
+              "default": "normal",
+              "enum": ["normal", "dry", "oily", "combination", "sensitive"],
+              "title": "Skin Type",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendedRoutinesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recommendations",
+        "tags": ["routines"]
+      }
+    },
+    "/api/v1/routines/{slot}": {
+      "put": {
+        "operationId": "routines_replace_routine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoutineIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Routine",
+        "tags": ["routines"]
+      }
+    },
+    "/api/v1/routines/{slot}/check-conflict/{product_id}": {
+      "post": {
+        "operationId": "routines_check_product_conflict",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          },
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Product Conflict",
+        "tags": ["routines"]
+      }
+    },
+    "/api/v1/routines/{slot}/complete": {
+      "post": {
+        "operationId": "routines_toggle_routine_completion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Toggle Routine Completion",
+        "tags": ["routines"]
       }
     },
     "/health/live": {

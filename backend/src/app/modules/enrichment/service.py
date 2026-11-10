@@ -7,13 +7,19 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.modules.catalog import ProductDetail, ProductIngredientOut, make_product_ingredient_out
 from app.modules.catalog.category_service import CategoryService
 from app.modules.catalog.enums import EnrichmentStatus
-from app.modules.enrichment.llm.client import LLMResult
+from app.modules.enrichment.exceptions import NoAnalyzableIngredientsError
+from app.modules.enrichment.llm.client import LLMError, LLMResult
 from app.modules.enrichment.llm.router import LLMRouter
 from app.modules.enrichment.prompts.alias_adjudication import (
     ALIAS_ADJUDICATION_SYSTEM_PROMPT,
     build_alias_adjudication_prompt,
+)
+from app.modules.enrichment.prompts.inci_normalization import (
+    INCI_NORMALIZATION_SYSTEM_PROMPT,
+    build_inci_normalization_prompt,
 )
 from app.modules.enrichment.prompts.ingredient_rating import (
     INGREDIENT_RATING_SYSTEM_PROMPT,
@@ -23,13 +29,20 @@ from app.modules.enrichment.prompts.product_enrichment import (
     PRODUCT_ENRICHMENT_SYSTEM_PROMPT,
     build_product_enrichment_prompt,
 )
+from app.modules.enrichment.prompts.product_summary import (
+    PRODUCT_SUMMARY_SYSTEM_PROMPT,
+    build_product_summary_prompt,
+)
 from app.modules.enrichment.repository import EnrichmentRepository
 from app.modules.enrichment.schemas import (
     AliasAdjudicationResult,
     EnrichmentOutcome,
+    InciNormalizationResult,
     IngredientRatingBatchResult,
+    InstantAnalysisOut,
     OcrIngredientsResult,
     ProductEnrichmentResult,
+    ProductSummaryResult,
 )
 from app.modules.enrichment.validator import (
     compute_consensus_rating,
@@ -37,12 +50,18 @@ from app.modules.enrichment.validator import (
 )
 from app.modules.ingredients import (
     AliasSource,
+    IngredientInfo,
     IngredientService,
     RatingSource,
     ReviewStatus,
     is_valid_ingredient_token,
     normalize,
     parse_ingredient_label,
+)
+from app.modules.scoring import (
+    INTERIM_RISK_TO_RATING,
+    IngredientScoreInput,
+    calculate_score,
 )
 
 logger = structlog.get_logger(__name__)
@@ -57,6 +76,63 @@ def register_divergence_hook(hook: RatingDivergenceHook) -> None:
 
 
 T = TypeVar("T", bound=BaseModel)
+
+
+def _score_input(position: int, info: IngredientInfo | None) -> IngredientScoreInput:
+    """Adapt a known ingredient to Scoring v4 without assigning a guessed match."""
+    if info is None:
+        return IngredientScoreInput(position=position, rating=None, confidence=0.0)
+
+    rating = info.rating if info.rating is not None else INTERIM_RISK_TO_RATING.get(info.risk_level)
+    confidence = (
+        info.rating_confidence
+        if info.rating_confidence is not None
+        else (0.0 if rating is None else 1.0)
+    )
+    return IngredientScoreInput(
+        position=position,
+        rating=rating,
+        confidence=confidence,
+        is_prohibited=info.is_prohibited,
+        is_restricted=info.is_restricted,
+        is_allergen=info.is_allergen,
+        functions=info.functions,
+    )
+
+
+def _instant_analysis_summary(
+    *,
+    ingredient_count: int,
+    recognized_count: int,
+    score_band: str,
+    locale: str,
+    product_name: str | None,
+) -> str:
+    """Two-sentence fallback copy for an ephemeral label analysis.
+
+    This intentionally contains no health claim and does not make an LLM call on
+    the synchronous analysis path.
+    """
+    is_french = locale.lower().startswith("fr")
+    label = (product_name or "").strip()
+    if is_french:
+        subject = f"Le produit {label}" if label else "Cette liste d'ingredients"
+        band = {
+            "low": "faible",
+            "moderate": "modéré",
+            "high": "élevé",
+            "unknown": "indéterminé",
+        }.get(score_band, "indéterminé")
+        return (
+            f"{subject} contient {ingredient_count} ingrédient(s) analysé(s). "
+            f"{recognized_count} correspondent à notre référence, avec un niveau de préoccupation {band}."
+        )
+
+    subject = f"{label} contains" if label else "This ingredient label contains"
+    return (
+        f"{subject} {ingredient_count} parsed ingredient(s). "
+        f"{recognized_count} match our reference, with a {score_band} concern level."
+    )
 
 
 class EnrichmentService:
@@ -469,6 +545,136 @@ class EnrichmentService:
             images=[b64_image],
         )
         return validated
+
+    async def analyze_ingredient_label(
+        self,
+        text: str,
+        locale: str,
+        product_name: str | None = None,
+    ) -> InstantAnalysisOut:
+        """Parse, cautiously match, and score a label without creating catalog records.
+
+        Matching is exact/component only. A best-effort LLM normalization is allowed for
+        unmatched foreign-language tokens, but its output is always passed through the
+        ingredient dictionary before it can affect a score.
+        """
+        parsed = [
+            item for item in parse_ingredient_label(text) if is_valid_ingredient_token(item.text)
+        ]
+        if not parsed:
+            raise NoAnalyzableIngredientsError(
+                "Submit a comma-separated ingredient label with at least one valid ingredient."
+            )
+
+        tokens = [item.text for item in parsed]
+        matches = await self.ingredient_service.match(tokens)
+        ingredient_ids = [match.ingredient_id for match in matches]
+
+        unmatched_tokens = [
+            token
+            for token, ingredient_id in zip(tokens, ingredient_ids, strict=True)
+            if ingredient_id is None
+        ]
+        if unmatched_tokens:
+            try:
+                normalized = await self.normalize_inci_tokens(unmatched_tokens)
+            except LLMError:
+                # An unavailable normalizer must not turn an otherwise useful immediate
+                # label analysis into a failed user request. Unmatched tokens stay unknown.
+                logger.warning("instant_analysis_normalization_unavailable")
+            else:
+                normalized_pairs = [
+                    (token, normalized[token]) for token in unmatched_tokens if token in normalized
+                ]
+                normalized_matches = await self.ingredient_service.match(
+                    [normalized_token for _, normalized_token in normalized_pairs]
+                )
+                normalized_ids = {
+                    original_token: match.ingredient_id
+                    for (original_token, _), match in zip(
+                        normalized_pairs, normalized_matches, strict=True
+                    )
+                    if match.ingredient_id is not None
+                }
+                ingredient_ids = [
+                    ingredient_id or normalized_ids.get(token)
+                    for token, ingredient_id in zip(tokens, ingredient_ids, strict=True)
+                ]
+
+        known_ids = {ingredient_id for ingredient_id in ingredient_ids if ingredient_id is not None}
+        infos = await self.ingredient_service.get_many(known_ids, locale) if known_ids else {}
+        resolved_infos = [
+            infos[ingredient_id] if ingredient_id is not None else None
+            for ingredient_id in ingredient_ids
+        ]
+
+        score_inputs = [
+            _score_input(position, info) for position, info in enumerate(resolved_infos, start=1)
+        ]
+        score_result = calculate_score(score_inputs)
+        ingredients: list[ProductIngredientOut] = [
+            make_product_ingredient_out(position, token, info)
+            for position, (token, info) in enumerate(
+                zip(tokens, resolved_infos, strict=True), start=1
+            )
+        ]
+        recognized_count = sum(ingredient_id is not None for ingredient_id in ingredient_ids)
+        return InstantAnalysisOut(
+            extracted_text=text.strip(),
+            score=score_result.score,
+            score_band=score_result.band,
+            score_coverage=round(recognized_count / len(tokens), 3),
+            score_is_estimated=score_result.is_estimated,
+            summary=_instant_analysis_summary(
+                ingredient_count=len(tokens),
+                recognized_count=recognized_count,
+                score_band=score_result.band.value,
+                locale=locale,
+                product_name=product_name,
+            ),
+            ingredients=ingredients,
+        )
+
+    async def normalize_inci_tokens(self, tokens: list[str]) -> dict[str, str]:
+        """Translate uncertain label tokens to canonical INCI without inventing matches.
+
+        The caller still runs the result through exact IngredientService matching. This
+        method never creates aliases or dictionary rows from an LLM response.
+        """
+        if not tokens:
+            return {}
+        prompt = build_inci_normalization_prompt(tokens)
+        result, _ = await self.generate_json(
+            task="normalize_inci",
+            system=INCI_NORMALIZATION_SYSTEM_PROMPT,
+            prompt=prompt,
+            schema=InciNormalizationResult,
+            schema_version=1,
+        )
+        allowed = {token.strip() for token in tokens}
+        normalized: dict[str, str] = {}
+        for item in result.ingredients:
+            original = item.original.strip()
+            inci = item.inci.strip().upper() if item.inci else ""
+            if original in allowed and inci and is_valid_ingredient_token(inci):
+                normalized[original] = inci
+        return normalized
+
+    async def generate_product_summary(self, product: ProductDetail) -> dict[str, str]:
+        """Generate bounded bilingual copy for a background enrichment job."""
+        result, _ = await self.generate_json(
+            task="product_summary",
+            system=PRODUCT_SUMMARY_SYSTEM_PROMPT,
+            prompt=build_product_summary_prompt(product),
+            schema=ProductSummaryResult,
+            schema_version=1,
+        )
+        summaries: dict[str, str] = {}
+        for locale in ("en", "fr"):
+            cleaned = validate_and_clean_plain_text(result.summaries.get(locale), max_words=40)
+            if cleaned:
+                summaries[locale] = cleaned
+        return summaries
 
     async def fetch_web_context_for_product(
         self, barcode: str | None, name: str | None

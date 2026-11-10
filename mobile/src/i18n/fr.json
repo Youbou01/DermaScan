@@ -106,5 +106,75 @@
     "empty_title": "Aucun produit pour le moment",
     "empty_description": "Scannez un produit pour consulter les indicateurs de risque de ses ingrédients.",
     "scan_product": "Scanner un produit"
+  },
+  "ocr": {
+    "title": "Scanner la liste d’ingrédients",
+    "switch_to_ocr": "Scanner le texte des ingrédients (OCR)",
+    "switch_to_barcode": "Scanner plutôt un code-barres",
+    "instruction": "Prenez une photo nette de la liste d’ingrédients sur l’emballage ou collez le texte ci-dessous.",
+    "capture_photo": "Photographier l’étiquette",
+    "analyzing": "Analyse de l’étiquette en cours…",
+    "text_label": "Texte de la liste d’ingrédients (toute langue)",
+    "text_placeholder": "Collez ou modifiez les ingrédients (ex. Aqua, Glycérine, Niacinamide, Rétinol…)",
+    "analyze_button": "Analyser les ingrédients",
+    "empty_text_error": "Veuillez saisir ou photographier une liste d’ingrédients à analyser.",
+    "result_heading": "Analyse instantanée de l’étiquette",
+    "extracted_label": "Texte extrait de l’étiquette",
+    "estimated_badge": "Score estimé",
+    "reset_button": "Analyser une autre étiquette"
+  },
+  "routine": {
+    "title": "Ma Routine Soin",
+    "open_routine": "Ma Routine",
+    "morning_tab": "Matin (AM)",
+    "evening_tab": "Soir (PM)",
+    "habit_title": "Suivi des habitudes quotidiennes",
+    "habit_completed": "Terminée aujourd’hui",
+    "habit_mark_complete": "Marquer la routine comme terminée",
+    "steps_heading": "Étapes de la routine",
+    "empty_title": "Aucun produit dans cette routine",
+    "empty_description": "Ajoutez des produits du catalogue ou découvrez une routine recommandée.",
+    "add_product_heading": "Ajouter un produit à cette routine",
+    "add_step_button": "Ajouter {{name}} à la routine",
+    "remove_step_label": "Retirer {{name}} de la routine",
+    "move_up_label": "Monter {{name}}",
+    "move_down_label": "Descendre {{name}}",
+    "open_recommendations": "Voir les routines AM/PM recommandées",
+    "step_types": {
+      "cleanser": "1. Nettoyant",
+      "toner": "2. Tonique",
+      "serum": "3. Sérum / Soin ciblé",
+      "moisturizer": "4. Hydratant",
+      "sunscreen": "5. Écran solaire"
+    }
+  },
+  "conflicts": {
+    "banner_title_one": "1 conflit d’ingrédients détecté dans cette routine",
+    "banner_title_other": "{{count}} conflits d’ingrédients détectés dans cette routine",
+    "banner_cta": "Voir les détails du conflit",
+    "modal_heading": "Détails des conflits de la routine",
+    "close_modal": "Fermer les détails des conflits",
+    "pre_check_warning": "L’ajout de ce produit crée un conflit avec votre routine actuelle.",
+    "severity_high": "Préoccupation d’interaction élevée",
+    "severity_moderate": "Préoccupation d’interaction modérée",
+    "resolution_label": "Ajustement recommandé :"
+  },
+  "recommendations": {
+    "title": "Routines Recommandées",
+    "subtitle": "Routines matin et soir sans conflit adaptées à votre type de peau.",
+    "skin_type_label": "Sélectionner le type de peau",
+    "skin_types": {
+      "normal": "Normale",
+      "dry": "Sèche",
+      "oily": "Grasse",
+      "combination": "Mixte",
+      "sensitive": "Sensible"
+    },
+    "morning_heading": "Routine Matin Recommandée (AM)",
+    "evening_heading": "Routine Soir Recommandée (PM)",
+    "apply_morning": "Appliquer à ma routine du matin",
+    "apply_evening": "Appliquer à ma routine du soir",
+    "applied_Confirmation": "Routine mise à jour avec les étapes recommandées.",
+    "back_to_routine": "Retour à ma routine"
   }
 }

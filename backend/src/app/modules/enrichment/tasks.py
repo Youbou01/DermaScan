@@ -18,6 +18,24 @@ from app.modules.ingredients import IngredientService
 logger = structlog.get_logger(__name__)
 
 
+@register_task("summarize_product")
+async def summarize_product_task(payload: dict[str, Any], session: AsyncSession) -> None:
+    """Generate stored bilingual copy off the request path (ADR-0012)."""
+    product_id_raw = payload.get("product_id")
+    if not product_id_raw:
+        logger.warning("summarize_product_missing_id")
+        return
+    product_id = uuid.UUID(str(product_id_raw))
+    catalog = CatalogService(session)
+    product = await catalog.get_product_detail(product_id, locale="en")
+    summaries = await EnrichmentService(session).generate_product_summary(product)
+    if summaries:
+        await catalog.set_product_summary(product_id, summaries)
+        logger.info("summarize_product_finished", product_id=str(product_id))
+    else:
+        logger.warning("summarize_product_empty", product_id=str(product_id))
+
+
 @register_task("rate_ingredients")
 async def rate_ingredients_task(payload: dict[str, Any], session: AsyncSession) -> None:
     raw_ids = payload.get("ingredient_ids")

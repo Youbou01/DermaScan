@@ -149,18 +149,34 @@ function HomeHero(): ReactElement {
       <Text style={[styles.heroDescription, { color: foreground }]}>
         {t('home.hero_description')}
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/scan' as unknown as Href)}
-        style={({ pressed }) => [
-          styles.scanButton,
-          { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
-        ]}
-      >
-        <Text style={[styles.scanButtonText, { color: colors.primary }]}>
-          {t('scan.scan_button')}
-        </Text>
-      </Pressable>
+      <View style={styles.heroActionsRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('scan.scan_button')}
+          onPress={() => router.push('/scan' as unknown as Href)}
+          style={({ pressed }) => [
+            styles.scanButton,
+            { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+            {t('scan.scan_button')}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('routine.open_routine')}
+          onPress={() => router.push('/routine' as unknown as Href)}
+          style={({ pressed }) => [
+            styles.scanButton,
+            { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+            {t('routine.open_routine')}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -232,11 +248,15 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     lineHeight: typography.lineHeight.sm,
   },
+  heroActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   scanButton: {
     minHeight: 44,
     alignSelf: 'flex-start',
     justifyContent: 'center',
-    marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderRadius: 12,
   },

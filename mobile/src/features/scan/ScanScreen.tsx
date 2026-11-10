@@ -95,6 +95,24 @@ export function ScanScreen(): ReactElement {
       <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
         {t('scan.title')}
       </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('ocr.switch_to_ocr')}
+        onPress={() => router.push('/scan-ocr' as unknown as Href)}
+        style={({ pressed }) => [
+          styles.actionButton,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+          {t('ocr.switch_to_ocr')}
+        </Text>
+      </Pressable>
       {permission?.granted && isFocused ? (
         <View style={[styles.cameraFrame, { backgroundColor: colors.surfaceMuted }]}>
           <CameraView

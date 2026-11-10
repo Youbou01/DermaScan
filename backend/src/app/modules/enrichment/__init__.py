@@ -1,5 +1,6 @@
 """enrichment module: AI enrichment gateway, prompts, schemas and cache."""
 
+from app.modules.enrichment.analysis_router import router as analysis_router
 from app.modules.enrichment.llm import (
     FakeLLMClient,
     GeminiClient,
@@ -16,12 +17,17 @@ from app.modules.enrichment.llm import (
 from app.modules.enrichment.schemas import (
     AliasAdjudicationItem,
     AliasAdjudicationResult,
+    InciNormalizationItem,
+    InciNormalizationResult,
     IngredientAliasItem,
     IngredientInciItem,
     IngredientRatingBatchResult,
+    InstantAnalysisOut,
     OcrIngredientsResult,
     ProductEnrichmentResult,
+    ProductSummaryResult,
     SingleIngredientRating,
+    TextAnalysisIn,
 )
 from app.modules.enrichment.service import EnrichmentService, register_divergence_hook
 
@@ -31,9 +37,12 @@ __all__ = [
     "EnrichmentService",
     "FakeLLMClient",
     "GeminiClient",
+    "InciNormalizationItem",
+    "InciNormalizationResult",
     "IngredientAliasItem",
     "IngredientInciItem",
     "IngredientRatingBatchResult",
+    "InstantAnalysisOut",
     "LLMChainExhaustedError",
     "LLMClient",
     "LLMError",
@@ -45,6 +54,9 @@ __all__ = [
     "OcrIngredientsResult",
     "OpenAICompatClient",
     "ProductEnrichmentResult",
+    "ProductSummaryResult",
     "SingleIngredientRating",
+    "TextAnalysisIn",
+    "analysis_router",
     "register_divergence_hook",
 ]
