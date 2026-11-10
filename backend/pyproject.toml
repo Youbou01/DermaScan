@@ -152,5 +152,5 @@ allowed_importers = ["app.modules.ingestion"]
 [[tool.importlinter.contracts]]
 name = "identity internals are private"
 type = "protected"
-protected_modules = ["app.modules.identity.models"]
+protected_modules = ["app.modules.identity.models", "app.modules.identity.repository"]
 allowed_importers = ["app.modules.identity"]
