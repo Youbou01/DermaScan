@@ -4,40 +4,6 @@
  */
 
 export interface paths {
-  '/health/live': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Live */
-    get: operations['health_live'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/health/ready': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Ready */
-    get: operations['health_ready'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/v1/categories': {
     parameters: {
       query?: never;
@@ -52,6 +18,23 @@ export interface paths {
     get: operations['categories_list_categories'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/contributions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Submit Photo Contribution */
+    post: operations['contributions_submit_photo_contribution'];
     delete?: never;
     options?: never;
     head?: never;
@@ -119,6 +102,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/products/filter': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Filter scored products, best score first */
+    get: operations['products_filter_products'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/products/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search products by name (accent-insensitive, typo-tolerant) */
+    get: operations['products_search_products'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/products/{product_id}': {
     parameters: {
       query?: never;
@@ -136,40 +153,101 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/health/live': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Live */
+    get: operations['health_live'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/health/ready': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Ready */
+    get: operations['health_ready'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** Body_contributions_submit_photo_contribution */
+    Body_contributions_submit_photo_contribution: {
+      /**
+       * Barcode
+       * @description Product barcode (GTIN-8, GTIN-12, or GTIN-13)
+       */
+      barcode: string;
+      /**
+       * Photo
+       * @description Photo of product packaging ingredient label
+       */
+      photo: string;
+    };
     /**
      * CategoryNodeOut
      * @description A category in the browse tree (top-level or child).
      */
     CategoryNodeOut: {
+      /** Children */
+      children?: components['schemas']['CategoryNodeOut'][];
+      /**
+       * Name
+       * @description Display name in the response language (English fallback).
+       */
+      name: string;
       /**
        * Slug
        * @description Stable key shared with the mobile app and seed files.
        */
       slug: string;
+    };
+    /** CategoryOut */
+    CategoryOut: {
       /**
        * Name
        * @description Display name in the response language (English fallback).
        */
       name: string;
-      /** Children */
-      children?: components['schemas']['CategoryNodeOut'][];
-    };
-    /** CategoryOut */
-    CategoryOut: {
       /**
        * Slug
        * @description Stable key, e.g. 'moisturizer'. Use it for icons and i18n.
        */
       slug: string;
+    };
+    /** ContributionResponse */
+    ContributionResponse: {
+      /** Barcode */
+      barcode: string;
       /**
-       * Name
-       * @description Display name in the response language (English fallback).
+       * Id
+       * Format: uuid
        */
-      name: string;
+      id: string;
+      /** Message */
+      message: string;
+      /** Status */
+      status: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -188,21 +266,31 @@ export interface components {
        * @description Stable section id, e.g. 'top_rated'.
        */
       id: string;
-      /**
-       * Type
-       * @description Section kind for the client layout.
-       */
-      type: string;
-      /**
-       * Title
-       * @description Localized section title.
-       */
-      title: string;
       /** Items */
       items: (components['schemas']['CategoryOut'] | components['schemas']['ProductCardOut'])[];
       /**
        * Next Cursor
        * @description Opaque cursor for the next page, or null.
+       */
+      next_cursor: string | null;
+      /**
+       * Title
+       * @description Localized section title.
+       */
+      title: string;
+      /**
+       * Type
+       * @description Section kind for the client layout.
+       */
+      type: string;
+    };
+    /** Page[ProductSummary] */
+    Page_ProductSummary_: {
+      /** Items */
+      items: components['schemas']['ProductSummary'][];
+      /**
+       * Next Cursor
+       * @description Pass it as `cursor` to get the next page. Null on the last page.
        */
       next_cursor: string | null;
     };
@@ -211,41 +299,43 @@ export interface components {
      * @description Error body. Declared so it appears in the OpenAPI schema (typed client).
      */
     ProblemDetails: {
-      /** Type */
-      type: string;
-      /** Title */
-      title: string;
-      /** Status */
-      status: number;
       /** Detail */
       detail?: string | null;
-      /** Instance */
-      instance?: string | null;
-      /** Request Id */
-      request_id?: string | null;
       /** Errors */
       errors?:
         | {
             [key: string]: unknown;
           }[]
         | null;
+      /** Instance */
+      instance?: string | null;
+      /** Request Id */
+      request_id?: string | null;
+      /** Status */
+      status: number;
+      /** Title */
+      title: string;
+      /** Type */
+      type: string;
     };
     /**
      * ProductCardOut
      * @description Light product row for home shelves and search results (not the full detail page).
      */
     ProductCardOut: {
+      /** Brand */
+      brand: string | null;
+      /** Category Slug */
+      category_slug: string | null;
       /**
        * Id
        * Format: uuid
        */
       id: string;
-      /** Name */
-      name: string;
-      /** Brand */
-      brand: string | null;
       /** Image Url */
       image_url: string | null;
+      /** Name */
+      name: string;
       /**
        * Score
        * @description 0-100, or null when not scored.
@@ -253,28 +343,37 @@ export interface components {
       score: number | null;
       /** @description Null when the product has no score; 'unknown' means insufficient data. */
       score_band: components['schemas']['RiskLevel'] | null;
-      /** Category Slug */
-      category_slug: string | null;
+      /**
+       * Score Is Estimated
+       * @description True when confidence K < 0.60.
+       * @default false
+       */
+      score_is_estimated: boolean;
     };
     /** ProductDetail */
     ProductDetail: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
       /**
        * Barcode
        * @description GTIN-13.
        */
       barcode: string;
-      /** Name */
-      name: string;
       /** Brand */
       brand: string | null;
+      category: components['schemas']['CategoryOut'] | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
       /** Image Url */
       image_url: string | null;
-      category: components['schemas']['CategoryOut'] | null;
+      /**
+       * Ingredients
+       * @description In label order.
+       */
+      ingredients: components['schemas']['ProductIngredientOut'][];
+      /** Name */
+      name: string;
       /**
        * Score
        * @description 0-100, or null when the product is not scored.
@@ -288,23 +387,19 @@ export interface components {
        */
       score_coverage: number | null;
       /**
-       * Ingredients
-       * @description In label order.
+       * Score Is Estimated
+       * @description True when confidence K < 0.60.
+       * @default false
        */
-      ingredients: components['schemas']['ProductIngredientOut'][];
+      score_is_estimated: boolean;
     };
     /** ProductIngredientOut */
     ProductIngredientOut: {
       /**
-       * Position
-       * @description 1-based position on the label (decreasing amount).
+       * Confidence
+       * @description Rating confidence 0.0-1.0.
        */
-      position: number;
-      /**
-       * Name
-       * @description The ingredient exactly as printed on this product's label.
-       */
-      name: string;
+      confidence?: number | null;
       /**
        * Inci Name
        * @description Standard INCI name, when the ingredient is recognized.
@@ -315,13 +410,59 @@ export interface components {
        * @description False when we do not recognize this ingredient yet.
        */
       matched: boolean;
-      /** @description 'unknown' when not recognized or not rated. */
-      risk_level: components['schemas']['RiskLevel'];
+      /**
+       * Name
+       * @description The ingredient exactly as printed on this product's label.
+       */
+      name: string;
+      /**
+       * Position
+       * @description 1-based position on the label (decreasing amount).
+       */
+      position: number;
+      /**
+       * Rating
+       * @description 0.0-10.0 scale, 10 = least concern.
+       */
+      rating?: number | null;
       /**
        * Rationale
        * @description Why it is rated this way, in the response language.
        */
       rationale: string | null;
+      /** @description 'unknown' when not recognized or not rated. */
+      risk_level: components['schemas']['RiskLevel'];
+      /**
+       * Summary
+       * @description Plain-language function summary.
+       */
+      summary?: string | null;
+    };
+    /** ProductSummary */
+    ProductSummary: {
+      /**
+       * Barcode
+       * @description GTIN-13.
+       */
+      barcode: string;
+      /** Brand */
+      brand: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Image Url */
+      image_url: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Score
+       * @description 0-100, or null when the product is not scored.
+       */
+      score: number | null;
+      /** @description 'unknown' means insufficient data, NOT safe. */
+      score_band: components['schemas']['RiskLevel'];
     };
     /**
      * RiskLevel
@@ -332,16 +473,16 @@ export interface components {
     RiskLevel: 'low' | 'moderate' | 'high' | 'unknown';
     /** ValidationError */
     ValidationError: {
+      /** Context */
+      ctx?: Record<string, never>;
+      /** Input */
+      input?: unknown;
       /** Location */
       loc: (string | number)[];
       /** Message */
       msg: string;
       /** Error Type */
       type: string;
-      /** Input */
-      input?: unknown;
-      /** Context */
-      ctx?: Record<string, never>;
     };
   };
   responses: never;
@@ -352,50 +493,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  health_live: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: string;
-          };
-        };
-      };
-    };
-  };
-  health_ready: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            [key: string]: string;
-          };
-        };
-      };
-    };
-  };
   categories_list_categories: {
     parameters: {
       query?: never;
@@ -412,6 +509,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['CategoryNodeOut'][];
+        };
+      };
+    };
+  };
+  contributions_submit_photo_contribution: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_contributions_submit_photo_contribution'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ContributionResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };
@@ -551,6 +681,86 @@ export interface operations {
       };
     };
   };
+  products_filter_products: {
+    parameters: {
+      query?: {
+        /** @description Category slug; child categories are included. */
+        category?: string | null;
+        /** @description One or more score bands. */
+        band?: components['schemas']['RiskLevel'][] | null;
+        min_score?: number | null;
+        max_score?: number | null;
+        /** @description Must contain all of these. */
+        include?: string[] | null;
+        /** @description Must contain none of these. */
+        exclude?: string[] | null;
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Page_ProductSummary_'];
+        };
+      };
+      /** @description Invalid query, cursor or score range. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  products_search_products: {
+    parameters: {
+      query: {
+        /** @description Name to look for. */
+        q: string;
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Page_ProductSummary_'];
+        };
+      };
+      /** @description Invalid query, cursor or score range. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   products_get_product: {
     parameters: {
       query?: never;
@@ -587,6 +797,50 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  health_live: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: string;
+          };
+        };
+      };
+    };
+  };
+  health_ready: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: string;
+          };
         };
       };
     };

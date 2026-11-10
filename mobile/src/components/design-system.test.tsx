@@ -25,6 +25,7 @@ const product = {
   image_url: null,
   score: 80,
   score_band: 'low' as const,
+  score_is_estimated: false,
   category_slug: 'moisturizer',
 };
 
@@ -60,13 +61,13 @@ describe('ScoreBadge and ProductCard', () => {
         i18n.t('common.score', { value: i18n.t('common.score_out_of', { score: 80 }) }),
       ),
     ).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Daily cream, Example' }));
+    await fireEvent.press(screen.getByRole('button', { name: /Daily cream, Example/ }));
     expect(onPress).toHaveBeenCalledWith('product-1');
   });
 });
 
 describe('state and loading components', () => {
-  it('renders children inside a scrollable safe-area screen', async () => {
+  it('renders children inside a scrollable inset-aware screen', async () => {
     expect(
       (
         await render(

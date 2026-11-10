@@ -9,6 +9,7 @@ import { spacing, typography, useThemeColors } from '@/theme/tokens';
 import { useTranslation } from '@/i18n/useTranslation';
 import { CategoryGrid } from './components/CategoryGrid';
 import { ProductShelf } from './components/ProductShelf';
+import { useAuth } from '@/features/auth/AuthProvider';
 
 export async function refreshHomeFeed(
   queryClient: QueryClient,
@@ -136,12 +137,27 @@ function HomeHero(): ReactElement {
   const colors = useThemeColors();
   const router = useRouter();
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuth();
   const foreground = colors.onPrimary;
   return (
     <View style={[styles.hero, { backgroundColor: colors.primary }]}>
       <View style={styles.heroMark}>
         <Text style={[styles.heroMarkText, { color: foreground }]}>DS</Text>
       </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() =>
+          router.push((isAuthenticated ? '/profile' : '/auth/sign-in') as unknown as Href)
+        }
+        style={({ pressed }) => [
+          styles.profileButton,
+          { borderColor: foreground, opacity: pressed ? 0.75 : 1 },
+        ]}
+      >
+        <Text style={[styles.profileButtonText, { color: foreground }]}>
+          {t(isAuthenticated ? 'profile.title' : 'auth.sign_in')}
+        </Text>
+      </Pressable>
       <Text style={[styles.heroEyebrow, { color: foreground }]}>{t('home.hero_eyebrow')}</Text>
       <Text accessibilityRole="header" style={[styles.heroTitle, { color: foreground }]}>
         {t('home.hero_title')}
@@ -213,6 +229,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF24',
   },
   heroMarkText: { fontSize: typography.size.sm, fontWeight: '700' },
+  profileButton: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: spacing.xl,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+  profileButtonText: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold },
   heroEyebrow: {
     marginBottom: spacing.sm,
     fontSize: typography.size.xs,

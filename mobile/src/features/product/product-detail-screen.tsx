@@ -7,7 +7,10 @@ import type { ProductIngredient, RiskLevel } from '@/api/types';
 import { useProductQuery } from '@/api/hooks';
 import { EmptyState, ErrorState, RiskBadge, ScoreBadge, Screen, Skeleton } from '@/components';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
+import { useTranslation } from '@/i18n/useTranslation';
 import { IngredientRationaleModal } from './components/IngredientRationaleModal';
+import { SuitabilityBanner } from './components/SuitabilityBanner';
+import { BlacklistButton } from './components/BlacklistButton';
 import { formatScoreCoverage, productDetailCopy } from './product-detail.copy';
 
 const productNotFoundType = 'urn:skincare:problem:product-not-found';
@@ -133,6 +136,9 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         </Text>
       </View>
 
+      <SuitabilityBanner productId={product.id} />
+      <BlacklistButton productId={product.id} />
+
       <View
         style={[
           styles.scoreSection,
@@ -192,12 +198,13 @@ interface IngredientRowProps {
 
 function IngredientRow({ ingredient, onPress }: IngredientRowProps): ReactElement {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const level: RiskLevel = ingredient.matched ? ingredient.risk_level : 'unknown';
 
   return (
     <Pressable
       accessibilityHint={productDetailCopy.openRationaleHint}
-      accessibilityLabel={`${ingredient.position}. ${ingredient.name}`}
+      accessibilityLabel={`${ingredient.position}. ${ingredient.name}. ${t(`risk.accessibility.${level}`)}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [

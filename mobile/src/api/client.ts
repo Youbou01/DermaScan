@@ -4,6 +4,12 @@ import { getActiveApiLocale } from './locale';
 import { categoriesFixture, homeFixture, productFixture } from './fixtures';
 import type { paths } from './generated/schema';
 
+let activeAccessToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  activeAccessToken = token;
+}
+
 function mockResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -70,6 +76,7 @@ export function createApiClient(
   client.use({
     onRequest({ request }) {
       request.headers.set('Accept-Language', getActiveApiLocale());
+      if (activeAccessToken) request.headers.set('Authorization', `Bearer ${activeAccessToken}`);
       return request;
     },
   });

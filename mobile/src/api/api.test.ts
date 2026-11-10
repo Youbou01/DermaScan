@@ -1,5 +1,5 @@
 import { ApiError } from './errors';
-import { createApiClient, mockApiFetch } from './client';
+import { createApiClient, mockApiFetch, setAccessToken } from './client';
 import { categoriesFixture, homeFixture, ingredientFixture, productFixture } from './fixtures';
 import { getActiveApiLocale, setApiLocale } from './locale';
 import { searchFixture } from './search-fixture';
@@ -8,6 +8,7 @@ import i18n from '@/i18n/i18n';
 describe('API layer', () => {
   beforeEach(() => {
     setApiLocale('en');
+    setAccessToken(null);
   });
 
   it('sends the active locale on every request', async () => {
@@ -27,6 +28,23 @@ describe('API layer', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0]?.headers.get('Accept-Language')).toBe('fr');
     expect(getActiveApiLocale()).toBe('fr');
+  });
+
+  it('adds the persisted bearer token only when one is available', async () => {
+    const requests: Request[] = [];
+    const adapter: typeof fetch = async (input, init) => {
+      requests.push(new Request(input, init));
+      return new Response(JSON.stringify(categoriesFixture.en), {
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+    const client = createApiClient(adapter);
+    setAccessToken('session-access-token');
+    await client.GET('/api/v1/categories');
+    setAccessToken(null);
+    await client.GET('/api/v1/categories');
+    expect(requests[0]?.headers.get('authorization')).toBe('Bearer session-access-token');
+    expect(requests[1]?.headers.has('authorization')).toBe(false);
   });
 
   it('parses RFC problem details and validation errors', async () => {

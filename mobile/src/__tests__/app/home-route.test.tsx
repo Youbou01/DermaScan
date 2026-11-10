@@ -9,6 +9,7 @@ import i18n from '@/i18n/i18n';
 import { LanguageProvider } from '@/i18n/LanguageProvider';
 import HomeRoute from '@/app/index';
 import { refreshHomeFeed } from '@/features/home/HomeScreen';
+import { AuthProvider } from '@/features/auth/AuthProvider';
 
 const mockPush = jest.fn();
 let mockQueryResult: UseQueryResult<HomeFeed>;
@@ -27,7 +28,9 @@ function renderRoute(): ReactElement {
   return (
     <QueryClientProvider client={client}>
       <LanguageProvider>
-        <HomeRoute />
+        <AuthProvider>
+          <HomeRoute />
+        </AuthProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );

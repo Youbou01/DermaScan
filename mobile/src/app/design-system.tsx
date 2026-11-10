@@ -24,6 +24,7 @@ const product = {
   image_url: null,
   score: 82,
   score_band: 'low' as const,
+  score_is_estimated: false,
   category_slug: 'moisturizer',
 };
 
@@ -72,6 +73,7 @@ export default function DesignSystemShowcase(): ReactElement | null {
           brand: null,
           score: null,
           score_band: null,
+          score_is_estimated: false,
           category_slug: null,
         }}
         onPress={(id) => setMessage(t('common.selected', { id }))}

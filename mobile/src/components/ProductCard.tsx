@@ -27,19 +27,19 @@ export function ProductCard({
     ? getLocalizedCategorySlug(product.category_slug)
     : null;
   const [imageFailed, setImageFailed] = useState(false);
-  const badge = product.score_band ? (
-    product.score_band === 'unknown' ? (
-      <RiskBadge level="unknown" />
+  const badge =
+    product.score_band && product.score_band !== 'unknown' ? (
+      <View style={styles.badges}>
+        <ScoreBadge score={product.score} band={product.score_band} />
+        <RiskBadge level={product.score_band} />
+      </View>
     ) : (
-      <ScoreBadge score={product.score} band={product.score_band} />
-    )
-  ) : (
-    <ScoreBadge score={product.score} />
-  );
+      <RiskBadge level="unknown" />
+    );
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${product.brand ?? t('errors.unknown_brand')}`}
+      accessibilityLabel={`${product.name}, ${product.brand ?? t('errors.unknown_brand')}, ${t(`risk.accessibility.${product.score_band ?? 'unknown'}`)}`}
       onPress={() => onPress?.(product.id)}
       style={({ pressed }) => [
         styles.card,
@@ -138,4 +138,5 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.xs,
     textTransform: 'capitalize',
   },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

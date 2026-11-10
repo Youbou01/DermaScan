@@ -5,6 +5,7 @@ import type {
   ProductDetail,
   ProductIngredient,
 } from './types';
+import type { ProfileDTO, SuitabilityDTO } from './contracts';
 
 const categoriesEn: CategoryNode[] = [
   {
@@ -59,6 +60,7 @@ const serumProduct: ProductCard = {
   image_url: null,
   score: 84,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'serum',
 };
 
@@ -69,6 +71,7 @@ const cleanserProduct: ProductCard = {
   image_url: null,
   score: 68,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'cleanser',
 };
 
@@ -79,6 +82,7 @@ const moisturizerProduct: ProductCard = {
   image_url: null,
   score: 92,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'moisturizer',
 };
 
@@ -89,6 +93,7 @@ const sunscreenProduct: ProductCard = {
   image_url: null,
   score: 76,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'sunscreen',
 };
 
@@ -99,6 +104,7 @@ const tonerProduct: ProductCard = {
   image_url: null,
   score: 81,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'toner',
 };
 
@@ -109,6 +115,7 @@ const eyeCareProduct: ProductCard = {
   image_url: null,
   score: 88,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'eye-care',
 };
 
@@ -119,6 +126,7 @@ const bodyLotionProduct: ProductCard = {
   image_url: null,
   score: 63,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'body-lotion',
 };
 
@@ -129,6 +137,7 @@ const lipCareProduct: ProductCard = {
   image_url: null,
   score: 40,
   score_band: 'unknown',
+  score_is_estimated: false,
   category_slug: 'lip-care',
 };
 
@@ -180,6 +189,7 @@ export const productFixture: ProductDetail = {
   score: 84,
   score_band: 'low',
   score_coverage: 0.8,
+  score_is_estimated: false,
   ingredients: productIngredients,
 };
 
@@ -223,3 +233,21 @@ function homeFeed(locale: 'en' | 'fr'): HomeFeed {
 
 export const homeFixture = { en: homeFeed('en'), fr: homeFeed('fr') };
 export const productCardsFixture = products;
+
+export const profileFixture: ProfileDTO = {
+  user_id: '01950000-0000-7000-8000-000000000001',
+  skin_type: 'sensitive',
+  is_pregnant_or_nursing: false,
+  health_conditions: ['eczema'],
+  allergy_ingredient_ids: [],
+  blacklisted_product_ids: [cleanserProduct.id],
+};
+
+export const suitabilityFixture: SuitabilityDTO = {
+  product_id: productFixture.id,
+  suits_profile: true,
+  verdict: 'suitable',
+  has_risk_alert: false,
+  is_blacklisted: false,
+  alerts: [],
+};
