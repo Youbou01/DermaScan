@@ -19,6 +19,7 @@ import app.modules.enrichment.models
 import app.modules.identity.models
 import app.modules.ingestion.models
 import app.modules.ingredients.models
+import app.modules.routines.models
 from app.core.config import get_settings
 from app.core.orm import Base
 
@@ -32,6 +33,7 @@ _REGISTERED_MODELS = (
     app.modules.identity.models,
     app.modules.ingestion.models,
     app.modules.ingredients.models,
+    app.modules.routines.models,
 )
 
 config = context.config

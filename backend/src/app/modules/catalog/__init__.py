@@ -32,8 +32,9 @@ from app.modules.catalog.schemas import (
     ProductDetail,
     ProductIngredientOut,
     ProductUpsert,
+    RoutineProductData,
 )
-from app.modules.catalog.service import CatalogService
+from app.modules.catalog.service import CatalogService, make_product_ingredient_out
 from app.modules.ingredients.service import IngredientService
 
 IngredientService.register_dirty_hook(
@@ -63,10 +64,12 @@ __all__ = [
     "ProductNotFoundError",
     "ProductSource",
     "ProductUpsert",
+    "RoutineProductData",
     "SectionNotFoundError",
     "catalog_router",
     "categories_router",
     "compute_check_digit",
     "home_router",
+    "make_product_ingredient_out",
     "normalize_gtin",
 ]

@@ -233,6 +233,16 @@ async def enrich_raw_product_task(payload: dict[str, Any], session: AsyncSession
 
         product = await catalog_service.upsert_product(upsert_dto)
 
+        # Copy generation is intentionally asynchronous; the catalog serves a
+        # deterministic fallback until this enrichment job has completed.
+        if product.summary_i18n is None:
+            await enqueue_job(
+                session,
+                queue="enrichment",
+                task_name="summarize_product",
+                payload={"product_id": str(product.id)},
+            )
+
         # Enqueue recompute dirty scores via singleton job
         await enqueue_singleton_job(
             session,

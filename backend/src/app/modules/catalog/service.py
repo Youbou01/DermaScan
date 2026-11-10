@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import RiskLevel
-from app.core.i18n import DEFAULT_LOCALE, resolve_product_name
+from app.core.i18n import DEFAULT_LOCALE, pick_translation, resolve_product_name
 from app.modules.catalog.category_repository import CategoryRepository
 from app.modules.catalog.enums import EnrichmentStatus, ImageStatus, ProductSource
 from app.modules.catalog.exceptions import ProductNotFoundError
@@ -24,9 +24,11 @@ from app.modules.catalog.schemas import (
     CategoryOut,
     CreateProductInput,
     DeduplicationResult,
+    ProductCardOut,
     ProductDetail,
     ProductIngredientOut,
     ProductUpsert,
+    RoutineProductData,
 )
 from app.modules.catalog.search_text import normalize_name
 from app.modules.ingredients import (
@@ -128,8 +130,13 @@ class CatalogService:
             score_band=RiskLevel(product.score_band),
             score_coverage=product.score_coverage,
             score_is_estimated=product.score_is_estimated,
+            summary=(
+                pick_translation(product.summary_i18n, locale)
+                if product.summary_i18n
+                else _fallback_product_summary(product, infos, locale)
+            ),
             ingredients=[
-                _ingredient_out(
+                make_product_ingredient_out(
                     item.position,
                     item.raw_text,
                     infos.get(item.ingredient_id) if item.ingredient_id else None,
@@ -137,6 +144,53 @@ class CatalogService:
                 for item in product.ingredients
             ],
         )
+
+    async def get_products_for_routine(
+        self, product_ids: Collection[uuid.UUID], locale: str
+    ) -> dict[uuid.UUID, RoutineProductData]:
+        """Return the catalog projection consumed by the routines module."""
+        products = await self._products.get_by_ids(product_ids)
+        ingredient_ids = {
+            item.ingredient_id
+            for product in products
+            for item in product.ingredients
+            if item.ingredient_id is not None
+        }
+        infos = await self._ingredients.get_many(ingredient_ids, locale) if ingredient_ids else {}
+        return {
+            product.id: RoutineProductData(
+                product=_routine_product_card(product, locale),
+                category_slug=product.primary_category.slug if product.primary_category else None,
+                ingredient_inci_names=tuple(
+                    infos[item.ingredient_id].inci_name
+                    for item in product.ingredients
+                    if item.ingredient_id in infos
+                ),
+            )
+            for product in products
+        }
+
+    async def get_routine_recommendation_candidates(
+        self, skin_type: str, locale: str
+    ) -> list[RoutineProductData]:
+        """Return scored candidates for deterministic routine assembly.
+
+        The profile/suitability module owns skin-type predicates. The parameter is
+        accepted at this stable module boundary so that predicate can be introduced
+        without changing routines' public API or crossing ORM boundaries.
+        """
+        del skin_type
+        products = await self._products.list_routine_recommendation_candidates(limit=100)
+        result = await self.get_products_for_routine([product.id for product in products], locale)
+        return list(result.values())
+
+    async def set_product_summary(self, product_id: uuid.UUID, summaries: dict[str, str]) -> None:
+        """Persist validated summaries without exposing catalog ORM models."""
+        product = await self._products.get_by_id(product_id)
+        if product is None:
+            raise ProductNotFoundError(f"No product with id {product_id}.")
+        product.summary_i18n = summaries
+        await self._session.flush()
 
     async def rematch_unmatched(self, batch_size: int = 500) -> int:
         """Re-runs exact matching on product_ingredient rows with ingredient_id IS NULL."""
@@ -681,7 +735,7 @@ class CatalogService:
         return claimed
 
 
-def _ingredient_out(
+def make_product_ingredient_out(
     position: int, raw_text: str, info: IngredientInfo | None
 ) -> ProductIngredientOut:
     if info is None:  # not recognized: shown, but never presented as safe
@@ -734,6 +788,61 @@ def _ingredient_out(
         summary=info.summary,
         confidence=eff_conf,
         ingredient_id=info.id,
+    )
+
+
+# Kept as a private compatibility alias for existing internal callers while the
+# routines and instant-analysis modules consume the intentionally public name.
+_ingredient_out = make_product_ingredient_out
+
+
+def _routine_product_card(product: Product, locale: str) -> ProductCardOut:
+    return ProductCardOut(
+        id=product.id,
+        name=resolve_product_name(product.name, product.name_i18n, locale),
+        brand=product.brand.name if product.brand else None,
+        image_url=product.image_url,
+        score=product.score,
+        score_band=RiskLevel(product.score_band) if product.score is not None else None,
+        score_is_estimated=product.score_is_estimated,
+        category_slug=product.primary_category.slug if product.primary_category else None,
+    )
+
+
+def _fallback_product_summary(
+    product: Product, infos: dict[uuid.UUID, IngredientInfo], locale: str
+) -> str | None:
+    """Small deterministic summary used until asynchronous LLM enrichment completes."""
+    if product.score is None:
+        return None
+    category = _category_out(product.primary_category, locale)
+    category_name = (
+        category.name.lower() if category else ("skincare product" if locale != "fr" else "soin")
+    )
+    roles: list[str] = []
+    for item in product.ingredients:
+        info = infos.get(item.ingredient_id) if item.ingredient_id else None
+        if info is None:
+            continue
+        for function in info.functions:
+            normalized = function.strip().lower()
+            if normalized and normalized not in roles:
+                roles.append(normalized)
+            if len(roles) == 3:
+                break
+        if len(roles) == 3:
+            break
+    count = len(product.ingredients)
+    if locale == "fr":
+        roles_text = ", ".join(roles) if roles else "des ingrédients de formulation"
+        return (
+            f"Ce {category_name} contient {count} ingrédients listés. "
+            f"Il associe notamment {roles_text} pour une étape de soin simple."
+        )
+    roles_text = ", ".join(roles) if roles else "standard formulation ingredients"
+    return (
+        f"This {category_name} has {count} listed ingredients. "
+        f"It includes {roles_text} for a straightforward skincare step."
     )
 
 
