@@ -7,4 +7,10 @@ PUBLIC INTERFACE: everything exported below. Other modules import ONLY from
 here, never from models or repository.
 """
 
-__all__: list[str] = []
+from app.modules.identity.router import auth_router as auth_router
+from app.modules.identity.router import profile_router as profile_router
+
+__all__ = [
+    "auth_router",
+    "profile_router",
+]

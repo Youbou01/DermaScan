@@ -1,6 +1,81 @@
 {
   "components": {
     "schemas": {
+      "AccessTokenOut": {
+        "description": "Response of POST /auth/refresh.",
+        "properties": {
+          "access_token": {
+            "description": "New short-lived JWT.",
+            "title": "Access Token",
+            "type": "string"
+          },
+          "token_type": {
+            "const": "bearer",
+            "default": "bearer",
+            "description": "Always 'bearer'.",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": ["access_token"],
+        "title": "AccessTokenOut",
+        "type": "object"
+      },
+      "AuthTokensOut": {
+        "description": "Response of POST /auth/register and POST /auth/login.",
+        "properties": {
+          "access_token": {
+            "description": "Short-lived JWT sent as Authorization: Bearer.",
+            "title": "Access Token",
+            "type": "string"
+          },
+          "refresh_token": {
+            "description": "Long-lived JWT used only at POST /auth/refresh.",
+            "title": "Refresh Token",
+            "type": "string"
+          },
+          "token_type": {
+            "const": "bearer",
+            "default": "bearer",
+            "description": "Always 'bearer'.",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut",
+            "description": "The authenticated user."
+          }
+        },
+        "required": ["access_token", "refresh_token", "user"],
+        "title": "AuthTokensOut",
+        "type": "object"
+      },
+      "BlacklistOut": {
+        "description": "Response of GET /profile/blacklist.",
+        "properties": {
+          "ingredient_ids": {
+            "description": "Blacklisted ingredient ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Ingredient Ids",
+            "type": "array"
+          },
+          "product_ids": {
+            "description": "Blacklisted product ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Product Ids",
+            "type": "array"
+          }
+        },
+        "required": ["product_ids", "ingredient_ids"],
+        "title": "BlacklistOut",
+        "type": "object"
+      },
       "Body_analysis_analyze_ocr_photo": {
         "properties": {
           "photo": {
@@ -141,6 +216,12 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthCondition": {
+        "description": "Closed list of health conditions the suitability engine understands.",
+        "enum": ["eczema", "rosacea", "acne_prone", "psoriasis"],
+        "title": "HealthCondition",
+        "type": "string"
+      },
       "HomeFeedOut": {
         "properties": {
           "sections": {
@@ -262,6 +343,26 @@
           "ingredients"
         ],
         "title": "InstantAnalysisOut",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "description": "Body of POST /auth/login.",
+        "properties": {
+          "email": {
+            "description": "Account email.",
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "Plain password.",
+            "maxLength": 128,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": ["email", "password"],
+        "title": "LoginRequest",
         "type": "object"
       },
       "Page_ProductSummary_": {
@@ -713,6 +814,110 @@
         "title": "ProductSummary",
         "type": "object"
       },
+      "ProfileOut": {
+        "description": "Response of GET and PUT /profile.",
+        "properties": {
+          "allergy_ingredient_ids": {
+            "description": "Declared allergy ingredient ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Allergy Ingredient Ids",
+            "type": "array"
+          },
+          "blacklisted_product_ids": {
+            "description": "Blacklisted product ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Blacklisted Product Ids",
+            "type": "array"
+          },
+          "health_conditions": {
+            "description": "Declared health conditions.",
+            "items": {
+              "$ref": "#/components/schemas/HealthCondition"
+            },
+            "title": "Health Conditions",
+            "type": "array"
+          },
+          "is_pregnant_or_nursing": {
+            "description": "Pregnancy or nursing flag.",
+            "title": "Is Pregnant Or Nursing",
+            "type": "boolean"
+          },
+          "skin_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkinType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared skin type, or null."
+          },
+          "user_id": {
+            "description": "Owner of the profile.",
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "skin_type",
+          "is_pregnant_or_nursing",
+          "health_conditions",
+          "allergy_ingredient_ids",
+          "blacklisted_product_ids"
+        ],
+        "title": "ProfileOut",
+        "type": "object"
+      },
+      "ProfileUpdateIn": {
+        "description": "Body of PUT /profile: full replacement of the editable profile fields.",
+        "properties": {
+          "allergy_ingredient_ids": {
+            "description": "Ingredient ids the user declares an allergy to.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Allergy Ingredient Ids",
+            "type": "array"
+          },
+          "health_conditions": {
+            "description": "Declared health conditions (closed list).",
+            "items": {
+              "$ref": "#/components/schemas/HealthCondition"
+            },
+            "title": "Health Conditions",
+            "type": "array"
+          },
+          "is_pregnant_or_nursing": {
+            "default": false,
+            "description": "Pregnancy or nursing flag.",
+            "title": "Is Pregnant Or Nursing",
+            "type": "boolean"
+          },
+          "skin_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkinType"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared skin type, or null."
+          }
+        },
+        "title": "ProfileUpdateIn",
+        "type": "object"
+      },
       "RecommendedRoutinesOut": {
         "properties": {
           "evening": {
@@ -736,6 +941,47 @@
         },
         "required": ["skin_type", "morning", "evening"],
         "title": "RecommendedRoutinesOut",
+        "type": "object"
+      },
+      "RefreshRequest": {
+        "description": "Body of POST /auth/refresh.",
+        "properties": {
+          "refresh_token": {
+            "description": "Refresh token received at register or login.",
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": ["refresh_token"],
+        "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RegisterRequest": {
+        "description": "Body of POST /auth/register.",
+        "properties": {
+          "display_name": {
+            "description": "Name shown in the app.",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "description": "Account email, stored trimmed and lowercase.",
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "Plain password, 8-128 chars.",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": ["email", "password", "display_name"],
+        "title": "RegisterRequest",
         "type": "object"
       },
       "RiskLevel": {
@@ -958,6 +1204,12 @@
         "title": "RoutinesListOut",
         "type": "object"
       },
+      "SkinType": {
+        "description": "Self-declared skin type stored on the user profile.",
+        "enum": ["normal", "dry", "oily", "combination", "sensitive"],
+        "title": "SkinType",
+        "type": "string"
+      },
       "TextAnalysisIn": {
         "additionalProperties": false,
         "description": "A manually entered ingredient label for immediate, non-persistent analysis.",
@@ -1000,6 +1252,30 @@
         },
         "required": ["steps"],
         "title": "UpdateRoutineIn",
+        "type": "object"
+      },
+      "UserOut": {
+        "description": "Public view of a user account.",
+        "properties": {
+          "display_name": {
+            "description": "Name shown in the app.",
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "description": "Account email.",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "description": "User id.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": ["id", "email", "display_name"],
+        "title": "UserOut",
         "type": "object"
       },
       "ValidationError": {
@@ -1200,6 +1476,153 @@
         ],
         "summary": "Analyze Ingredient Text",
         "tags": ["analysis"]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "auth_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid credentials or token."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Sign in with email and password",
+        "tags": ["auth"]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "auth_refresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid credentials or token."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Get a new access token from a refresh token",
+        "tags": ["auth"]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "auth_register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Email already registered."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Create an account",
+        "tags": ["auth"]
       }
     },
     "/api/v1/categories": {
@@ -1767,6 +2190,408 @@
         },
         "summary": "Get a product by id",
         "tags": ["products"]
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "operationId": "profile_get_profile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get my health profile",
+        "tags": ["profile"]
+      },
+      "put": {
+        "operationId": "profile_put_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace my health profile and allergies",
+        "tags": ["profile"]
+      }
+    },
+    "/api/v1/profile/blacklist": {
+      "get": {
+        "operationId": "profile_get_blacklist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlacklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List my blacklisted products and ingredients",
+        "tags": ["profile"]
+      }
+    },
+    "/api/v1/profile/blacklist/ingredients/{ingredient_id}": {
+      "delete": {
+        "operationId": "profile_unblacklist_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove an ingredient from my blacklist",
+        "tags": ["profile"]
+      },
+      "post": {
+        "operationId": "profile_blacklist_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Blacklist an ingredient",
+        "tags": ["profile"]
+      }
+    },
+    "/api/v1/profile/blacklist/products/{product_id}": {
+      "delete": {
+        "operationId": "profile_unblacklist_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a product from my blacklist",
+        "tags": ["profile"]
+      },
+      "post": {
+        "operationId": "profile_blacklist_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Blacklist a product",
+        "tags": ["profile"]
       }
     },
     "/api/v1/routines": {
