@@ -459,3 +459,41 @@ async def test_profile_routes_require_a_token(
     response = await client.request(method, url, json={} if method == "PUT" else None)
 
     assert response.status_code == 401
+
+
+async def test_preset_ingredient_id_resolves_for_blacklist_and_profile(
+    client: httpx.AsyncClient,
+) -> None:
+    headers = await _signed_in(client)
+    preset_alcohol_id = "0194f024-6c67-7e21-9e16-a774b0d53404"
+
+    added = await client.post(
+        f"{BLACKLIST_URL}/ingredients/{preset_alcohol_id}",
+        headers=headers,
+    )
+    assert added.status_code == 204
+
+    listed = await client.get(BLACKLIST_URL, headers=headers)
+    assert listed.status_code == 200
+    assert preset_alcohol_id in listed.json()["ingredient_ids"]
+
+    prof = await client.put(
+        PROFILE_URL,
+        headers=headers,
+        json={
+            "skin_type": "sensitive",
+            "is_pregnant_or_nursing": False,
+            "health_conditions": ["eczema"],
+            "allergy_ingredient_ids": [preset_alcohol_id],
+        },
+    )
+    assert prof.status_code == 200
+    assert preset_alcohol_id in prof.json()["allergy_ingredient_ids"]
+
+    removed = await client.delete(
+        f"{BLACKLIST_URL}/ingredients/{preset_alcohol_id}",
+        headers=headers,
+    )
+    assert removed.status_code == 204
+    after = await client.get(BLACKLIST_URL, headers=headers)
+    assert preset_alcohol_id not in after.json()["ingredient_ids"]

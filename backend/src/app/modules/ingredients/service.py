@@ -181,6 +181,26 @@ class IngredientService:
                 )
         return list(best.values())[:limit]
 
+    async def resolve_filter_ingredient_ids(self, term: str) -> list[uuid.UUID]:
+        """Resolve a user filter term to matching ingredient IDs (exact, substring, or trigram)."""
+        key = normalize(term)
+        if not key:
+            return []
+        exact = await self.match([term])
+        ids: list[uuid.UUID] = []
+        if exact and exact[0].ingredient_id is not None:
+            ids.append(exact[0].ingredient_id)
+        keyword_ids = await self._repository.search_ids_by_keyword(key, limit=25)
+        for kid in keyword_ids:
+            if kid not in ids:
+                ids.append(kid)
+        if not ids:
+            suggestions = await self.suggest(term, limit=5, min_similarity=0.5)
+            for s in suggestions:
+                if s.ingredient_id not in ids:
+                    ids.append(s.ingredient_id)
+        return ids
+
     async def set_rating(
         self,
         ingredient_id: uuid.UUID,

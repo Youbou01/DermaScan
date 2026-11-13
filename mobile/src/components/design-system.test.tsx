@@ -25,6 +25,7 @@ const product = {
   image_url: null,
   score: 80,
   score_band: 'low' as const,
+  score_is_estimated: false,
   category_slug: 'moisturizer',
 };
 

@@ -8,12 +8,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.enums import RiskLevel
-from app.modules.catalog.models import Category, Product, ProductIngredient
+from app.modules.catalog.models import Brand, Category, Product, ProductIngredient
 
 ProductQuery = Select[Product]
 
 
-# Each filter is a small pure function: easy to test and to combine.
+def by_search_query(stmt: ProductQuery, q_norm: str) -> ProductQuery:
+    """Match product normalized name (prefix, substring, or trigram) or brand name."""
+    prefix = Product.name_normalized.startswith(q_norm, autoescape=True)
+    substring = Product.name_normalized.contains(q_norm, autoescape=True)
+    brand_match = exists().where(
+        Brand.id == Product.brand_id,
+        func.lower(func.unaccent(Brand.name)).contains(q_norm, autoescape=True),
+    )
+    return stmt.where(
+        or_(
+            prefix,
+            substring,
+            Product.name_normalized.op("%")(q_norm),
+            literal(q_norm, Text).op("<%")(Product.name_normalized),
+            brand_match,
+        )
+    )
+
+
 def by_categories(stmt: ProductQuery, category_ids: Sequence[uuid.UUID]) -> ProductQuery:
     return stmt.where(Product.primary_category_id.in_(category_ids))
 
@@ -44,6 +62,20 @@ def with_ingredients(stmt: ProductQuery, ingredient_ids: Sequence[uuid.UUID]) ->
     return stmt
 
 
+def with_ingredient_groups(
+    stmt: ProductQuery, ingredient_groups: Sequence[Sequence[uuid.UUID]]
+) -> ProductQuery:
+    """Product contains at least one candidate ingredient from each requested group."""
+    for group in ingredient_groups:
+        stmt = stmt.where(
+            exists().where(
+                ProductIngredient.product_id == Product.id,
+                ProductIngredient.ingredient_id.in_(group),
+            )
+        )
+    return stmt
+
+
 def without_ingredients(stmt: ProductQuery, ingredient_ids: Sequence[uuid.UUID]) -> ProductQuery:
     """Product contains NONE of the given ingredients."""
     if not ingredient_ids:
@@ -62,7 +94,10 @@ class ProductSearchRepository:
 
     @staticmethod
     def base_query() -> ProductQuery:
-        return select(Product).options(joinedload(Product.brand))
+        return select(Product).options(
+            joinedload(Product.brand),
+            joinedload(Product.primary_category),
+        )
 
     async def category_subtree_ids(self, slug: str) -> list[uuid.UUID]:
         """The category with this slug plus all its descendants."""
@@ -71,21 +106,22 @@ class ProductSearchRepository:
         return list((await self._session.scalars(select(tree.c.id))).all())
 
     async def search_by_name(self, q_norm: str, *, limit: int, offset: int) -> list[Product]:
-        """Prefix matches first, then fuzzy (trigram) matches by similarity."""
+        """Prefix matches first, then brand/fuzzy (trigram) matches by similarity."""
         prefix = Product.name_normalized.startswith(q_norm, autoescape=True)
-        rank = func.greatest(
-            func.similarity(Product.name_normalized, q_norm),
-            func.word_similarity(q_norm, Product.name_normalized),
-        ) + case((prefix, literal(1.0, Float)), else_=literal(0.0, Float))
-        stmt = (
-            self.base_query()
-            .where(
-                or_(
-                    prefix,
-                    Product.name_normalized.op("%")(q_norm),
-                    literal(q_norm, Text).op("<%")(Product.name_normalized),
-                )
+        brand_match = exists().where(
+            Brand.id == Product.brand_id,
+            func.lower(func.unaccent(Brand.name)).contains(q_norm, autoescape=True),
+        )
+        rank = (
+            func.greatest(
+                func.similarity(Product.name_normalized, q_norm),
+                func.word_similarity(q_norm, Product.name_normalized),
             )
+            + case((prefix, literal(1.0, Float)), else_=literal(0.0, Float))
+            + case((brand_match, literal(0.5, Float)), else_=literal(0.0, Float))
+        )
+        stmt = (
+            by_search_query(self.base_query(), q_norm)
             .order_by(rank.desc(), Product.id.desc())
             .offset(offset)
             .limit(limit)

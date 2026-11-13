@@ -1,5 +1,6 @@
 import { useMutation, type UseMutationResult } from '@tanstack/react-query';
 import { env } from '@/config/env';
+import { buildAuthHeaders } from '@/api/auth-token';
 import { getActiveApiLocale } from '@/api/locale';
 import type { ProductIngredient, RiskLevel } from '@/api/types';
 
@@ -185,11 +186,11 @@ export async function analyzePackagingText(text: string): Promise<InstantAnalysi
   try {
     const response = await fetch(`${env.apiUrl}/api/v1/analysis/text`, {
       method: 'POST',
-      headers: {
+      headers: buildAuthHeaders({
         'Content-Type': 'application/json',
         'Accept-Language': getActiveApiLocale(),
-      },
-      body: JSON.stringify({ ingredients_text: text }),
+      }),
+      body: JSON.stringify({ text }),
     });
     if (response.ok) {
       return (await response.json()) as InstantAnalysisResult;
@@ -217,9 +218,9 @@ export async function analyzePackagingPhoto(
 
     const response = await fetch(`${env.apiUrl}/api/v1/analysis/ocr`, {
       method: 'POST',
-      headers: {
+      headers: buildAuthHeaders({
         'Accept-Language': getActiveApiLocale(),
-      },
+      }),
       body: formData,
     });
     if (response.ok) {

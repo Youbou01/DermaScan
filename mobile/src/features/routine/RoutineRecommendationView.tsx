@@ -85,7 +85,10 @@ export function RoutineRecommendationView(): ReactElement {
       </View>
 
       {appliedMessage ? (
-        <Text accessibilityRole="status" style={[styles.statusBanner, { color: colors.primary }]}>
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[styles.statusBanner, { color: colors.primary }]}
+        >
           {t('recommendations.applied_Confirmation')}
         </Text>
       ) : null}

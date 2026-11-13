@@ -1,11 +1,23 @@
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
+import { getActiveAccessToken } from '@/api/auth-token';
 import { ApiError } from '@/api/errors';
 import type { ProductIngredient, RiskLevel } from '@/api/types';
 import { useProductQuery } from '@/api/hooks';
 import { EmptyState, ErrorState, RiskBadge, ScoreBadge, Screen, Skeleton } from '@/components';
+import { env } from '@/config/env';
+import { getProductArtwork } from '@/features/home/product-artwork';
+import {
+  ProfileAuthRequiredError,
+  useBlacklistQuery,
+  useProductSuitabilityQuery,
+  useToggleBlacklistIngredientMutation,
+  useToggleBlacklistProductMutation,
+} from '@/features/profile/profile-api';
+import { useTranslation } from '@/i18n/useTranslation';
+import { resolveProductImageUrl } from '@/lib/image-url';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import { IngredientRationaleModal } from './components/IngredientRationaleModal';
 import { formatScoreCoverage, productDetailCopy } from './product-detail.copy';
@@ -18,9 +30,18 @@ export interface ProductDetailScreenProps {
 
 export function ProductDetailScreen({ productId }: ProductDetailScreenProps): ReactElement {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const productQuery = useProductQuery(productId);
   const [selectedIngredient, setSelectedIngredient] = useState<ProductIngredient | null>(null);
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+
+  const suitabilityQuery = useProductSuitabilityQuery(
+    productId,
+    productQuery.data?.ingredients ?? [],
+  );
+  const blacklistQuery = useBlacklistQuery();
+  const toggleBlacklistProduct = useToggleBlacklistProductMutation();
+  const toggleBlacklistIngredient = useToggleBlacklistIngredientMutation();
 
   if (!productId) {
     return (
@@ -78,7 +99,67 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
     );
   }
 
-  const imageAvailable = product.image_url !== null && failedImageUrl !== product.image_url;
+  const resolvedImageUrl = resolveProductImageUrl(product.image_url);
+  const imageAvailable = resolvedImageUrl !== null && failedImageUrl !== resolvedImageUrl;
+  const fallbackArtwork = getProductArtwork(product.category?.slug ?? null);
+  const suitability = suitabilityQuery.data;
+  const isProductBlacklisted = Boolean(
+    blacklistQuery.data?.product_ids.includes(product.id) || suitability?.is_blacklisted,
+  );
+  const selectedIngBlacklisted = Boolean(
+    selectedIngredient?.ingredient_id &&
+    blacklistQuery.data?.ingredient_ids.includes(selectedIngredient.ingredient_id),
+  );
+  const verdictColor =
+    suitability?.verdict === 'avoid'
+      ? colors.high
+      : suitability?.verdict === 'caution'
+        ? colors.moderate
+        : colors.low;
+  const verdictSurface =
+    suitability?.verdict === 'avoid'
+      ? colors.highSurface
+      : suitability?.verdict === 'caution'
+        ? colors.moderateSurface
+        : colors.lowSurface;
+  const verdictIcon =
+    suitability?.verdict === 'avoid' ? '⬟' : suitability?.verdict === 'caution' ? '△' : '○';
+  const verdictLabel =
+    suitability?.verdict === 'avoid'
+      ? t('product_detail.verdict_avoid')
+      : suitability?.verdict === 'caution'
+        ? t('product_detail.verdict_caution')
+        : t('product_detail.verdict_suitable');
+
+  const handleToggleProductBlacklist = async (): Promise<void> => {
+    if (!env.useMocks && !getActiveAccessToken()) {
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    try {
+      await toggleBlacklistProduct.mutateAsync(product.id);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
+  };
+
+  const handleToggleIngredientBlacklist = async (ingId: string): Promise<void> => {
+    if (!env.useMocks && !getActiveAccessToken()) {
+      setSelectedIngredient(null);
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    try {
+      await toggleBlacklistIngredient.mutateAsync(ingId);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        setSelectedIngredient(null);
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
+  };
 
   return (
     <Screen contentContainerStyle={styles.content}>
@@ -100,9 +181,16 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         {imageAvailable ? (
           <Image
             accessibilityLabel={`${product.name} product image`}
-            onError={() => setFailedImageUrl(product.image_url)}
+            onError={() => setFailedImageUrl(resolvedImageUrl)}
             resizeMode="contain"
-            source={{ uri: product.image_url ?? undefined }}
+            source={{ uri: resolvedImageUrl }}
+            style={[styles.productImage, { backgroundColor: colors.surfaceMuted }]}
+          />
+        ) : fallbackArtwork ? (
+          <Image
+            accessibilityLabel={`${product.name} product image`}
+            resizeMode="contain"
+            source={fallbackArtwork}
             style={[styles.productImage, { backgroundColor: colors.surfaceMuted }]}
           />
         ) : (
@@ -131,6 +219,35 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         <Text style={[styles.productMeta, { color: colors.textMuted }]}>
           {product.category?.name ?? productDetailCopy.categoryUnavailable}
         </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            isProductBlacklisted
+              ? t('product_detail.blacklist_remove_product')
+              : t('product_detail.blacklist_add_product')
+          }
+          onPress={() => {
+            void handleToggleProductBlacklist();
+          }}
+          style={[
+            styles.blacklistButton,
+            {
+              borderColor: isProductBlacklisted ? colors.high : colors.border,
+              backgroundColor: isProductBlacklisted ? colors.highSurface : colors.surface,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.blacklistButtonText,
+              { color: isProductBlacklisted ? colors.high : colors.text },
+            ]}
+          >
+            {isProductBlacklisted
+              ? t('product_detail.blacklist_remove_product')
+              : t('product_detail.blacklist_add_product')}
+          </Text>
+        </Pressable>
       </View>
 
       <View
@@ -146,10 +263,53 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
           score={product.score}
           band={product.score === null ? 'unknown' : product.score_band}
         />
+        {product.score_is_estimated ? (
+          <Text style={[styles.coverage, { color: colors.textMuted }]}>
+            {t('product_detail.estimated_note')}
+          </Text>
+        ) : null}
         <Text style={[styles.coverage, { color: colors.textMuted }]}>
           {formatScoreCoverage(product.score_coverage)}
         </Text>
+        {product.summary ? (
+          <View style={styles.summaryBox}>
+            <Text style={[styles.summaryTitle, { color: colors.text }]}>
+              {t('product_detail.summary_heading')}
+            </Text>
+            <Text style={[styles.summaryBody, { color: colors.textMuted }]}>{product.summary}</Text>
+          </View>
+        ) : null}
       </View>
+
+      {suitability ? (
+        <View
+          testID="product-suitability-card"
+          style={[
+            styles.suitabilitySection,
+            { backgroundColor: verdictSurface, borderColor: verdictColor },
+          ]}
+        >
+          <Text accessibilityRole="header" style={[styles.sectionHeading, { color: verdictColor }]}>
+            {verdictIcon} {t('product_detail.suitability_heading')}
+          </Text>
+          <Text style={[styles.verdictText, { color: verdictColor }]}>{verdictLabel}</Text>
+          {suitability.alerts.map((alert, idx) => (
+            <View
+              key={`${alert.code}-${alert.ingredient_name}-${idx}`}
+              style={[
+                styles.alertCard,
+                { backgroundColor: colors.surface, borderColor: verdictColor },
+              ]}
+            >
+              <Text style={[styles.alertTitle, { color: colors.text }]}>
+                {alert.severity === 'high' ? '⬟ ' : '△ '}
+                {alert.title} ({alert.ingredient_name})
+              </Text>
+              <Text style={[styles.alertDetail, { color: colors.textMuted }]}>{alert.detail}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.ingredientsSection}>
         <Text accessibilityRole="header" style={[styles.sectionHeading, { color: colors.text }]}>
@@ -179,7 +339,11 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
 
       <IngredientRationaleModal
         ingredient={selectedIngredient}
+        isBlacklisted={selectedIngBlacklisted}
         onClose={() => setSelectedIngredient(null)}
+        onToggleBlacklistIngredient={(ingId) => {
+          void handleToggleIngredientBlacklist(ingId);
+        }}
       />
     </Screen>
   );
@@ -249,6 +413,18 @@ const styles = StyleSheet.create({
     fontSize: typography.size.md,
     lineHeight: typography.lineHeight.md,
   },
+  blacklistButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    marginTop: spacing.xs,
+  },
+  blacklistButtonText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+  },
   scoreSection: {
     alignItems: 'flex-start',
     gap: spacing.md,
@@ -262,6 +438,42 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.bold,
   },
   coverage: { fontSize: typography.size.sm, lineHeight: typography.lineHeight.sm },
+  summaryBox: {
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  summaryTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+  },
+  summaryBody: {
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+  },
+  suitabilitySection: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderRadius: radii.md,
+  },
+  verdictText: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+  },
+  alertCard: {
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderRadius: radii.sm,
+  },
+  alertTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+  },
+  alertDetail: {
+    fontSize: typography.size.xs,
+    lineHeight: typography.lineHeight.xs,
+  },
   ingredientsSection: { gap: spacing.md },
   ingredientList: { gap: spacing.sm },
   ingredientRow: {

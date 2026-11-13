@@ -205,3 +205,36 @@ async def test_score_pages_do_not_overlap_and_stay_ordered(
 
     assert ids(first) + ids(second) == expected
     assert second.json()["next_cursor"] is None
+
+
+async def test_filter_combines_query_category_and_score(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    cat = make_category(slug="combined-serum")
+    db_session.add(cat)
+    await db_session.flush()
+
+    match_prod = await add_scored(
+        db_session,
+        88,
+        RiskLevel.LOW,
+        name="CeraVe Hydrating Serum",
+        primary_category_id=cat.id,
+    )
+    wrong_name = await add_scored(
+        db_session,
+        90,
+        RiskLevel.LOW,
+        name="Other Soothing Fluid",
+        primary_category_id=cat.id,
+    )
+
+    response = await client.get(
+        URL,
+        params={"q": "cerave", "category": "combined-serum", "min_score": 80},
+    )
+
+    assert response.status_code == 200
+    found = ids(response)
+    assert str(match_prod.id) in found
+    assert str(wrong_name.id) not in found

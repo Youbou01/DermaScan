@@ -18,7 +18,7 @@ class HttpCacheMiddleware:
             return 3600, 300
         if path.startswith("/api/v1/home"):
             return 300, 60
-        if path.startswith("/api/v1/products"):
+        if path.startswith("/api/v1/products") and not path.endswith("/suitability"):
             return 300, 60
         return None
 

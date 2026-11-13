@@ -13,5 +13,7 @@ class ProductSummary(BaseModel):
     name: str
     brand: str | None
     image_url: str | None
+    category_slug: str | None = None
     score: int | None = Field(description="0-100, or null when the product is not scored.")
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
+    score_is_estimated: bool = False

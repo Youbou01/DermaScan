@@ -59,6 +59,7 @@ const serumProduct: ProductCard = {
   image_url: null,
   score: 84,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'serum',
 };
 
@@ -69,6 +70,7 @@ const cleanserProduct: ProductCard = {
   image_url: null,
   score: 68,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'cleanser',
 };
 
@@ -79,6 +81,7 @@ const moisturizerProduct: ProductCard = {
   image_url: null,
   score: 92,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'moisturizer',
 };
 
@@ -89,6 +92,7 @@ const sunscreenProduct: ProductCard = {
   image_url: null,
   score: 76,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'sunscreen',
 };
 
@@ -99,6 +103,7 @@ const tonerProduct: ProductCard = {
   image_url: null,
   score: 81,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'toner',
 };
 
@@ -109,6 +114,7 @@ const eyeCareProduct: ProductCard = {
   image_url: null,
   score: 88,
   score_band: 'low',
+  score_is_estimated: false,
   category_slug: 'eye-care',
 };
 
@@ -119,6 +125,7 @@ const bodyLotionProduct: ProductCard = {
   image_url: null,
   score: 63,
   score_band: 'moderate',
+  score_is_estimated: false,
   category_slug: 'body-lotion',
 };
 
@@ -129,6 +136,7 @@ const lipCareProduct: ProductCard = {
   image_url: null,
   score: 40,
   score_band: 'unknown',
+  score_is_estimated: false,
   category_slug: 'lip-care',
 };
 
@@ -151,6 +159,10 @@ const productIngredients: ProductIngredient[] = [
     matched: true,
     risk_level: 'low',
     rationale: 'Commonly used as a solvent in cosmetic products.',
+    ingredient_id: '0194f024-6c67-7e21-9e16-a774b0d53410',
+    rating: 10,
+    summary: 'Solvent and carrier for active ingredients.',
+    confidence: 1.0,
   },
   {
     position: 2,
@@ -159,6 +171,10 @@ const productIngredients: ProductIngredient[] = [
     matched: true,
     risk_level: 'low',
     rationale: 'A humectant used to help retain moisture.',
+    ingredient_id: '0194f024-6c67-7e21-9e16-a774b0d53411',
+    rating: 9.5,
+    summary: 'Humectant that draws moisture into the skin barrier.',
+    confidence: 0.95,
   },
   {
     position: 3,
@@ -167,6 +183,10 @@ const productIngredients: ProductIngredient[] = [
     matched: false,
     risk_level: 'unknown',
     rationale: null,
+    ingredient_id: '0194f024-6c67-7e21-9e16-a774b0d53401',
+    rating: 4.0,
+    summary: 'Fragrance mixture with potential allergen concerns.',
+    confidence: 0.5,
   },
 ];
 
@@ -180,6 +200,8 @@ export const productFixture: ProductDetail = {
   score: 84,
   score_band: 'low',
   score_coverage: 0.8,
+  score_is_estimated: false,
+  summary: 'Lightweight hydrating serum formulated for everyday barrier support.',
   ingredients: productIngredients,
 };
 
@@ -223,3 +245,51 @@ function homeFeed(locale: 'en' | 'fr'): HomeFeed {
 
 export const homeFixture = { en: homeFeed('en'), fr: homeFeed('fr') };
 export const productCardsFixture = products;
+
+export interface KnownProfileIngredient {
+  readonly id: string;
+  readonly inci_name: string;
+  readonly label_en: string;
+  readonly label_fr: string;
+  readonly is_pregnancy_contraindicated?: boolean;
+  readonly is_drying?: boolean;
+  readonly is_allergen?: boolean;
+}
+
+export const KNOWN_PROFILE_INGREDIENTS: readonly KnownProfileIngredient[] = [
+  {
+    id: '0194f024-6c67-7e21-9e16-a774b0d53401',
+    inci_name: 'PARFUM',
+    label_en: 'Parfum / Fragrance',
+    label_fr: 'Parfum / Fragrance',
+    is_allergen: true,
+  },
+  {
+    id: '0194f024-6c67-7e21-9e16-a774b0d53402',
+    inci_name: 'RETINOL',
+    label_en: 'Retinol (Vitamin A)',
+    label_fr: 'Rétinol (Vitamine A)',
+    is_pregnancy_contraindicated: true,
+  },
+  {
+    id: '0194f024-6c67-7e21-9e16-a774b0d53403',
+    inci_name: 'SALICYLIC ACID',
+    label_en: 'Salicylic Acid (BHA)',
+    label_fr: 'Acide Salicylique (BHA)',
+    is_pregnancy_contraindicated: true,
+  },
+  {
+    id: '0194f024-6c67-7e21-9e16-a774b0d53404',
+    inci_name: 'ALCOHOL DENAT.',
+    label_en: 'Alcohol Denat.',
+    label_fr: 'Alcool Dénaturé',
+    is_drying: true,
+  },
+  {
+    id: '0194f024-6c67-7e21-9e16-a774b0d53405',
+    inci_name: 'SODIUM LAURYL SULFATE',
+    label_en: 'Sodium Lauryl Sulfate (SLS)',
+    label_fr: 'Laurylsulfate de Sodium (SLS)',
+    is_drying: true,
+  },
+];
