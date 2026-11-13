@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.dependencies import SessionDep
+from app.core.dependencies import LocaleDep, SessionDep
 from app.core.errors import ProblemDetails
 from app.core.security import CurrentUserIdDep
 from app.modules.identity.schemas import (
@@ -17,11 +17,13 @@ from app.modules.identity.schemas import (
     ProfileUpdateIn,
     RefreshRequest,
     RegisterRequest,
+    SuitabilityOut,
 )
 from app.modules.identity.service import IdentityService
 
 auth_router = APIRouter()
 profile_router = APIRouter()
+suitability_router = APIRouter()
 
 _INVALID_BODY: dict[int | str, dict[str, Any]] = {
     422: {"model": ProblemDetails, "description": "Malformed or invalid request."},
@@ -42,6 +44,13 @@ _PROFILE_ERRORS: dict[int | str, dict[str, Any]] = {
 _BLACKLIST_ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"model": ProblemDetails, "description": "Missing or invalid access token."},
     404: {"model": ProblemDetails, "description": "Unknown product or ingredient id."},
+    **_INVALID_BODY,
+}
+
+
+_SUITABILITY_ERRORS: dict[int | str, dict[str, Any]] = {
+    401: {"model": ProblemDetails, "description": "Missing or invalid access token."},
+    404: {"model": ProblemDetails, "description": "Unknown product id."},
     **_INVALID_BODY,
 }
 
@@ -168,3 +177,21 @@ async def unblacklist_ingredient(
     ingredient_id: uuid.UUID, user_id: CurrentUserIdDep, service: ServiceDep
 ) -> None:
     await service.remove_blacklisted_ingredient(user_id, ingredient_id)
+
+
+# ----------------------------------------------------------------------- suitability
+
+
+@suitability_router.get(
+    "/{product_id}/suitability",
+    response_model=SuitabilityOut,
+    responses=_SUITABILITY_ERRORS,
+    summary="Does this product suit my profile?",
+)
+async def get_suitability(
+    product_id: uuid.UUID,
+    user_id: CurrentUserIdDep,
+    locale: LocaleDep,
+    service: ServiceDep,
+) -> SuitabilityOut:
+    return await service.get_suitability(user_id, product_id, locale)

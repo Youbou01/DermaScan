@@ -38,7 +38,13 @@ from app.modules.identity.schemas import (
     ProfileOut,
     ProfileUpdateIn,
     RegisterRequest,
+    SuitabilityOut,
     UserOut,
+)
+from app.modules.identity.suitability import (
+    IngredientFacts,
+    ProfileFacts,
+    evaluate_suitability,
 )
 from app.modules.ingredients import IngredientService
 
@@ -137,6 +143,44 @@ class IdentityService:
     ) -> None:
         await self._repository.remove_blacklisted_ingredient(user_id, ingredient_id)
         await self._commit()
+
+    # ---------------------------------------------------------------- suitability
+
+    async def get_suitability(
+        self, user_id: uuid.UUID, product_id: uuid.UUID, locale: str
+    ) -> SuitabilityOut:
+        detail = await self._catalog.get_product_detail(product_id, locale)
+        profile = await self._repository.get_profile(user_id)
+        blacklisted_products = await self._repository.list_blacklisted_product_ids(user_id)
+        ingredient_ids = list(
+            dict.fromkeys(
+                item.ingredient_id for item in detail.ingredients if item.ingredient_id is not None
+            )
+        )
+        infos = await self._ingredients.get_many(ingredient_ids, locale) if ingredient_ids else {}
+        facts = ProfileFacts(
+            skin_type=profile.skin_type if profile else None,
+            is_pregnant_or_nursing=profile.is_pregnant_or_nursing if profile else False,
+            health_conditions=frozenset(
+                HealthCondition(value) for value in (profile.health_conditions if profile else [])
+            ),
+            allergy_ingredient_ids=frozenset(await self._repository.list_allergy_ids(user_id)),
+            blacklisted_ingredient_ids=frozenset(
+                await self._repository.list_blacklisted_ingredient_ids(user_id)
+            ),
+            product_is_blacklisted=product_id in blacklisted_products,
+        )
+        items = [
+            IngredientFacts(
+                ingredient_id=info.id,
+                name=info.inci_name,
+                is_prohibited=info.is_prohibited,
+                is_allergen=info.is_allergen,
+            )
+            for ingredient_id in ingredient_ids
+            if (info := infos.get(ingredient_id)) is not None
+        ]
+        return evaluate_suitability(product_id, facts, items, locale)
 
     # -------------------------------------------------------------------- helpers
 

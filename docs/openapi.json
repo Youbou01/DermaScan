@@ -23,6 +23,25 @@
         "title": "AccessTokenOut",
         "type": "object"
       },
+      "AlertCode": {
+        "description": "Machine-readable type of a personal risk alert (frozen contract, sprint 2 section 7).",
+        "enum": [
+          "pregnancy_contraindication",
+          "allergy_match",
+          "blacklisted",
+          "skin_type_mismatch"
+        ],
+        "title": "AlertCode",
+        "type": "string"
+      },
+      "AlertSeverity": {
+        "enum": [
+          "high",
+          "medium"
+        ],
+        "title": "AlertSeverity",
+        "type": "string"
+      },
       "AuthTokensOut": {
         "description": "Response of POST /auth/register and POST /auth/login.",
         "properties": {
@@ -1068,6 +1087,43 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RiskAlertOut": {
+        "description": "One personal risk alert on a product.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/AlertCode",
+            "description": "Machine-readable alert type."
+          },
+          "detail": {
+            "description": "Explanation in the response language.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "ingredient_name": {
+            "description": "INCI name of the triggering ingredient.",
+            "title": "Ingredient Name",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AlertSeverity",
+            "description": "'high' or 'medium'."
+          },
+          "title": {
+            "description": "Short alert title in the response language.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "ingredient_name",
+          "title",
+          "detail"
+        ],
+        "title": "RiskAlertOut",
+        "type": "object"
+      },
       "RiskLevel": {
         "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe.",
         "enum": [
@@ -1335,6 +1391,54 @@
         "title": "SkinType",
         "type": "string"
       },
+      "SuitabilityOut": {
+        "description": "Response of GET /products/{product_id}/suitability.",
+        "properties": {
+          "alerts": {
+            "description": "Alerts, most severe first.",
+            "items": {
+              "$ref": "#/components/schemas/RiskAlertOut"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "has_risk_alert": {
+            "description": "True when there is an alert or a blacklist match.",
+            "title": "Has Risk Alert",
+            "type": "boolean"
+          },
+          "is_blacklisted": {
+            "description": "True for a blacklisted product or ingredient.",
+            "title": "Is Blacklisted",
+            "type": "boolean"
+          },
+          "product_id": {
+            "description": "Product the verdict is about.",
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "suits_profile": {
+            "description": "True only when the verdict is 'suitable'.",
+            "title": "Suits Profile",
+            "type": "boolean"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict",
+            "description": "suitable, caution or avoid."
+          }
+        },
+        "required": [
+          "product_id",
+          "suits_profile",
+          "verdict",
+          "has_risk_alert",
+          "is_blacklisted",
+          "alerts"
+        ],
+        "title": "SuitabilityOut",
+        "type": "object"
+      },
       "TextAnalysisIn": {
         "additionalProperties": false,
         "description": "A manually entered ingredient label for immediate, non-persistent analysis.",
@@ -1450,6 +1554,15 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "Verdict": {
+        "enum": [
+          "suitable",
+          "caution",
+          "avoid"
+        ],
+        "title": "Verdict",
+        "type": "string"
       }
     },
     "securitySchemes": {
@@ -2350,6 +2463,74 @@
           }
         },
         "summary": "Get a product by id",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/suitability": {
+      "get": {
+        "operationId": "products_get_suitability",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuitabilityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Does this product suit my profile?",
         "tags": [
           "products"
         ]
