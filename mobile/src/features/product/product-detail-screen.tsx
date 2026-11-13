@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, RiskBadge, ScoreBadge, Screen, Skeleton } from 
 import { env } from '@/config/env';
 import { getProductArtwork } from '@/features/home/product-artwork';
 import {
+  ProfileAuthRequiredError,
   useBlacklistQuery,
   useProductSuitabilityQuery,
   useToggleBlacklistIngredientMutation,
@@ -130,21 +131,34 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         ? t('product_detail.verdict_caution')
         : t('product_detail.verdict_suitable');
 
-  const handleToggleProductBlacklist = (): void => {
+  const handleToggleProductBlacklist = async (): Promise<void> => {
     if (!env.useMocks && !getActiveAccessToken()) {
       router.push('/auth/login' as unknown as Href);
       return;
     }
-    void toggleBlacklistProduct.mutateAsync(product.id);
+    try {
+      await toggleBlacklistProduct.mutateAsync(product.id);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
   };
 
-  const handleToggleIngredientBlacklist = (ingId: string): void => {
+  const handleToggleIngredientBlacklist = async (ingId: string): Promise<void> => {
     if (!env.useMocks && !getActiveAccessToken()) {
       setSelectedIngredient(null);
       router.push('/auth/login' as unknown as Href);
       return;
     }
-    void toggleBlacklistIngredient.mutateAsync(ingId);
+    try {
+      await toggleBlacklistIngredient.mutateAsync(ingId);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        setSelectedIngredient(null);
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
   };
 
   return (
@@ -212,7 +226,9 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
               ? t('product_detail.blacklist_remove_product')
               : t('product_detail.blacklist_add_product')
           }
-          onPress={handleToggleProductBlacklist}
+          onPress={() => {
+            void handleToggleProductBlacklist();
+          }}
           style={[
             styles.blacklistButton,
             {
@@ -325,7 +341,9 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         ingredient={selectedIngredient}
         isBlacklisted={selectedIngBlacklisted}
         onClose={() => setSelectedIngredient(null)}
-        onToggleBlacklistIngredient={handleToggleIngredientBlacklist}
+        onToggleBlacklistIngredient={(ingId) => {
+          void handleToggleIngredientBlacklist(ingId);
+        }}
       />
     </Screen>
   );

@@ -6,7 +6,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { buildAuthHeaders, getActiveAccessToken } from '@/api/auth-token';
+import { buildAuthHeaders, getActiveAccessToken, setActiveAccessToken } from '@/api/auth-token';
 import { apiClient } from '@/api/client';
 import { KNOWN_PROFILE_INGREDIENTS, productCardsFixture, productFixture } from '@/api/fixtures';
 import { getActiveApiLocale } from '@/api/locale';
@@ -196,14 +196,17 @@ export function evaluateLocalSuitability(
 export function useProfileQuery(): UseQueryResult<ProfileOut, Error> {
   const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['profile', token],
+    queryKey: ['profile', token ?? 'guest'],
     queryFn: async (): Promise<ProfileOut> => {
       if (!env.useMocks && token) {
         try {
           const response = await fetch(`${env.apiUrl}/api/v1/profile`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
           });
-          if (response.ok) {
+          if (response.status === 401) {
+            setActiveAccessToken(null);
+            resetMockProfileStore();
+          } else if (response.ok) {
             const serverProfile = (await response.json()) as ProfileOut;
             profileStore = {
               ...profileStore,
@@ -220,7 +223,7 @@ export function useProfileQuery(): UseQueryResult<ProfileOut, Error> {
         }
       }
       return {
-        user_id: '0194f024-6c67-7e21-9e16-a774b0d53999',
+        user_id: token ? '0194f024-6c67-7e21-9e16-a774b0d53999' : 'guest-user',
         skin_type: profileStore.skin_type,
         is_pregnant_or_nursing: profileStore.is_pregnant_or_nursing,
         health_conditions: profileStore.health_conditions,
@@ -291,14 +294,17 @@ export function useUpdateProfileMutation(): UseMutationResult<ProfileOut, Error,
 export function useBlacklistQuery(): UseQueryResult<BlacklistOut, Error> {
   const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['blacklist', token],
+    queryKey: ['blacklist', token ?? 'guest'],
     queryFn: async (): Promise<BlacklistOut> => {
       if (!env.useMocks && token) {
         try {
           const response = await fetch(`${env.apiUrl}/api/v1/profile/blacklist`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
           });
-          if (response.ok) {
+          if (response.status === 401) {
+            setActiveAccessToken(null);
+            resetMockProfileStore();
+          } else if (response.ok) {
             const data = (await response.json()) as BlacklistOut;
             profileStore = {
               ...profileStore,

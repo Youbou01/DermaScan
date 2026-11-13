@@ -9,6 +9,7 @@ import { ConflictWarningBanner } from './components/ConflictWarningBanner';
 import {
   checkCandidateConflict,
   ROUTINE_CATALOG_CANDIDATES,
+  useRoutineCandidateProductsQuery,
   useRoutinesQuery,
   useToggleRoutineCompletionMutation,
   useUpdateRoutineMutation,
@@ -25,6 +26,8 @@ export function RoutineScreen(): ReactElement {
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
 
   const routinesQuery = useRoutinesQuery();
+  const candidatesQuery = useRoutineCandidateProductsQuery();
+  const candidates = candidatesQuery.data ?? ROUTINE_CATALOG_CANDIDATES;
   const updateRoutine = useUpdateRoutineMutation();
   const toggleCompletion = useToggleRoutineCompletionMutation();
   const isMutating = updateRoutine.isPending || toggleCompletion.isPending;
@@ -265,7 +268,7 @@ export function RoutineScreen(): ReactElement {
         {t('routine.add_product_heading')}
       </Text>
       <View style={styles.candidatesList}>
-        {ROUTINE_CATALOG_CANDIDATES.map((candidate) => {
+        {candidates.map((candidate) => {
           const preConflict = checkCandidateConflict(candidate, steps);
           return (
             <Pressable

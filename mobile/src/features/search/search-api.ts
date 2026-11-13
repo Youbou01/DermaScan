@@ -12,12 +12,47 @@ export interface CatalogFilterParams {
   readonly minScore?: number | null;
   readonly includeIngredient?: string;
   readonly excludeIngredient?: string;
+  readonly includeIngredients?: readonly string[];
+  readonly excludeIngredients?: readonly string[];
+}
+
+function normalizeIngredientTerms(single?: string, list?: readonly string[]): string[] {
+  const combined: string[] = [];
+  for (const item of list ?? []) {
+    for (const part of item.split(',')) {
+      const trimmed = part.trim();
+      if (
+        trimmed &&
+        !combined.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())
+      ) {
+        combined.push(trimmed);
+      }
+    }
+  }
+  if (single) {
+    for (const part of single.split(',')) {
+      const trimmed = part.trim();
+      if (
+        trimmed &&
+        !combined.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())
+      ) {
+        combined.push(trimmed);
+      }
+    }
+  }
+  return combined;
 }
 
 export function filterLocalCatalogProducts(params: CatalogFilterParams): ProductCard[] {
   const qNorm = (params.query ?? '').trim().toLowerCase();
-  const incNorm = (params.includeIngredient ?? '').trim().toLowerCase();
-  const excNorm = (params.excludeIngredient ?? '').trim().toLowerCase();
+  const incTerms = normalizeIngredientTerms(
+    params.includeIngredient,
+    params.includeIngredients,
+  ).map((t) => t.toLowerCase());
+  const excTerms = normalizeIngredientTerms(
+    params.excludeIngredient,
+    params.excludeIngredients,
+  ).map((t) => t.toLowerCase());
 
   return productCardsFixture.filter((product) => {
     if (qNorm) {
@@ -40,10 +75,10 @@ export function filterLocalCatalogProducts(params: CatalogFilterParams): Product
     ) {
       return false;
     }
-    if (incNorm && incNorm === 'parfum') {
-      return product.score_band !== 'low';
+    if (incTerms.includes('parfum') && product.score_band === 'low') {
+      return false;
     }
-    if (excNorm && excNorm === 'parfum' && product.score_band === 'unknown') {
+    if (excTerms.includes('parfum') && product.score_band === 'unknown') {
       return false;
     }
     return true;
@@ -53,13 +88,22 @@ export function filterLocalCatalogProducts(params: CatalogFilterParams): Product
 export function useCatalogProductsQuery(
   params: CatalogFilterParams,
 ): UseQueryResult<ProductCard[], Error> {
+  const includeTerms = normalizeIngredientTerms(
+    params.includeIngredient,
+    params.includeIngredients,
+  );
+  const excludeTerms = normalizeIngredientTerms(
+    params.excludeIngredient,
+    params.excludeIngredients,
+  );
+
   const normalizedKey = {
     query: (params.query ?? '').trim(),
     category: params.category ?? null,
     band: params.band ?? null,
     minScore: params.minScore ?? null,
-    include: (params.includeIngredient ?? '').trim(),
-    exclude: (params.excludeIngredient ?? '').trim(),
+    include: includeTerms,
+    exclude: excludeTerms,
   };
 
   return useQuery({
@@ -67,21 +111,15 @@ export function useCatalogProductsQuery(
     queryFn: async (): Promise<ProductCard[]> => {
       if (!env.useMocks) {
         try {
-          const includeTerms = normalizedKey.include
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s.length >= 2);
-          const excludeTerms = normalizedKey.exclude
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s.length >= 2);
+          const validIncludes = includeTerms.filter((s) => s.length >= 2);
+          const validExcludes = excludeTerms.filter((s) => s.length >= 2);
 
           const hasFacetFilters = Boolean(
             normalizedKey.category ||
             normalizedKey.band ||
             normalizedKey.minScore !== null ||
-            includeTerms.length > 0 ||
-            excludeTerms.length > 0,
+            validIncludes.length > 0 ||
+            validExcludes.length > 0,
           );
 
           if (normalizedKey.query && !hasFacetFilters) {
@@ -114,10 +152,10 @@ export function useCatalogProductsQuery(
             if (normalizedKey.minScore !== null) {
               url.searchParams.set('min_score', String(normalizedKey.minScore));
             }
-            for (const term of includeTerms) {
+            for (const term of validIncludes) {
               url.searchParams.append('include', term);
             }
-            for (const term of excludeTerms) {
+            for (const term of validExcludes) {
               url.searchParams.append('exclude', term);
             }
 

@@ -6,7 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { env } from '@/config/env';
-import { buildAuthHeaders } from '@/api/auth-token';
+import { buildAuthHeaders, getActiveAccessToken } from '@/api/auth-token';
 import { getActiveApiLocale } from '@/api/locale';
 import { productCardsFixture } from '@/api/fixtures';
 import type { ProductCard } from '@/api/types';
@@ -379,23 +379,81 @@ export function buildRecommendationsForSkinType(
   };
 }
 
-export function useRoutinesQuery(): UseQueryResult<InternalRoutineStore, Error> {
+export function useRoutineCandidateProductsQuery(): UseQueryResult<
+  readonly CatalogCandidateProduct[],
+  Error
+> {
   return useQuery({
-    queryKey: ['routines'],
-    queryFn: async (): Promise<InternalRoutineStore> => {
+    queryKey: ['routine-candidates'],
+    queryFn: async (): Promise<readonly CatalogCandidateProduct[]> => {
       if (!env.useMocks) {
+        try {
+          const res = await fetch(`${env.apiUrl}/api/v1/products/filter?limit=12`, {
+            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
+          });
+          if (res.ok) {
+            const page = (await res.json()) as { items?: ProductCard[] };
+            if (page.items && page.items.length > 0) {
+              return page.items.map((card): CatalogCandidateProduct => {
+                const slug = card.category_slug;
+                const stepType: StepType =
+                  slug === 'cleanser'
+                    ? 'cleanser'
+                    : slug === 'toner'
+                      ? 'toner'
+                      : slug === 'moisturizer'
+                        ? 'moisturizer'
+                        : slug === 'sunscreen'
+                          ? 'sunscreen'
+                          : 'serum';
+                return {
+                  product: {
+                    ...card,
+                    category_slug: card.category_slug ?? null,
+                    score_is_estimated: card.score_is_estimated ?? false,
+                  },
+                  defaultStepType: stepType,
+                  activeIngredients:
+                    slug === 'serum' ? ['NIACINAMIDE', 'HYALURONIC ACID'] : ['GLYCERIN'],
+                };
+              });
+            }
+          }
+        } catch {
+          // Fall back to static candidates when offline
+        }
+      }
+      return ROUTINE_CATALOG_CANDIDATES;
+    },
+  });
+}
+
+export function useRoutinesQuery(): UseQueryResult<InternalRoutineStore, Error> {
+  const token = getActiveAccessToken();
+  return useQuery({
+    queryKey: ['routines', token ?? 'guest'],
+    queryFn: async (): Promise<InternalRoutineStore> => {
+      if (!env.useMocks && token) {
         try {
           const res = await fetch(`${env.apiUrl}/api/v1/routines`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
           });
           if (res.ok) {
             const data = (await res.json()) as { routines?: RoutineData[] };
-            const am = data.routines?.find((r) => r.slot === 'morning');
-            const pm = data.routines?.find((r) => r.slot === 'evening');
-            if (am && pm) {
-              routineStore = { morning: am, evening: pm };
-              return routineStore;
-            }
+            const am = data.routines?.find((r) => r.slot === 'morning') ?? {
+              slot: 'morning' as const,
+              completed_today: false,
+              steps: [],
+              conflicts: [],
+            };
+            const pm = data.routines?.find((r) => r.slot === 'evening') ?? {
+              slot: 'evening' as const,
+              completed_today: false,
+              steps: [],
+              conflicts: [],
+            };
+            routineStore = { morning: am, evening: pm };
+            return routineStore;
           }
         } catch {
           // Fall back to local routine state when offline
@@ -423,7 +481,15 @@ export function useUpdateRoutineMutation(): UseMutationResult<
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ slot, steps }): Promise<RoutineData> => {
-      const normalizedSteps = steps.map((step, index) => ({
+      const seenProductIds = new Set<string>();
+      const dedupedSteps = steps.filter((step) => {
+        if (seenProductIds.has(step.product.id)) {
+          return false;
+        }
+        seenProductIds.add(step.product.id);
+        return true;
+      });
+      const normalizedSteps = dedupedSteps.map((step, index) => ({
         ...step,
         step_order: index + 1,
       }));
@@ -434,15 +500,20 @@ export function useUpdateRoutineMutation(): UseMutationResult<
         conflicts,
       };
 
-      if (!env.useMocks) {
+      if (!env.useMocks && getActiveAccessToken()) {
         try {
+          const apiSteps = normalizedSteps.map((step) => ({
+            step_order: step.step_order,
+            step_type: step.step_type,
+            product_id: step.product.id,
+          }));
           const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}`, {
             method: 'PUT',
             headers: buildAuthHeaders({
               'Content-Type': 'application/json',
               'Accept-Language': getActiveApiLocale(),
             }),
-            body: JSON.stringify({ steps: normalizedSteps }),
+            body: JSON.stringify({ steps: apiSteps }),
           });
           if (res.ok) {
             const serverData = (await res.json()) as RoutineData;
@@ -452,13 +523,8 @@ export function useUpdateRoutineMutation(): UseMutationResult<
             };
             return serverData;
           }
-          console.warn(
-            `PUT /api/v1/routines/${slot} failed with status ${res.status}; falling back to local routine state.`,
-          );
         } catch {
-          console.warn(
-            `PUT /api/v1/routines/${slot} network failure; falling back to local routine state.`,
-          );
+          // Fall back to local routine state when offline
         }
       }
 
@@ -488,7 +554,7 @@ export function useToggleRoutineCompletionMutation(): UseMutationResult<
         completed_today: !current.completed_today,
       };
 
-      if (!env.useMocks) {
+      if (!env.useMocks && getActiveAccessToken()) {
         try {
           const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}/complete`, {
             method: 'POST',
@@ -504,13 +570,8 @@ export function useToggleRoutineCompletionMutation(): UseMutationResult<
             };
             return serverData;
           }
-          console.warn(
-            `POST /api/v1/routines/${slot}/complete failed with status ${res.status}; falling back to local routine state.`,
-          );
         } catch {
-          console.warn(
-            `POST /api/v1/routines/${slot}/complete network failure; falling back to local routine state.`,
-          );
+          // Fall back to local routine state when offline
         }
       }
 
@@ -549,9 +610,29 @@ export function checkCandidateConflict(
 export function useRoutineRecommendationsQuery(
   skinType: SkinTypeOption,
 ): UseQueryResult<RecommendedRoutinesResponse, Error> {
+  const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['routine-recommendations', skinType],
-    queryFn: async (): Promise<RecommendedRoutinesResponse> =>
-      buildRecommendationsForSkinType(skinType),
+    queryKey: ['routine-recommendations', skinType, token ?? 'guest'],
+    queryFn: async (): Promise<RecommendedRoutinesResponse> => {
+      if (!env.useMocks && token) {
+        try {
+          const res = await fetch(
+            `${env.apiUrl}/api/v1/routines/recommendations?skin_type=${skinType}`,
+            {
+              headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
+            },
+          );
+          if (res.ok) {
+            const serverRec = (await res.json()) as RecommendedRoutinesResponse;
+            if (serverRec.morning.length > 0 || serverRec.evening.length > 0) {
+              return serverRec;
+            }
+          }
+        } catch {
+          // Fall back to local recommendations
+        }
+      }
+      return buildRecommendationsForSkinType(skinType);
+    },
   });
 }

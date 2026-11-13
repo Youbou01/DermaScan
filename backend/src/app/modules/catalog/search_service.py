@@ -63,7 +63,7 @@ def _parse_offset(cursor: str | None) -> int:
 async def _resolve_ingredient_groups(
     session: AsyncSession, raw_names: list[str]
 ) -> tuple[list[list[uuid.UUID]], list[str]]:
-    """Resolve ingredient filter terms via exact alias match first, then trigram suggestion."""
+    """Resolve each ingredient filter term to its candidate ingredient IDs."""
     expanded: list[str] = []
     for raw in raw_names:
         for part in raw.split(","):
@@ -75,17 +75,13 @@ async def _resolve_ingredient_groups(
         return [], []
 
     ing_service = IngredientService(session)
-    matches = await ing_service.match(expanded)
     groups: list[list[uuid.UUID]] = []
     unmatched: list[str] = []
 
-    for term, match in zip(expanded, matches, strict=True):
-        if match.ingredient_id is not None:
-            groups.append([match.ingredient_id])
-            continue
-        suggestions = await ing_service.suggest(term, limit=5, min_similarity=0.55)
-        if suggestions:
-            groups.append([s.ingredient_id for s in suggestions])
+    for term in expanded:
+        matched_ids = await ing_service.resolve_filter_ingredient_ids(term)
+        if matched_ids:
+            groups.append(matched_ids)
         else:
             unmatched.append(term)
 

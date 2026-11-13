@@ -36,3 +36,4 @@ backend/before_m11.dump
 backend/before_sprint2.dump
 backend/openbeautyfacts-products.jsonl.gz
 *.dump
+*.dump

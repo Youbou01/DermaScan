@@ -84,4 +84,27 @@ describe('ProfileScreen (US-11, US-12, US-14)', () => {
     expect(screen.getByText(i18n.t('profile.empty_blacklist_products'))).toBeTruthy();
     expect(targetProduct.name).toBe('Daily Hydration Serum');
   });
+
+  it('resets profile selections when signing out', async () => {
+    const screen = await render(renderProfile());
+    await screen.findByText(i18n.t('profile.title'));
+
+    const sensitivePill = screen.getByRole('button', {
+      name: i18n.t('profile.skin_types.sensitive'),
+    });
+    await fireEvent.press(sensitivePill);
+    await fireEvent.press(screen.getByRole('button', { name: i18n.t('profile.save_button') }));
+
+    await waitFor(() => {
+      expect(screen.getByText(i18n.t('profile.saved_confirmation'))).toBeTruthy();
+    });
+
+    resetMockProfileStore();
+    const freshScreen = await render(renderProfile());
+    await freshScreen.findByText(i18n.t('profile.title'));
+    expect(
+      freshScreen.getByRole('button', { name: i18n.t('profile.skin_types.sensitive') }).props
+        .accessibilityState?.selected,
+    ).toBe(false);
+  });
 });

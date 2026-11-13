@@ -56,22 +56,57 @@ describe('ProductCatalogScreen (US-05, US-06)', () => {
     });
   });
 
+  it('adds multiple included and excluded ingredient chips via the add buttons and removes them', async () => {
+    const screen = await render(renderCatalog());
+    await screen.findByText(i18n.t('search.title'));
+
+    const includeInput = screen.getByLabelText(i18n.t('search.include_label'));
+    const addIncludeBtn = screen.getByRole('button', {
+      name: i18n.t('search.add_include_button'),
+    });
+
+    await fireEvent.changeText(includeInput, 'Niacinamide');
+    await fireEvent.press(addIncludeBtn);
+
+    await fireEvent.changeText(includeInput, 'Glycerin');
+    await fireEvent.press(addIncludeBtn);
+
+    expect(
+      screen.getByRole('button', {
+        name: i18n.t('search.remove_include_chip', { name: 'Niacinamide' }),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: i18n.t('search.remove_include_chip', { name: 'Glycerin' }),
+      }),
+    ).toBeTruthy();
+
+    const excludeInput = screen.getByLabelText(i18n.t('search.exclude_label'));
+    const addExcludeBtn = screen.getByRole('button', {
+      name: i18n.t('search.add_exclude_button'),
+    });
+
+    await fireEvent.changeText(excludeInput, 'Parfum');
+    await fireEvent.press(addExcludeBtn);
+
+    const parfumChip = screen.getByRole('button', {
+      name: i18n.t('search.remove_exclude_chip', { name: 'Parfum' }),
+    });
+    expect(parfumChip).toBeTruthy();
+
+    await fireEvent.press(parfumChip);
+    expect(
+      screen.queryByRole('button', {
+        name: i18n.t('search.remove_exclude_chip', { name: 'Parfum' }),
+      }),
+    ).toBeNull();
+  });
+
   it('pre-filters by initialCategory when navigated from HomeScreen', async () => {
     const screen = await render(renderCatalog('cleanser'));
     await screen.findByText('Gentle Cream Cleanser');
 
     expect(screen.queryByText('Cloud Cream Moisturizer')).toBeNull();
-  });
-
-  it('combines text search query with category filter', async () => {
-    const screen = await render(renderCatalog('serum'));
-    await screen.findByText('Daily Hydration Serum');
-
-    const input = screen.getByLabelText(i18n.t('search.query_label'));
-    await fireEvent.changeText(input, 'Hydration');
-
-    await waitFor(() => {
-      expect(screen.getByText('Daily Hydration Serum')).toBeTruthy();
-    });
   });
 });

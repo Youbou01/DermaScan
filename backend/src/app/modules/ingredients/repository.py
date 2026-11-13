@@ -128,3 +128,22 @@ class IngredientRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def search_ids_by_keyword(self, normalized: str, *, limit: int = 25) -> list[uuid.UUID]:
+        """Find ingredient IDs whose normalized alias or INCI name matches or contains `normalized`."""
+        if not normalized:
+            return []
+        stmt = (
+            select(Ingredient.id)
+            .outerjoin(IngredientAlias, IngredientAlias.ingredient_id == Ingredient.id)
+            .where(
+                (IngredientAlias.normalized_alias == normalized)
+                | IngredientAlias.normalized_alias.startswith(normalized, autoescape=True)
+                | IngredientAlias.normalized_alias.contains(normalized, autoescape=True)
+                | func.lower(Ingredient.inci_name).contains(normalized, autoescape=True)
+            )
+            .distinct()
+            .limit(limit)
+        )
+        result = await self._session.scalars(stmt)
+        return list(result.all())

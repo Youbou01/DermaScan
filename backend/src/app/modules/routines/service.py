@@ -15,7 +15,6 @@ from app.modules.routines.conflict_engine import (
 from app.modules.routines.enums import RoutineSlot, RoutineStepType
 from app.modules.routines.exceptions import (
     InvalidRoutineStepsError,
-    RoutineNotFoundError,
     RoutineProductNotFoundError,
 )
 from app.modules.routines.models import Routine
@@ -86,9 +85,7 @@ class RoutineService:
     async def toggle_completion(
         self, user_id: uuid.UUID, slot: RoutineSlot, locale: str
     ) -> RoutineDataOut:
-        routine = await self._repository.get_for_user_slot(user_id, slot)
-        if routine is None:
-            raise RoutineNotFoundError(f"No {slot.value} routine exists for this user.")
+        routine = await self._repository.get_or_create_for_user_slot(user_id, slot)
         completed = await self._repository.toggle_completion(routine.id, _today())
         return await self._to_out(routine, locale, completed_today=completed)
 

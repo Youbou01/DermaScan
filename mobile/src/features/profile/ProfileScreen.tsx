@@ -55,10 +55,18 @@ function ProfileScreenContent({
   const [prevProfile, setPrevProfile] = useState(initialProfile);
   if (prevProfile !== initialProfile) {
     setPrevProfile(initialProfile);
-    setSkinType(initialProfile.skin_type);
-    setIsPregnant(initialProfile.is_pregnant_or_nursing);
-    setConditions(initialProfile.health_conditions);
-    setAllergies(initialProfile.allergy_ingredient_ids);
+    if (!isAuthenticated && !env.useMocks) {
+      setSkinType(null);
+      setIsPregnant(false);
+      setConditions([]);
+      setAllergies([]);
+      setSavedNotice(false);
+    } else {
+      setSkinType(initialProfile.skin_type);
+      setIsPregnant(initialProfile.is_pregnant_or_nursing);
+      setConditions(initialProfile.health_conditions);
+      setAllergies(initialProfile.allergy_ingredient_ids);
+    }
   }
 
   const blacklistedIngredientIds = blacklist?.ingredient_ids ?? [];

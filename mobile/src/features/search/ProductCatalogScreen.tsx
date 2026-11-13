@@ -38,6 +38,8 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
   const [minScore, setMinScore] = useState<number | null>(null);
   const [includeIngredient, setIncludeIngredient] = useState('');
   const [excludeIngredient, setExcludeIngredient] = useState('');
+  const [includedIngredients, setIncludedIngredients] = useState<string[]>([]);
+  const [excludedIngredients, setExcludedIngredients] = useState<string[]>([]);
 
   const catalogQuery = useCatalogProductsQuery({
     query,
@@ -46,7 +48,39 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
     minScore,
     includeIngredient,
     excludeIngredient,
+    includeIngredients: includedIngredients,
+    excludeIngredients: excludedIngredients,
   });
+
+  const handleAddIncludedIngredient = (): void => {
+    const trimmed = includeIngredient.trim();
+    if (!trimmed) {
+      return;
+    }
+    setIncludedIngredients((prev) =>
+      prev.some((item) => item.toLowerCase() === trimmed.toLowerCase()) ? prev : [...prev, trimmed],
+    );
+    setIncludeIngredient('');
+  };
+
+  const handleRemoveIncludedIngredient = (name: string): void => {
+    setIncludedIngredients((prev) => prev.filter((item) => item !== name));
+  };
+
+  const handleAddExcludedIngredient = (): void => {
+    const trimmed = excludeIngredient.trim();
+    if (!trimmed) {
+      return;
+    }
+    setExcludedIngredients((prev) =>
+      prev.some((item) => item.toLowerCase() === trimmed.toLowerCase()) ? prev : [...prev, trimmed],
+    );
+    setExcludeIngredient('');
+  };
+
+  const handleRemoveExcludedIngredient = (name: string): void => {
+    setExcludedIngredients((prev) => prev.filter((item) => item !== name));
+  };
 
   const handleResetFilters = (): void => {
     setQuery('');
@@ -55,6 +89,8 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
     setMinScore(null);
     setIncludeIngredient('');
     setExcludeIngredient('');
+    setIncludedIngredients([]);
+    setExcludedIngredients([]);
   };
 
   const products = catalogQuery.data ?? [];
@@ -214,9 +250,13 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
           </Text>
           <TextInput
             accessibilityLabel={t('search.include_label')}
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={setIncludeIngredient}
+            onSubmitEditing={handleAddIncludedIngredient}
             placeholder={t('search.include_placeholder')}
             placeholderTextColor={colors.textMuted}
+            returnKeyType="done"
             style={[
               styles.smallInput,
               {
@@ -227,16 +267,56 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
             ]}
             value={includeIngredient}
           />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('search.add_include_button')}
+            onPress={handleAddIncludedIngredient}
+            style={({ pressed }) => [
+              styles.addIngredientButton,
+              {
+                borderColor: colors.primary,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.addIngredientButtonText, { color: colors.primary }]}>
+              {t('search.add_include_button')}
+            </Text>
+          </Pressable>
+          {includedIngredients.length > 0 ? (
+            <View style={styles.chipsWrap}>
+              {includedIngredients.map((item) => (
+                <Pressable
+                  key={`inc-${item}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('search.remove_include_chip', { name: item })}
+                  onPress={() => handleRemoveIncludedIngredient(item)}
+                  style={[
+                    styles.ingredientChip,
+                    { backgroundColor: colors.lowSurface, borderColor: colors.low },
+                  ]}
+                >
+                  <Text style={[styles.ingredientChipText, { color: colors.low }]}>✓ {item} ×</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
+
         <View style={styles.ingredientFilterCol}>
           <Text style={[styles.smallLabel, { color: colors.text }]}>
             {t('search.exclude_label')}
           </Text>
           <TextInput
             accessibilityLabel={t('search.exclude_label')}
+            autoCapitalize="none"
+            autoCorrect={false}
             onChangeText={setExcludeIngredient}
+            onSubmitEditing={handleAddExcludedIngredient}
             placeholder={t('search.exclude_placeholder')}
             placeholderTextColor={colors.textMuted}
+            returnKeyType="done"
             style={[
               styles.smallInput,
               {
@@ -247,6 +327,43 @@ export function ProductCatalogScreen({ initialCategory }: ProductCatalogScreenPr
             ]}
             value={excludeIngredient}
           />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('search.add_exclude_button')}
+            onPress={handleAddExcludedIngredient}
+            style={({ pressed }) => [
+              styles.addIngredientButton,
+              {
+                borderColor: colors.high,
+                backgroundColor: colors.surface,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.addIngredientButtonText, { color: colors.high }]}>
+              {t('search.add_exclude_button')}
+            </Text>
+          </Pressable>
+          {excludedIngredients.length > 0 ? (
+            <View style={styles.chipsWrap}>
+              {excludedIngredients.map((item) => (
+                <Pressable
+                  key={`exc-${item}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('search.remove_exclude_chip', { name: item })}
+                  onPress={() => handleRemoveExcludedIngredient(item)}
+                  style={[
+                    styles.ingredientChip,
+                    { backgroundColor: colors.highSurface, borderColor: colors.high },
+                  ]}
+                >
+                  <Text style={[styles.ingredientChipText, { color: colors.high }]}>
+                    ⬟ {item} ×
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -343,6 +460,34 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     fontSize: typography.size.sm,
+  },
+  addIngredientButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+  },
+  addIngredientButtonText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  ingredientChip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+  },
+  ingredientChipText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold,
   },
   pillsRow: {
     flexDirection: 'row',

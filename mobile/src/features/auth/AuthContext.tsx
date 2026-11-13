@@ -14,6 +14,8 @@ import { setActiveAccessToken } from '@/api/auth-token';
 import { getActiveApiLocale } from '@/api/locale';
 import type { AuthTokensOut, UserOut } from '@/api/types';
 import { env } from '@/config/env';
+import { resetMockProfileStore } from '@/features/profile/profile-api';
+import { resetMockRoutineStore } from '@/features/routine/routine-api';
 
 const AUTH_STORAGE_KEY = 'dermascan-auth-session';
 
@@ -83,6 +85,10 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
 
   const persistSession = useCallback(
     async (next: StoredSession | null): Promise<void> => {
+      if (!next) {
+        resetMockProfileStore();
+        resetMockRoutineStore();
+      }
       setActiveAccessToken(next?.access_token ?? null);
       setSession(next);
       try {
