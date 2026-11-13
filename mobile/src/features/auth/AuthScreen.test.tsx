@@ -9,6 +9,10 @@ import { AuthScreen } from './AuthScreen';
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 
+jest.mock('@/config/env', () => ({
+  env: { apiUrl: 'https://mock.invalid', useMocks: true },
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));

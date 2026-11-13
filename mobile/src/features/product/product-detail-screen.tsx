@@ -1,11 +1,14 @@
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
+import { getActiveAccessToken } from '@/api/auth-token';
 import { ApiError } from '@/api/errors';
 import type { ProductIngredient, RiskLevel } from '@/api/types';
 import { useProductQuery } from '@/api/hooks';
 import { EmptyState, ErrorState, RiskBadge, ScoreBadge, Screen, Skeleton } from '@/components';
+import { env } from '@/config/env';
+import { getProductArtwork } from '@/features/home/product-artwork';
 import {
   useBlacklistQuery,
   useProductSuitabilityQuery,
@@ -13,6 +16,7 @@ import {
   useToggleBlacklistProductMutation,
 } from '@/features/profile/profile-api';
 import { useTranslation } from '@/i18n/useTranslation';
+import { resolveProductImageUrl } from '@/lib/image-url';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import { IngredientRationaleModal } from './components/IngredientRationaleModal';
 import { formatScoreCoverage, productDetailCopy } from './product-detail.copy';
@@ -94,7 +98,9 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
     );
   }
 
-  const imageAvailable = product.image_url !== null && failedImageUrl !== product.image_url;
+  const resolvedImageUrl = resolveProductImageUrl(product.image_url);
+  const imageAvailable = resolvedImageUrl !== null && failedImageUrl !== resolvedImageUrl;
+  const fallbackArtwork = getProductArtwork(product.category?.slug ?? null);
   const suitability = suitabilityQuery.data;
   const isProductBlacklisted = Boolean(
     blacklistQuery.data?.product_ids.includes(product.id) || suitability?.is_blacklisted,
@@ -103,7 +109,6 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
     selectedIngredient?.ingredient_id &&
     blacklistQuery.data?.ingredient_ids.includes(selectedIngredient.ingredient_id),
   );
-
   const verdictColor =
     suitability?.verdict === 'avoid'
       ? colors.high
@@ -125,6 +130,23 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         ? t('product_detail.verdict_caution')
         : t('product_detail.verdict_suitable');
 
+  const handleToggleProductBlacklist = (): void => {
+    if (!env.useMocks && !getActiveAccessToken()) {
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    void toggleBlacklistProduct.mutateAsync(product.id);
+  };
+
+  const handleToggleIngredientBlacklist = (ingId: string): void => {
+    if (!env.useMocks && !getActiveAccessToken()) {
+      setSelectedIngredient(null);
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    void toggleBlacklistIngredient.mutateAsync(ingId);
+  };
+
   return (
     <Screen contentContainerStyle={styles.content}>
       <Pressable
@@ -145,9 +167,16 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         {imageAvailable ? (
           <Image
             accessibilityLabel={`${product.name} product image`}
-            onError={() => setFailedImageUrl(product.image_url)}
+            onError={() => setFailedImageUrl(resolvedImageUrl)}
             resizeMode="contain"
-            source={{ uri: product.image_url ?? undefined }}
+            source={{ uri: resolvedImageUrl }}
+            style={[styles.productImage, { backgroundColor: colors.surfaceMuted }]}
+          />
+        ) : fallbackArtwork ? (
+          <Image
+            accessibilityLabel={`${product.name} product image`}
+            resizeMode="contain"
+            source={fallbackArtwork}
             style={[styles.productImage, { backgroundColor: colors.surfaceMuted }]}
           />
         ) : (
@@ -183,9 +212,7 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
               ? t('product_detail.blacklist_remove_product')
               : t('product_detail.blacklist_add_product')
           }
-          onPress={() => {
-            void toggleBlacklistProduct.mutateAsync(product.id);
-          }}
+          onPress={handleToggleProductBlacklist}
           style={[
             styles.blacklistButton,
             {
@@ -298,9 +325,7 @@ export function ProductDetailScreen({ productId }: ProductDetailScreenProps): Re
         ingredient={selectedIngredient}
         isBlacklisted={selectedIngBlacklisted}
         onClose={() => setSelectedIngredient(null)}
-        onToggleBlacklistIngredient={(ingId) => {
-          void toggleBlacklistIngredient.mutateAsync(ingId);
-        }}
+        onToggleBlacklistIngredient={handleToggleIngredientBlacklist}
       />
     </Screen>
   );

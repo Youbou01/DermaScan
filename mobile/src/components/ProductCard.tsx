@@ -7,6 +7,7 @@ import { RiskBadge } from './RiskBadge';
 import { ScoreBadge } from './ScoreBadge';
 import { getLocalizedCategorySlug } from '@/i18n/category';
 import { useTranslation } from '@/i18n/useTranslation';
+import { resolveProductImageUrl } from '@/lib/image-url';
 
 export interface ProductCardProps {
   product: ProductCardData;
@@ -27,6 +28,7 @@ export function ProductCard({
     ? getLocalizedCategorySlug(product.category_slug)
     : null;
   const [imageFailed, setImageFailed] = useState(false);
+  const resolvedImageUrl = resolveProductImageUrl(product.image_url);
   const badge = product.score_band ? (
     product.score_band === 'unknown' ? (
       <RiskBadge level="unknown" />
@@ -51,12 +53,12 @@ export function ProductCard({
         },
       ]}
     >
-      {product.image_url && !imageFailed ? (
+      {resolvedImageUrl && !imageFailed ? (
         <Image
           accessibilityLabel={t('errors.product_image', { name: product.name })}
           onError={() => setImageFailed(true)}
           resizeMode="cover"
-          source={{ uri: product.image_url }}
+          source={{ uri: resolvedImageUrl }}
           style={[
             styles.image,
             layout === 'shelf' && styles.shelfImage,

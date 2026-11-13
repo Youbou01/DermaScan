@@ -31,7 +31,8 @@ backend/uploads/
 repomix-output.xml
 
 #dump
+*.dump
 backend/before_m11.dump
-backend/openbeautyfacts-products.jsonl.gz
+backend/before_sprint2.dump
 backend/openbeautyfacts-products.jsonl.gz
 *.dump

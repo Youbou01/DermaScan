@@ -1,14 +1,17 @@
 import { useRouter, type Href } from 'expo-router';
 import { useState, type ReactElement } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { KNOWN_PROFILE_INGREDIENTS, productCardsFixture } from '@/api/fixtures';
+import { KNOWN_PROFILE_INGREDIENTS } from '@/api/fixtures';
 import type { BlacklistOut, HealthCondition, ProfileOut, SkinType } from '@/api/types';
 import { Screen, Skeleton } from '@/components';
+import { env } from '@/config/env';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { useTranslation } from '@/i18n/useTranslation';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import {
+  ProfileAuthRequiredError,
+  useBlacklistedProductsDetails,
   useBlacklistQuery,
   useProfileQuery,
   useToggleBlacklistIngredientMutation,
@@ -49,6 +52,19 @@ function ProfileScreenContent({
   const [allergies, setAllergies] = useState<string[]>(initialProfile.allergy_ingredient_ids);
   const [savedNotice, setSavedNotice] = useState(false);
 
+  const [prevProfile, setPrevProfile] = useState(initialProfile);
+  if (prevProfile !== initialProfile) {
+    setPrevProfile(initialProfile);
+    setSkinType(initialProfile.skin_type);
+    setIsPregnant(initialProfile.is_pregnant_or_nursing);
+    setConditions(initialProfile.health_conditions);
+    setAllergies(initialProfile.allergy_ingredient_ids);
+  }
+
+  const blacklistedIngredientIds = blacklist?.ingredient_ids ?? [];
+  const blacklistedProductIds = blacklist?.product_ids ?? [];
+  const productDetailsMap = useBlacklistedProductsDetails(blacklistedProductIds);
+
   const toggleCondition = (cond: HealthCondition): void => {
     setSavedNotice(false);
     setConditions((prev) =>
@@ -66,17 +82,55 @@ function ProfileScreenContent({
   };
 
   const handleSaveProfile = async (): Promise<void> => {
-    await updateProfile.mutateAsync({
-      skin_type: skinType,
-      is_pregnant_or_nursing: isPregnant,
-      health_conditions: conditions,
-      allergy_ingredient_ids: allergies,
-    });
-    setSavedNotice(true);
+    if (!env.useMocks && !isAuthenticated) {
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    try {
+      await updateProfile.mutateAsync({
+        skin_type: skinType,
+        is_pregnant_or_nursing: isPregnant,
+        health_conditions: conditions,
+        allergy_ingredient_ids: allergies,
+      });
+      setSavedNotice(true);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        await signOut();
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
   };
 
-  const blacklistedIngredientIds = blacklist?.ingredient_ids ?? [];
-  const blacklistedProductIds = blacklist?.product_ids ?? [];
+  const handleToggleIngredientBlacklist = async (ingredientId: string): Promise<void> => {
+    if (!env.useMocks && !isAuthenticated) {
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    try {
+      await toggleBlacklistIngredient.mutateAsync(ingredientId);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        await signOut();
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
+  };
+
+  const handleToggleProductBlacklist = async (productId: string): Promise<void> => {
+    if (!env.useMocks && !isAuthenticated) {
+      router.push('/auth/login' as unknown as Href);
+      return;
+    }
+    try {
+      await toggleBlacklistProduct.mutateAsync(productId);
+    } catch (err) {
+      if (err instanceof ProfileAuthRequiredError) {
+        await signOut();
+        router.push('/auth/login' as unknown as Href);
+      }
+    }
+  };
 
   return (
     <Screen contentContainerStyle={styles.content}>
@@ -291,7 +345,10 @@ function ProfileScreenContent({
         </View>
 
         {savedNotice ? (
-          <Text accessibilityRole="status" style={[styles.savedBanner, { color: colors.primary }]}>
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.savedBanner, { color: colors.primary }]}
+          >
             {t('profile.saved_confirmation')}
           </Text>
         ) : null}
@@ -336,8 +393,9 @@ function ProfileScreenContent({
                 accessibilityRole="button"
                 accessibilityLabel={`Blacklist: ${label}`}
                 accessibilityState={{ selected: isBlacklisted }}
+                disabled={toggleBlacklistIngredient.isPending}
                 onPress={() => {
-                  void toggleBlacklistIngredient.mutateAsync(ing.id);
+                  void handleToggleIngredientBlacklist(ing.id);
                 }}
                 style={[
                   styles.pill,
@@ -368,16 +426,33 @@ function ProfileScreenContent({
         ) : (
           <View style={styles.productList}>
             {blacklistedProductIds.map((pid) => {
-              const matchedCard = productCardsFixture.find((p) => p.id === pid);
-              const displayName = matchedCard?.name ?? pid;
+              const resolved = productDetailsMap[pid];
+              const displayName = resolved
+                ? resolved.brand
+                  ? `${resolved.name} (${resolved.brand})`
+                  : resolved.name
+                : pid;
               return (
                 <View key={pid} style={[styles.productRow, { borderColor: colors.border }]}>
-                  <Text style={[styles.productName, { color: colors.text }]}>{displayName}</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={displayName}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/products/[productId]',
+                        params: { productId: pid },
+                      } as unknown as Href)
+                    }
+                    style={styles.productNameButton}
+                  >
+                    <Text style={[styles.productName, { color: colors.text }]}>{displayName}</Text>
+                  </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t('profile.remove_product', { id: displayName })}
+                    disabled={toggleBlacklistProduct.isPending}
                     onPress={() => {
-                      void toggleBlacklistProduct.mutateAsync(pid);
+                      void handleToggleProductBlacklist(pid);
                     }}
                     style={[styles.removeButton, { borderColor: colors.high }]}
                   >
@@ -530,12 +605,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
     padding: spacing.sm,
     borderWidth: 1,
     borderRadius: radii.md,
   },
-  productName: {
+  productNameButton: {
     flex: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  productName: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium,
   },

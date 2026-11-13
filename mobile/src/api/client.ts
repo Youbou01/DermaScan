@@ -33,11 +33,13 @@ export const mockApiFetch: typeof fetch = async (input, _init): Promise<Response
     return mockResponse(findMockSearchResults(q));
   }
   if (url.pathname === '/api/v1/products/filter') {
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
     const category = url.searchParams.get('category');
     const band = url.searchParams.get('band');
     const minScoreRaw = url.searchParams.get('min_score');
     const minScore = minScoreRaw ? Number(minScoreRaw) : null;
     const filtered = productCardsFixture.filter((item) => {
+      if (q && !`${item.name} ${item.brand ?? ''}`.toLowerCase().includes(q)) return false;
       if (category && item.category_slug !== category) return false;
       if (band && item.score_band !== band) return false;
       if (minScore !== null && (item.score === null || item.score < minScore)) return false;

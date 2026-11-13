@@ -10,6 +10,10 @@ import { resetMockRoutineStore } from './routine-api';
 
 const mockPush = jest.fn();
 
+jest.mock('@/config/env', () => ({
+  env: { apiUrl: 'https://mock.invalid', useMocks: true },
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
 }));

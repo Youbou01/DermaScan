@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
   useCallback,
@@ -44,6 +45,7 @@ export class AuthActionError extends Error {
 }
 
 export function AuthProvider({ children }: { readonly children: ReactNode }): ReactElement {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<StoredSession | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -54,7 +56,11 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
         const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as StoredSession;
-          if (parsed?.access_token && parsed?.user?.id) {
+          const isMockTokenInLiveMode =
+            !env.useMocks && parsed?.access_token === 'mock-jwt-access-token';
+          if (isMockTokenInLiveMode) {
+            await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+          } else if (parsed?.access_token && parsed?.user?.id) {
             setActiveAccessToken(parsed.access_token);
             if (mounted) {
               setSession(parsed);
@@ -75,26 +81,36 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
     };
   }, []);
 
-  const persistSession = useCallback(async (next: StoredSession | null): Promise<void> => {
-    setActiveAccessToken(next?.access_token ?? null);
-    setSession(next);
-    try {
-      if (next) {
-        await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
-      } else {
-        await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+  const persistSession = useCallback(
+    async (next: StoredSession | null): Promise<void> => {
+      setActiveAccessToken(next?.access_token ?? null);
+      setSession(next);
+      try {
+        if (next) {
+          await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+        } else {
+          await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+      } catch {
+        // Session remains active in memory if storage fails
       }
-    } catch {
-      // Session remains active in memory if storage fails
-    }
-  }, []);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['blacklist'] }),
+        queryClient.invalidateQueries({ queryKey: ['suitability'] }),
+        queryClient.invalidateQueries({ queryKey: ['routines'] }),
+      ]);
+    },
+    [queryClient],
+  );
 
   const signIn = useCallback(
     async (email: string, password: string): Promise<UserOut> => {
       const normalizedEmail = email.trim().toLowerCase();
       if (!env.useMocks) {
+        let response: Response;
         try {
-          const response = await fetch(`${env.apiUrl}/api/v1/auth/login`, {
+          response = await fetch(`${env.apiUrl}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -102,23 +118,20 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
             },
             body: JSON.stringify({ email: normalizedEmail, password }),
           });
-          if (response.ok) {
-            const tokens = (await response.json()) as AuthTokensOut;
-            await persistSession({
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              user: tokens.user,
-            });
-            return tokens.user;
-          }
-          if (response.status === 401) {
-            throw new AuthActionError('invalid-credentials', 'Invalid email or password.');
-          }
-        } catch (err) {
-          if (err instanceof AuthActionError) {
-            throw err;
-          }
+        } catch {
+          throw new AuthActionError('network-error', 'Could not connect to server.');
         }
+
+        if (response.ok) {
+          const tokens = (await response.json()) as AuthTokensOut;
+          await persistSession({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            user: tokens.user,
+          });
+          return tokens.user;
+        }
+        throw new AuthActionError('invalid-credentials', 'Invalid email or password.');
       }
 
       const fallbackUser: UserOut = {
@@ -141,8 +154,9 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
       const normalizedEmail = email.trim().toLowerCase();
       const trimmedName = displayName.trim();
       if (!env.useMocks) {
+        let response: Response;
         try {
-          const response = await fetch(`${env.apiUrl}/api/v1/auth/register`, {
+          response = await fetch(`${env.apiUrl}/api/v1/auth/register`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -154,23 +168,23 @@ export function AuthProvider({ children }: { readonly children: ReactNode }): Re
               display_name: trimmedName,
             }),
           });
-          if (response.ok) {
-            const tokens = (await response.json()) as AuthTokensOut;
-            await persistSession({
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              user: tokens.user,
-            });
-            return tokens.user;
-          }
-          if (response.status === 409) {
-            throw new AuthActionError('email-already-registered', 'Email already registered.');
-          }
-        } catch (err) {
-          if (err instanceof AuthActionError) {
-            throw err;
-          }
+        } catch {
+          throw new AuthActionError('network-error', 'Could not connect to server.');
         }
+
+        if (response.ok) {
+          const tokens = (await response.json()) as AuthTokensOut;
+          await persistSession({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            user: tokens.user,
+          });
+          return tokens.user;
+        }
+        if (response.status === 409) {
+          throw new AuthActionError('email-already-registered', 'Email already registered.');
+        }
+        throw new AuthActionError('registration-failed', 'Could not create account.');
       }
 
       const fallbackUser: UserOut = {

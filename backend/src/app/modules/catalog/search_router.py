@@ -48,6 +48,10 @@ async def search_products(
 )
 async def filter_products(
     service: SearchServiceDep,
+    q: Annotated[
+        str | None,
+        Query(max_length=100, description="Optional product name or brand search query."),
+    ] = None,
     category: Annotated[
         str | None, Query(description="Category slug; child categories are included.")
     ] = None,
@@ -64,6 +68,7 @@ async def filter_products(
     cursor: CursorQuery = None,
 ) -> Page[ProductSummary]:
     return await service.filter_products(
+        q=q,
         category=category,
         bands=band,
         min_score=min_score,

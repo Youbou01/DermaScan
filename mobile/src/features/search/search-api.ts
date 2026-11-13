@@ -67,16 +67,27 @@ export function useCatalogProductsQuery(
     queryFn: async (): Promise<ProductCard[]> => {
       if (!env.useMocks) {
         try {
+          const includeTerms = normalizedKey.include
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length >= 2);
+          const excludeTerms = normalizedKey.exclude
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length >= 2);
+
           const hasFacetFilters = Boolean(
             normalizedKey.category ||
             normalizedKey.band ||
             normalizedKey.minScore !== null ||
-            normalizedKey.include ||
-            normalizedKey.exclude,
+            includeTerms.length > 0 ||
+            excludeTerms.length > 0,
           );
+
           if (normalizedKey.query && !hasFacetFilters) {
             const url = new URL(`${env.apiUrl}/api/v1/products/search`);
             url.searchParams.set('q', normalizedKey.query);
+            url.searchParams.set('limit', '50');
             const res = await fetch(url.toString(), {
               headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
             });
@@ -85,34 +96,41 @@ export function useCatalogProductsQuery(
               return (page.items ?? []).map((item) => ({
                 ...item,
                 category_slug: item.category_slug ?? null,
+                score_is_estimated: item.score_is_estimated ?? false,
               }));
             }
           } else {
             const url = new URL(`${env.apiUrl}/api/v1/products/filter`);
-            if (normalizedKey.category) url.searchParams.set('category', normalizedKey.category);
-            if (normalizedKey.band) url.searchParams.set('band', normalizedKey.band);
+            url.searchParams.set('limit', '50');
+            if (normalizedKey.query) {
+              url.searchParams.set('q', normalizedKey.query);
+            }
+            if (normalizedKey.category) {
+              url.searchParams.set('category', normalizedKey.category);
+            }
+            if (normalizedKey.band) {
+              url.searchParams.set('band', normalizedKey.band);
+            }
             if (normalizedKey.minScore !== null) {
               url.searchParams.set('min_score', String(normalizedKey.minScore));
             }
-            if (normalizedKey.include) url.searchParams.append('include', normalizedKey.include);
-            if (normalizedKey.exclude) url.searchParams.append('exclude', normalizedKey.exclude);
+            for (const term of includeTerms) {
+              url.searchParams.append('include', term);
+            }
+            for (const term of excludeTerms) {
+              url.searchParams.append('exclude', term);
+            }
 
             const res = await fetch(url.toString(), {
               headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
             });
             if (res.ok) {
               const page = (await res.json()) as { items?: ProductCard[] };
-              const items = (page.items ?? []).map((item) => ({
+              return (page.items ?? []).map((item) => ({
                 ...item,
                 category_slug: item.category_slug ?? normalizedKey.category ?? null,
+                score_is_estimated: item.score_is_estimated ?? false,
               }));
-              if (normalizedKey.query) {
-                const qLow = normalizedKey.query.toLowerCase();
-                return items.filter((p) =>
-                  `${p.name} ${p.brand ?? ''}`.toLowerCase().includes(qLow),
-                );
-              }
-              return items;
             }
           }
         } catch {

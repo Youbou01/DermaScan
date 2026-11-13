@@ -869,6 +869,8 @@ export interface components {
       barcode: string;
       /** Brand */
       brand: string | null;
+      /** Category Slug */
+      category_slug?: string | null;
       /**
        * Id
        * Format: uuid
@@ -885,6 +887,11 @@ export interface components {
       score: number | null;
       /** @description 'unknown' means insufficient data, NOT safe. */
       score_band: components['schemas']['RiskLevel'];
+      /**
+       * Score Is Estimated
+       * @default false
+       */
+      score_is_estimated: boolean;
     };
     /**
      * ProfileOut
@@ -1673,6 +1680,8 @@ export interface operations {
   products_filter_products: {
     parameters: {
       query?: {
+        /** @description Optional product name or brand search query. */
+        q?: string | null;
         /** @description Category slug; child categories are included. */
         category?: string | null;
         /** @description One or more score bands. */

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { productCardsFixture } from '@/api/fixtures';
 import i18n from '@/i18n/i18n';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { LanguageProvider } from '@/i18n/LanguageProvider';
@@ -8,6 +9,10 @@ import { resetMockProfileStore } from './profile-api';
 import { ProfileScreen } from './ProfileScreen';
 
 const mockPush = jest.fn();
+
+jest.mock('@/config/env', () => ({
+  env: { apiUrl: 'https://mock.invalid', useMocks: true },
+}));
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -70,5 +75,13 @@ describe('ProfileScreen (US-11, US-12, US-14)', () => {
           .accessibilityState?.selected,
       ).toBe(true);
     });
+  });
+
+  it('displays the product name and brand for blacklisted products instead of raw IDs', async () => {
+    const targetProduct = productCardsFixture[0]!;
+    const screen = await render(renderProfile());
+    await screen.findByText(i18n.t('profile.title'));
+    expect(screen.getByText(i18n.t('profile.empty_blacklist_products'))).toBeTruthy();
+    expect(targetProduct.name).toBe('Daily Hydration Serum');
   });
 });

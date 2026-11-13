@@ -7,6 +7,10 @@ import { ProductCatalogScreen } from './ProductCatalogScreen';
 
 const mockPush = jest.fn();
 
+jest.mock('@/config/env', () => ({
+  env: { apiUrl: 'https://mock.invalid', useMocks: true },
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
@@ -57,5 +61,17 @@ describe('ProductCatalogScreen (US-05, US-06)', () => {
     await screen.findByText('Gentle Cream Cleanser');
 
     expect(screen.queryByText('Cloud Cream Moisturizer')).toBeNull();
+  });
+
+  it('combines text search query with category filter', async () => {
+    const screen = await render(renderCatalog('serum'));
+    await screen.findByText('Daily Hydration Serum');
+
+    const input = screen.getByLabelText(i18n.t('search.query_label'));
+    await fireEvent.changeText(input, 'Hydration');
+
+    await waitFor(() => {
+      expect(screen.getByText('Daily Hydration Serum')).toBeTruthy();
+    });
   });
 });

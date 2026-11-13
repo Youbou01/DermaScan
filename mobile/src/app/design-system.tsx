@@ -122,7 +122,7 @@ export default function DesignSystemShowcase(): ReactElement | null {
         }
       />
       {message ? (
-        <Text accessibilityRole="status" style={[styles.message, { color: colors.primary }]}>
+        <Text accessibilityLiveRegion="polite" style={[styles.message, { color: colors.primary }]}>
           {message}
         </Text>
       ) : null}

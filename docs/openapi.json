@@ -858,6 +858,17 @@
             ],
             "title": "Brand"
           },
+          "category_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Slug"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -893,6 +904,11 @@
           "score_band": {
             "$ref": "#/components/schemas/RiskLevel",
             "description": "'unknown' means insufficient data, NOT safe."
+          },
+          "score_is_estimated": {
+            "default": false,
+            "title": "Score Is Estimated",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2157,6 +2173,25 @@
       "get": {
         "operationId": "products_filter_products",
         "parameters": [
+          {
+            "description": "Optional product name or brand search query.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional product name or brand search query.",
+              "title": "Q"
+            }
+          },
           {
             "description": "Category slug; child categories are included.",
             "in": "query",

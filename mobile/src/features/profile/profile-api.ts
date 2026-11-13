@@ -1,12 +1,14 @@
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { buildAuthHeaders } from '@/api/auth-token';
-import { KNOWN_PROFILE_INGREDIENTS } from '@/api/fixtures';
+import { buildAuthHeaders, getActiveAccessToken } from '@/api/auth-token';
+import { apiClient } from '@/api/client';
+import { KNOWN_PROFILE_INGREDIENTS, productCardsFixture, productFixture } from '@/api/fixtures';
 import { getActiveApiLocale } from '@/api/locale';
 import type {
   BlacklistOut,
@@ -20,6 +22,13 @@ import type {
   Verdict,
 } from '@/api/types';
 import { env } from '@/config/env';
+
+export class ProfileAuthRequiredError extends Error {
+  constructor() {
+    super('Authentication required');
+    this.name = 'ProfileAuthRequiredError';
+  }
+}
 
 interface InternalProfileState {
   skin_type: SkinType | null;
@@ -185,10 +194,11 @@ export function evaluateLocalSuitability(
 }
 
 export function useProfileQuery(): UseQueryResult<ProfileOut, Error> {
+  const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', token],
     queryFn: async (): Promise<ProfileOut> => {
-      if (!env.useMocks) {
+      if (!env.useMocks && token) {
         try {
           const response = await fetch(`${env.apiUrl}/api/v1/profile`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
@@ -225,6 +235,35 @@ export function useUpdateProfileMutation(): UseMutationResult<ProfileOut, Error,
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: ProfileUpdateIn): Promise<ProfileOut> => {
+      if (!env.useMocks) {
+        if (!getActiveAccessToken()) {
+          throw new ProfileAuthRequiredError();
+        }
+        const response = await fetch(`${env.apiUrl}/api/v1/profile`, {
+          method: 'PUT',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json',
+            'Accept-Language': getActiveApiLocale(),
+          }),
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 401) {
+          throw new ProfileAuthRequiredError();
+        }
+        if (response.ok) {
+          const updated = (await response.json()) as ProfileOut;
+          profileStore = {
+            ...profileStore,
+            skin_type: updated.skin_type,
+            is_pregnant_or_nursing: updated.is_pregnant_or_nursing,
+            health_conditions: updated.health_conditions,
+            allergy_ingredient_ids: updated.allergy_ingredient_ids,
+            blacklisted_product_ids: updated.blacklisted_product_ids,
+          };
+          return updated;
+        }
+      }
+
       profileStore = {
         ...profileStore,
         skin_type: payload.skin_type ?? null,
@@ -232,24 +271,6 @@ export function useUpdateProfileMutation(): UseMutationResult<ProfileOut, Error,
         health_conditions: payload.health_conditions ?? [],
         allergy_ingredient_ids: payload.allergy_ingredient_ids ?? [],
       };
-
-      if (!env.useMocks) {
-        try {
-          const response = await fetch(`${env.apiUrl}/api/v1/profile`, {
-            method: 'PUT',
-            headers: buildAuthHeaders({
-              'Content-Type': 'application/json',
-              'Accept-Language': getActiveApiLocale(),
-            }),
-            body: JSON.stringify(payload),
-          });
-          if (response.ok) {
-            return (await response.json()) as ProfileOut;
-          }
-        } catch {
-          // Fall back to local profile state
-        }
-      }
 
       return {
         user_id: '0194f024-6c67-7e21-9e16-a774b0d53999',
@@ -268,10 +289,11 @@ export function useUpdateProfileMutation(): UseMutationResult<ProfileOut, Error,
 }
 
 export function useBlacklistQuery(): UseQueryResult<BlacklistOut, Error> {
+  const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['blacklist'],
+    queryKey: ['blacklist', token],
     queryFn: async (): Promise<BlacklistOut> => {
-      if (!env.useMocks) {
+      if (!env.useMocks && token) {
         try {
           const response = await fetch(`${env.apiUrl}/api/v1/profile/blacklist`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
@@ -306,6 +328,23 @@ export function useToggleBlacklistProductMutation(): UseMutationResult<
   return useMutation({
     mutationFn: async (productId: string): Promise<BlacklistOut> => {
       const exists = profileStore.blacklisted_product_ids.includes(productId);
+
+      if (!env.useMocks) {
+        if (!getActiveAccessToken()) {
+          throw new ProfileAuthRequiredError();
+        }
+        const response = await fetch(
+          `${env.apiUrl}/api/v1/profile/blacklist/products/${productId}`,
+          {
+            method: exists ? 'DELETE' : 'POST',
+            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
+          },
+        );
+        if (response.status === 401) {
+          throw new ProfileAuthRequiredError();
+        }
+      }
+
       const nextProducts = exists
         ? profileStore.blacklisted_product_ids.filter((id) => id !== productId)
         : [...profileStore.blacklisted_product_ids, productId];
@@ -314,17 +353,6 @@ export function useToggleBlacklistProductMutation(): UseMutationResult<
         ...profileStore,
         blacklisted_product_ids: nextProducts,
       };
-
-      if (!env.useMocks) {
-        try {
-          await fetch(`${env.apiUrl}/api/v1/profile/blacklist/products/${productId}`, {
-            method: exists ? 'DELETE' : 'POST',
-            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
-          });
-        } catch {
-          // Keep optimistic local update
-        }
-      }
 
       return {
         product_ids: profileStore.blacklisted_product_ids,
@@ -348,6 +376,23 @@ export function useToggleBlacklistIngredientMutation(): UseMutationResult<
   return useMutation({
     mutationFn: async (ingredientId: string): Promise<BlacklistOut> => {
       const exists = profileStore.blacklisted_ingredient_ids.includes(ingredientId);
+
+      if (!env.useMocks) {
+        if (!getActiveAccessToken()) {
+          throw new ProfileAuthRequiredError();
+        }
+        const response = await fetch(
+          `${env.apiUrl}/api/v1/profile/blacklist/ingredients/${ingredientId}`,
+          {
+            method: exists ? 'DELETE' : 'POST',
+            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
+          },
+        );
+        if (response.status === 401) {
+          throw new ProfileAuthRequiredError();
+        }
+      }
+
       const nextIngredients = exists
         ? profileStore.blacklisted_ingredient_ids.filter((id) => id !== ingredientId)
         : [...profileStore.blacklisted_ingredient_ids, ingredientId];
@@ -356,17 +401,6 @@ export function useToggleBlacklistIngredientMutation(): UseMutationResult<
         ...profileStore,
         blacklisted_ingredient_ids: nextIngredients,
       };
-
-      if (!env.useMocks) {
-        try {
-          await fetch(`${env.apiUrl}/api/v1/profile/blacklist/ingredients/${ingredientId}`, {
-            method: exists ? 'DELETE' : 'POST',
-            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
-          });
-        } catch {
-          // Keep optimistic local update
-        }
-      }
 
       return {
         product_ids: profileStore.blacklisted_product_ids,
@@ -380,18 +414,62 @@ export function useToggleBlacklistIngredientMutation(): UseMutationResult<
   });
 }
 
+export function useBlacklistedProductsDetails(
+  productIds: readonly string[],
+): Record<string, { name: string; brand: string | null }> {
+  const results = useQueries({
+    queries: productIds.map((pid) => ({
+      queryKey: ['product', pid],
+      queryFn: async () => {
+        const res = await apiClient.GET('/api/v1/products/{product_id}', {
+          params: { path: { product_id: pid } },
+        });
+        if (res.response.ok && res.data) {
+          return res.data;
+        }
+        const fallback = productCardsFixture.find((c) => c.id === pid);
+        if (fallback) {
+          return {
+            ...productFixture,
+            id: fallback.id,
+            name: fallback.name,
+            brand: fallback.brand,
+          };
+        }
+        throw new Error('Product not found');
+      },
+      staleTime: 5 * 60_000,
+    })),
+  });
+
+  const map: Record<string, { name: string; brand: string | null }> = {};
+  productIds.forEach((pid, idx) => {
+    const data = results[idx]?.data;
+    if (data) {
+      map[pid] = { name: data.name, brand: data.brand };
+    } else {
+      const matchedCard = productCardsFixture.find((p) => p.id === pid);
+      if (matchedCard) {
+        map[pid] = { name: matchedCard.name, brand: matchedCard.brand };
+      }
+    }
+  });
+  return map;
+}
+
 export function useProductSuitabilityQuery(
   productId: string | undefined,
   ingredients: readonly ProductIngredient[] = [],
 ): UseQueryResult<SuitabilityResult, Error> {
+  const token = getActiveAccessToken();
   return useQuery({
-    queryKey: ['suitability', productId, ingredients.length],
+    queryKey: ['suitability', productId, ingredients.length, token],
     enabled: Boolean(productId),
     queryFn: async (): Promise<SuitabilityResult> => {
       if (!productId) {
         throw new Error('Product ID is required');
       }
-      if (!env.useMocks) {
+      if (!env.useMocks && token) {
         try {
           const response = await fetch(`${env.apiUrl}/api/v1/products/${productId}/suitability`, {
             headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
