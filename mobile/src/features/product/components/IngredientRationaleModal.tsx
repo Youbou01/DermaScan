@@ -3,19 +3,25 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ProductIngredient, RiskLevel } from '@/api/types';
 import { RiskBadge } from '@/components';
+import { useTranslation } from '@/i18n/useTranslation';
 import { radii, spacing, typography, useThemeColors } from '@/theme/tokens';
 import { productDetailCopy } from '../product-detail.copy';
 
 export interface IngredientRationaleModalProps {
   ingredient: ProductIngredient | null;
   onClose: () => void;
+  isBlacklisted?: boolean;
+  onToggleBlacklistIngredient?: (ingredientId: string) => void;
 }
 
 export function IngredientRationaleModal({
   ingredient,
   onClose,
+  isBlacklisted = false,
+  onToggleBlacklistIngredient,
 }: IngredientRationaleModalProps): ReactElement {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const visible = ingredient !== null;
   const level: RiskLevel = ingredient?.matched ? ingredient.risk_level : 'unknown';
   const rationale = ingredient?.matched
@@ -64,7 +70,49 @@ export function IngredientRationaleModal({
                   </Text>
                 ) : null}
                 <RiskBadge level={level} />
+                {ingredient.rating !== null && ingredient.rating !== undefined ? (
+                  <Text style={[styles.ratingText, { color: colors.primary }]}>
+                    {t('product_detail.rating_out_of_ten', {
+                      rating: ingredient.rating.toFixed(1),
+                    })}
+                  </Text>
+                ) : null}
+                {ingredient.summary ? (
+                  <Text style={[styles.summaryText, { color: colors.text }]}>
+                    {t('product_detail.function_summary_label')} {ingredient.summary}
+                  </Text>
+                ) : null}
                 <Text style={[styles.rationale, { color: colors.textMuted }]}>{rationale}</Text>
+                {ingredient.ingredient_id && onToggleBlacklistIngredient ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      isBlacklisted
+                        ? t('product_detail.blacklist_remove_ingredient')
+                        : t('product_detail.blacklist_add_ingredient')
+                    }
+                    onPress={() => {
+                      if (ingredient.ingredient_id) {
+                        onToggleBlacklistIngredient(ingredient.ingredient_id);
+                      }
+                    }}
+                    style={[
+                      styles.blacklistButton,
+                      { borderColor: isBlacklisted ? colors.high : colors.border },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.blacklistButtonText,
+                        { color: isBlacklisted ? colors.high : colors.text },
+                      ]}
+                    >
+                      {isBlacklisted
+                        ? t('product_detail.blacklist_remove_ingredient')
+                        : t('product_detail.blacklist_add_ingredient')}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </>
             ) : null}
           </ScrollView>
@@ -115,5 +163,26 @@ const styles = StyleSheet.create({
     fontWeight: typography.weight.semibold,
   },
   inciName: { fontSize: typography.size.sm, lineHeight: typography.lineHeight.sm },
+  ratingText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+  },
+  summaryText: {
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+  },
   rationale: { fontSize: typography.size.md, lineHeight: typography.lineHeight.md },
+  blacklistButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  blacklistButtonText: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+  },
 });

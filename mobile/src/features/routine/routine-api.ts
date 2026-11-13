@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { env } from '@/config/env';
+import { buildAuthHeaders } from '@/api/auth-token';
 import { getActiveApiLocale } from '@/api/locale';
 import { productCardsFixture } from '@/api/fixtures';
 import type { ProductCard } from '@/api/types';
@@ -68,6 +69,7 @@ const EXTRA_ACTIVE_PRODUCTS: readonly CatalogCandidateProduct[] = [
       image_url: null,
       score: 64,
       score_band: 'moderate',
+      score_is_estimated: false,
       category_slug: 'serum',
     },
     defaultStepType: 'serum',
@@ -81,6 +83,7 @@ const EXTRA_ACTIVE_PRODUCTS: readonly CatalogCandidateProduct[] = [
       image_url: null,
       score: 66,
       score_band: 'moderate',
+      score_is_estimated: false,
       category_slug: 'toner',
     },
     defaultStepType: 'toner',
@@ -94,6 +97,7 @@ const EXTRA_ACTIVE_PRODUCTS: readonly CatalogCandidateProduct[] = [
       image_url: null,
       score: 78,
       score_band: 'low',
+      score_is_estimated: false,
       category_slug: 'serum',
     },
     defaultStepType: 'serum',
@@ -382,7 +386,7 @@ export function useRoutinesQuery(): UseQueryResult<InternalRoutineStore, Error> 
       if (!env.useMocks) {
         try {
           const res = await fetch(`${env.apiUrl}/api/v1/routines`, {
-            headers: { 'Accept-Language': getActiveApiLocale() },
+            headers: buildAuthHeaders({ 'Accept-Language': getActiveApiLocale() }),
           });
           if (res.ok) {
             const data = (await res.json()) as { routines?: RoutineData[] };
@@ -434,10 +438,10 @@ export function useUpdateRoutineMutation(): UseMutationResult<
         try {
           const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}`, {
             method: 'PUT',
-            headers: {
+            headers: buildAuthHeaders({
               'Content-Type': 'application/json',
               'Accept-Language': getActiveApiLocale(),
-            },
+            }),
             body: JSON.stringify({ steps: normalizedSteps }),
           });
           if (res.ok) {
@@ -488,9 +492,9 @@ export function useToggleRoutineCompletionMutation(): UseMutationResult<
         try {
           const res = await fetch(`${env.apiUrl}/api/v1/routines/${slot}/complete`, {
             method: 'POST',
-            headers: {
+            headers: buildAuthHeaders({
               'Accept-Language': getActiveApiLocale(),
-            },
+            }),
           });
           if (res.ok) {
             const serverData = (await res.json()) as RoutineData;

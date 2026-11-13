@@ -176,6 +176,32 @@ function HomeHero(): ReactElement {
             {t('routine.open_routine')}
           </Text>
         </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('search.open_search')}
+          onPress={() => router.push('/search' as unknown as Href)}
+          style={({ pressed }) => [
+            styles.scanButton,
+            { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+            {t('search.open_search')}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.open_profile')}
+          onPress={() => router.push('/profile' as unknown as Href)}
+          style={({ pressed }) => [
+            styles.scanButton,
+            { backgroundColor: colors.onPrimary, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Text style={[styles.scanButtonText, { color: colors.primary }]}>
+            {t('profile.open_profile')}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -250,6 +276,7 @@ const styles = StyleSheet.create({
   },
   heroActionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.xs,
   },

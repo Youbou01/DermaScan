@@ -99,7 +99,7 @@ async def generate_quality_report(db: AsyncSession, output_path: Path) -> str:
             select(func.count(Product.id)).where(
                 (Product.score_dirty.is_(True))
                 | (Product.scoring_version.is_(None))
-                | (Product.scoring_version < 3)
+                | (Product.scoring_version < 4)
             )
         )
         or 0
@@ -365,7 +365,7 @@ async def generate_quality_report(db: AsyncSession, output_path: Path) -> str:
             "",
             "## 7. Overhaul Verification Summary",
             "",
-            "- **Scoring v3 Algorithm**: Active across 100% of products (`scoring_version = 3`).",
+            "- **Scoring v4 Algorithm**: Active across 100% of products (`scoring_version = 4`).",
             "- **PostgreSQL Job Queue**: Active (`app/core/jobs.py` + `app/worker.py`).",
             "- **Enrichment Gateway**: Multi-provider fallback and rate limiting active.",
             "- **Product Provenance**: Source precedence (`curated > retailer/brand > obf > ai`).",
