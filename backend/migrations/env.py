@@ -5,6 +5,7 @@ The database URL is taken from, in order:
   2. the application settings (DATABASE_URL environment variable / .env).
 """
 
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -34,6 +35,7 @@ _REGISTERED_MODELS = (
     app.modules.ingredients.models,
     app.modules.routines.models,
 )
+logger = logging.getLogger("alembic.runtime.migration")
 
 config = context.config
 if config.config_file_name is not None:
@@ -86,7 +88,7 @@ async def run_async_migrations() -> None:
             """)
         )
 
-        print("[ALEMBIC DB CHECK]", dict(result.mappings().one()), flush=True)
+        logger.info("[ALEMBIC DB CHECK] %s", dict(result.mappings().one()))
 
         await connection.run_sync(do_run_migrations)
 
