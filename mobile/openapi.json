@@ -17,9 +17,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "access_token"
-        ],
+        "required": ["access_token"],
         "title": "AccessTokenOut",
         "type": "object"
       },
@@ -35,10 +33,7 @@
         "type": "string"
       },
       "AlertSeverity": {
-        "enum": [
-          "high",
-          "medium"
-        ],
+        "enum": ["high", "medium"],
         "title": "AlertSeverity",
         "type": "string"
       },
@@ -67,11 +62,7 @@
             "description": "The authenticated user."
           }
         },
-        "required": [
-          "access_token",
-          "refresh_token",
-          "user"
-        ],
+        "required": ["access_token", "refresh_token", "user"],
         "title": "AuthTokensOut",
         "type": "object"
       },
@@ -97,10 +88,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "product_ids",
-          "ingredient_ids"
-        ],
+        "required": ["product_ids", "ingredient_ids"],
         "title": "BlacklistOut",
         "type": "object"
       },
@@ -125,9 +113,7 @@
             "title": "Product Name"
           }
         },
-        "required": [
-          "photo"
-        ],
+        "required": ["photo"],
         "title": "Body_analysis_analyze_ocr_photo",
         "type": "object"
       },
@@ -145,10 +131,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "barcode",
-          "photo"
-        ],
+        "required": ["barcode", "photo"],
         "title": "Body_contributions_submit_photo_contribution",
         "type": "object"
       },
@@ -173,10 +156,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug",
-          "name"
-        ],
+        "required": ["slug", "name"],
         "title": "CategoryNodeOut",
         "type": "object"
       },
@@ -193,10 +173,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug",
-          "name"
-        ],
+        "required": ["slug", "name"],
         "title": "CategoryOut",
         "type": "object"
       },
@@ -214,10 +191,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "has_conflict",
-          "conflicts"
-        ],
+        "required": ["has_conflict", "conflicts"],
         "title": "ConflictCheckOut",
         "type": "object"
       },
@@ -241,12 +215,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "barcode",
-          "status",
-          "message"
-        ],
+        "required": ["id", "barcode", "status", "message"],
         "title": "ContributionResponse",
         "type": "object"
       },
@@ -265,12 +234,7 @@
       },
       "HealthCondition": {
         "description": "Closed list of health conditions the suitability engine understands.",
-        "enum": [
-          "eczema",
-          "rosacea",
-          "acne_prone",
-          "psoriasis"
-        ],
+        "enum": ["eczema", "rosacea", "acne_prone", "psoriasis"],
         "title": "HealthCondition",
         "type": "string"
       },
@@ -284,9 +248,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "sections"
-        ],
+        "required": ["sections"],
         "title": "HomeFeedOut",
         "type": "object"
       },
@@ -334,13 +296,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "type",
-          "title",
-          "items",
-          "next_cursor"
-        ],
+        "required": ["id", "type", "title", "items", "next_cursor"],
         "title": "HomeSectionOut",
         "type": "object"
       },
@@ -421,10 +377,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ],
+        "required": ["email", "password"],
         "title": "LoginRequest",
         "type": "object"
       },
@@ -450,10 +403,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "Page[ProductSummary]",
         "type": "object"
       },
@@ -521,11 +471,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
+        "required": ["type", "title", "status"],
         "title": "ProblemDetails",
         "type": "object"
       },
@@ -604,15 +550,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "brand",
-          "image_url",
-          "score",
-          "score_band",
-          "category_slug"
-        ],
+        "required": ["id", "name", "brand", "image_url", "score", "score_band", "category_slug"],
         "title": "ProductCardOut",
         "type": "object"
       },
@@ -829,14 +767,7 @@
             "title": "Summary"
           }
         },
-        "required": [
-          "position",
-          "name",
-          "inci_name",
-          "matched",
-          "risk_level",
-          "rationale"
-        ],
+        "required": ["position", "name", "inci_name", "matched", "risk_level", "rationale"],
         "title": "ProductIngredientOut",
         "type": "object"
       },
@@ -911,15 +842,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "barcode",
-          "name",
-          "brand",
-          "image_url",
-          "score",
-          "score_band"
-        ],
+        "required": ["id", "barcode", "name", "brand", "image_url", "score", "score_band"],
         "title": "ProductSummary",
         "type": "object"
       },
@@ -1048,11 +971,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "skin_type",
-          "morning",
-          "evening"
-        ],
+        "required": ["skin_type", "morning", "evening"],
         "title": "RecommendedRoutinesOut",
         "type": "object"
       },
@@ -1065,9 +984,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "refresh_token"
-        ],
+        "required": ["refresh_token"],
         "title": "RefreshRequest",
         "type": "object"
       },
@@ -1095,11 +1012,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password",
-          "display_name"
-        ],
+        "required": ["email", "password", "display_name"],
         "title": "RegisterRequest",
         "type": "object"
       },
@@ -1130,24 +1043,13 @@
             "type": "string"
           }
         },
-        "required": [
-          "code",
-          "severity",
-          "ingredient_name",
-          "title",
-          "detail"
-        ],
+        "required": ["code", "severity", "ingredient_name", "title", "detail"],
         "title": "RiskAlertOut",
         "type": "object"
       },
       "RiskLevel": {
         "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe.",
-        "enum": [
-          "low",
-          "moderate",
-          "high",
-          "unknown"
-        ],
+        "enum": ["low", "moderate", "high", "unknown"],
         "title": "RiskLevel",
         "type": "string"
       },
@@ -1196,10 +1098,7 @@
           },
           "severity": {
             "description": "High severity indicates active damage risk; moderate indicates irritation/reduced efficacy.",
-            "enum": [
-              "high",
-              "moderate"
-            ],
+            "enum": ["high", "moderate"],
             "title": "Severity",
             "type": "string"
           },
@@ -1258,22 +1157,12 @@
             "type": "array"
           }
         },
-        "required": [
-          "id",
-          "slot",
-          "name",
-          "completed_today",
-          "steps",
-          "conflicts"
-        ],
+        "required": ["id", "slot", "name", "completed_today", "steps", "conflicts"],
         "title": "RoutineDataOut",
         "type": "object"
       },
       "RoutineSlot": {
-        "enum": [
-          "morning",
-          "evening"
-        ],
+        "enum": ["morning", "evening"],
         "title": "RoutineSlot",
         "type": "string"
       },
@@ -1308,11 +1197,7 @@
             "description": "Category/type: cleanser, toner, serum, moisturizer, sunscreen, treatment."
           }
         },
-        "required": [
-          "step_order",
-          "step_type",
-          "product_id"
-        ],
+        "required": ["step_order", "step_type", "product_id"],
         "title": "RoutineStepIn",
         "type": "object"
       },
@@ -1359,23 +1244,12 @@
             "$ref": "#/components/schemas/RoutineStepType"
           }
         },
-        "required": [
-          "step_order",
-          "step_type",
-          "product"
-        ],
+        "required": ["step_order", "step_type", "product"],
         "title": "RoutineStepOut",
         "type": "object"
       },
       "RoutineStepType": {
-        "enum": [
-          "cleanser",
-          "toner",
-          "serum",
-          "moisturizer",
-          "sunscreen",
-          "treatment"
-        ],
+        "enum": ["cleanser", "toner", "serum", "moisturizer", "sunscreen", "treatment"],
         "title": "RoutineStepType",
         "type": "string"
       },
@@ -1389,21 +1263,13 @@
             "type": "array"
           }
         },
-        "required": [
-          "routines"
-        ],
+        "required": ["routines"],
         "title": "RoutinesListOut",
         "type": "object"
       },
       "SkinType": {
         "description": "Self-declared skin type stored on the user profile.",
-        "enum": [
-          "normal",
-          "dry",
-          "oily",
-          "combination",
-          "sensitive"
-        ],
+        "enum": ["normal", "dry", "oily", "combination", "sensitive"],
         "title": "SkinType",
         "type": "string"
       },
@@ -1479,9 +1345,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "text"
-        ],
+        "required": ["text"],
         "title": "TextAnalysisIn",
         "type": "object"
       },
@@ -1497,9 +1361,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "steps"
-        ],
+        "required": ["steps"],
         "title": "UpdateRoutineIn",
         "type": "object"
       },
@@ -1523,11 +1385,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "display_name"
-        ],
+        "required": ["id", "email", "display_name"],
         "title": "UserOut",
         "type": "object"
       },
@@ -1563,20 +1421,12 @@
             "type": "string"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError",
         "type": "object"
       },
       "Verdict": {
-        "enum": [
-          "suitable",
-          "caution",
-          "avoid"
-        ],
+        "enum": ["suitable", "caution", "avoid"],
         "title": "Verdict",
         "type": "string"
       }
@@ -1666,9 +1516,7 @@
           }
         ],
         "summary": "Analyze Ocr Photo",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v1/analysis/text": {
@@ -1743,9 +1591,7 @@
           }
         ],
         "summary": "Analyze Ingredient Text",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v1/auth/login": {
@@ -1794,9 +1640,7 @@
           }
         },
         "summary": "Sign in with email and password",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/auth/refresh": {
@@ -1845,9 +1689,7 @@
           }
         },
         "summary": "Get a new access token from a refresh token",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/auth/register": {
@@ -1896,9 +1738,7 @@
           }
         },
         "summary": "Create an account",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/categories": {
@@ -1922,9 +1762,7 @@
           }
         },
         "summary": "List the category tree",
-        "tags": [
-          "categories"
-        ]
+        "tags": ["categories"]
       }
     },
     "/api/v1/contributions": {
@@ -1993,9 +1831,7 @@
           }
         },
         "summary": "Submit Photo Contribution",
-        "tags": [
-          "contributions"
-        ]
+        "tags": ["contributions"]
       }
     },
     "/api/v1/home": {
@@ -2049,9 +1885,7 @@
           }
         },
         "summary": "Home feed sections",
-        "tags": [
-          "home"
-        ]
+        "tags": ["home"]
       }
     },
     "/api/v1/home/sections/{section_id}": {
@@ -2141,9 +1975,7 @@
           }
         },
         "summary": "Load more items for one home section",
-        "tags": [
-          "home"
-        ]
+        "tags": ["home"]
       }
     },
     "/api/v1/products/by-barcode/{barcode}": {
@@ -2194,9 +2026,7 @@
           }
         },
         "summary": "Get a product by scanning its barcode",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/filter": {
@@ -2397,9 +2227,7 @@
           }
         },
         "summary": "Filter scored products, best score first",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/search": {
@@ -2475,9 +2303,7 @@
           }
         },
         "summary": "Search products by name (accent-insensitive, typo-tolerant)",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/{product_id}": {
@@ -2528,9 +2354,7 @@
           }
         },
         "summary": "Get a product by id",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/products/{product_id}/suitability": {
@@ -2596,9 +2420,7 @@
           }
         ],
         "summary": "Does this product suit my profile?",
-        "tags": [
-          "products"
-        ]
+        "tags": ["products"]
       }
     },
     "/api/v1/profile": {
@@ -2652,9 +2474,7 @@
           }
         ],
         "summary": "Get my health profile",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       },
       "put": {
         "operationId": "profile_put_profile",
@@ -2716,9 +2536,7 @@
           }
         ],
         "summary": "Replace my health profile and allergies",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       }
     },
     "/api/v1/profile/blacklist": {
@@ -2772,9 +2590,7 @@
           }
         ],
         "summary": "List my blacklisted products and ingredients",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       }
     },
     "/api/v1/profile/blacklist/ingredients/{ingredient_id}": {
@@ -2833,9 +2649,7 @@
           }
         ],
         "summary": "Remove an ingredient from my blacklist",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       },
       "post": {
         "operationId": "profile_blacklist_ingredient",
@@ -2892,9 +2706,7 @@
           }
         ],
         "summary": "Blacklist an ingredient",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       }
     },
     "/api/v1/profile/blacklist/products/{product_id}": {
@@ -2953,9 +2765,7 @@
           }
         ],
         "summary": "Remove a product from my blacklist",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       },
       "post": {
         "operationId": "profile_blacklist_product",
@@ -3012,9 +2822,7 @@
           }
         ],
         "summary": "Blacklist a product",
-        "tags": [
-          "profile"
-        ]
+        "tags": ["profile"]
       }
     },
     "/api/v1/routines": {
@@ -3068,9 +2876,7 @@
           }
         ],
         "summary": "Get Routines",
-        "tags": [
-          "routines"
-        ]
+        "tags": ["routines"]
       }
     },
     "/api/v1/routines/recommendations": {
@@ -3083,13 +2889,7 @@
             "required": false,
             "schema": {
               "default": "normal",
-              "enum": [
-                "normal",
-                "dry",
-                "oily",
-                "combination",
-                "sensitive"
-              ],
+              "enum": ["normal", "dry", "oily", "combination", "sensitive"],
               "title": "Skin Type",
               "type": "string"
             }
@@ -3143,9 +2943,7 @@
           }
         ],
         "summary": "Get Recommendations",
-        "tags": [
-          "routines"
-        ]
+        "tags": ["routines"]
       }
     },
     "/api/v1/routines/{slot}": {
@@ -3219,9 +3017,7 @@
           }
         ],
         "summary": "Replace Routine",
-        "tags": [
-          "routines"
-        ]
+        "tags": ["routines"]
       }
     },
     "/api/v1/routines/{slot}/check-conflict/{product_id}": {
@@ -3295,9 +3091,7 @@
           }
         ],
         "summary": "Check Product Conflict",
-        "tags": [
-          "routines"
-        ]
+        "tags": ["routines"]
       }
     },
     "/api/v1/routines/{slot}/complete": {
@@ -3361,9 +3155,7 @@
           }
         ],
         "summary": "Toggle Routine Completion",
-        "tags": [
-          "routines"
-        ]
+        "tags": ["routines"]
       }
     },
     "/health/live": {
@@ -3386,9 +3178,7 @@
           }
         },
         "summary": "Live",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/health/ready": {
@@ -3411,9 +3201,7 @@
           }
         },
         "summary": "Ready",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     }
   }
