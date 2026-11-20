@@ -5,11 +5,11 @@ The database URL is taken from, in order:
   2. the application settings (DATABASE_URL environment variable / .env).
 """
 
-import logging
+import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool, text
+from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -35,7 +35,6 @@ _REGISTERED_MODELS = (
     app.modules.ingredients.models,
     app.modules.routines.models,
 )
-logger = logging.getLogger("alembic.runtime.migration")
 
 config = context.config
 if config.config_file_name is not None:
@@ -76,20 +75,12 @@ async def run_async_migrations() -> None:
     connectable = create_async_engine(get_url(), poolclass=pool.NullPool)
 
     async with connectable.connect() as connection:
-        # Diagnostic: inspect the actual Render/Alembic connection
-        result = await connection.execute(
-            text("""
-                SELECT
-                    current_database() AS database,
-                    current_user AS db_user,
-                    current_schema() AS schema,
-                    current_setting('search_path') AS search_path,
-                    current_schemas(false) AS effective_schemas
-            """)
-        )
-
-        logger.info("[ALEMBIC DB CHECK] %s", dict(result.mappings().one()))
-
         await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    asyncio.run(run_async_migrations())
