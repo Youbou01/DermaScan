@@ -14,7 +14,8 @@ from app.modules.catalog.search_repository import (
     by_bands,
     by_categories,
     by_score_range,
-    with_ingredients,
+    by_search_query,
+    with_ingredient_groups,
     without_ingredients,
 )
 from app.modules.catalog.search_schemas import ProductSummary
@@ -35,9 +36,11 @@ def _summary(product: Product, locale: str = DEFAULT_LOCALE) -> ProductSummary:
         barcode=product.barcode,
         name=resolve_product_name(product.name, product.name_i18n, locale),
         brand=product.brand.name if product.brand else None,
+        category_slug=product.primary_category.slug if product.primary_category else None,
         image_url=product.image_url,
         score=product.score,
         score_band=product.score_band,
+        score_is_estimated=product.score_is_estimated,
     )
 
 
@@ -57,20 +60,32 @@ def _parse_offset(cursor: str | None) -> int:
     return offset
 
 
-async def _resolve_ingredient_ids(
-    session: AsyncSession, names: list[str]
-) -> tuple[list[uuid.UUID], list[str]]:
-    """Resolve names through the ingredients alias pipeline (public service only).
-    Returns (distinct ingredient ids, names that did not match)."""
-    matches = await IngredientService(session).match(names)
-    ids: list[uuid.UUID] = []
+async def _resolve_ingredient_groups(
+    session: AsyncSession, raw_names: list[str]
+) -> tuple[list[list[uuid.UUID]], list[str]]:
+    """Resolve each ingredient filter term to its candidate ingredient IDs."""
+    expanded: list[str] = []
+    for raw in raw_names:
+        for part in raw.split(","):
+            cleaned = part.strip()
+            if cleaned:
+                expanded.append(cleaned)
+
+    if not expanded:
+        return [], []
+
+    ing_service = IngredientService(session)
+    groups: list[list[uuid.UUID]] = []
     unmatched: list[str] = []
-    for match in matches:
-        if match.ingredient_id is None:
-            unmatched.append(match.raw_text)
-        elif match.ingredient_id not in ids:
-            ids.append(match.ingredient_id)
-    return ids, unmatched
+
+    for term in expanded:
+        matched_ids = await ing_service.resolve_filter_ingredient_ids(term)
+        if matched_ids:
+            groups.append(matched_ids)
+        else:
+            unmatched.append(term)
+
+    return groups, unmatched
 
 
 class ProductSearchService:
@@ -79,7 +94,7 @@ class ProductSearchService:
         self._repo = ProductSearchRepository(session)
 
     async def search_by_name(
-        self, q: str, *, limit: int, cursor: str | None
+        self, q: str, *, limit: int, cursor: str | None, locale: str = DEFAULT_LOCALE
     ) -> Page[ProductSummary]:
         offset = _parse_offset(cursor)
         q_norm = normalize_name(q)
@@ -89,13 +104,14 @@ class ProductSearchService:
         rows = await self._repo.search_by_name(q_norm, limit=page_size + 1, offset=offset)
         has_more = len(rows) > page_size and offset + page_size < MAX_SEARCH_RESULTS
         return Page[ProductSummary](
-            items=[_summary(p) for p in rows[:page_size]],
+            items=[_summary(p, locale) for p in rows[:page_size]],
             next_cursor=str(offset + page_size) if has_more else None,
         )
 
     async def filter_products(
         self,
         *,
+        q: str | None = None,
         category: str | None,
         bands: list[RiskLevel] | None,
         min_score: int | None,
@@ -104,14 +120,20 @@ class ProductSearchService:
         exclude: list[str] | None,
         limit: int,
         cursor: str | None,
+        locale: str = DEFAULT_LOCALE,
     ) -> Page[ProductSummary]:
         """Scored products only, best score first (unscored = insufficient data).
-        An unknown category slug or an unrecognized `include` name gives an empty page;
-        an unrecognized `exclude` name is ignored."""
+        Supports combining search query `q` with category, band, score range, and ingredient
+        include/exclude filters in a single database query."""
         if min_score is not None and max_score is not None and min_score > max_score:
             raise InvalidScoreRangeError
 
         stmt = self._repo.base_query().where(Product.score.is_not(None))
+        if q is not None and q.strip():
+            q_norm = normalize_name(q)
+            if not q_norm:
+                return _empty()
+            stmt = by_search_query(stmt, q_norm)
         if category:
             category_ids = await self._repo.category_subtree_ids(category)
             if not category_ids:
@@ -121,12 +143,13 @@ class ProductSearchService:
             stmt = by_bands(stmt, bands)
         stmt = by_score_range(stmt, min_score, max_score)
         if include:
-            include_ids, unmatched = await _resolve_ingredient_ids(self._session, include)
+            include_groups, unmatched = await _resolve_ingredient_groups(self._session, include)
             if unmatched:
                 return _empty()
-            stmt = with_ingredients(stmt, include_ids)
+            stmt = with_ingredient_groups(stmt, include_groups)
         if exclude:
-            exclude_ids, _ = await _resolve_ingredient_ids(self._session, exclude)
+            exclude_groups, _ = await _resolve_ingredient_groups(self._session, exclude)
+            exclude_ids = list({ing_id for grp in exclude_groups for ing_id in grp})
             stmt = without_ingredients(stmt, exclude_ids)
 
         items, next_cursor = await paginate(
@@ -140,4 +163,6 @@ class ProductSearchService:
             limit=limit,
             cursor=cursor,
         )
-        return Page[ProductSummary](items=[_summary(p) for p in items], next_cursor=next_cursor)
+        return Page[ProductSummary](
+            items=[_summary(p, locale) for p in items], next_cursor=next_cursor
+        )

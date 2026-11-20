@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.dependencies import SessionDep
+from app.core.dependencies import LocaleDep, SessionDep
 from app.core.enums import RiskLevel
 from app.core.errors import ProblemDetails
 from app.core.keyset import DEFAULT_LIMIT, CursorQuery, LimitQuery, Page
@@ -33,11 +33,12 @@ SearchServiceDep = Annotated[ProductSearchService, Depends(get_search_service)]
 )
 async def search_products(
     service: SearchServiceDep,
+    locale: LocaleDep,
     q: Annotated[str, Query(min_length=1, max_length=100, description="Name to look for.")],
     limit: LimitQuery = DEFAULT_LIMIT,
     cursor: CursorQuery = None,
 ) -> Page[ProductSummary]:
-    return await service.search_by_name(q, limit=limit, cursor=cursor)
+    return await service.search_by_name(q, limit=limit, cursor=cursor, locale=locale)
 
 
 @router.get(
@@ -48,6 +49,11 @@ async def search_products(
 )
 async def filter_products(
     service: SearchServiceDep,
+    locale: LocaleDep,
+    q: Annotated[
+        str | None,
+        Query(max_length=100, description="Optional product name or brand search query."),
+    ] = None,
     category: Annotated[
         str | None, Query(description="Category slug; child categories are included.")
     ] = None,
@@ -64,6 +70,7 @@ async def filter_products(
     cursor: CursorQuery = None,
 ) -> Page[ProductSummary]:
     return await service.filter_products(
+        q=q,
         category=category,
         bands=band,
         min_score=min_score,
@@ -72,4 +79,5 @@ async def filter_products(
         exclude=exclude,
         limit=limit,
         cursor=cursor,
+        locale=locale,
     )

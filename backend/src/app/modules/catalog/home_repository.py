@@ -25,6 +25,7 @@ class ProductCardRow:
     created_at: datetime
     rotation_key: str | None = None
     name_i18n: dict[str, str] | None = None
+    score_is_estimated: bool = False
 
 
 class HomeRepository:
@@ -80,6 +81,7 @@ class HomeRepository:
                 created_at=product.created_at,
                 rotation_key=rot_key,
                 name_i18n=product.name_i18n,
+                score_is_estimated=product.score_is_estimated,
             )
             for product, brand_name, category_slug, rot_key in rows
         ]
@@ -117,6 +119,7 @@ class HomeRepository:
                 category_slug=category_slug,
                 created_at=product.created_at,
                 name_i18n=product.name_i18n,
+                score_is_estimated=product.score_is_estimated,
             )
             for product, brand_name, category_slug in rows
         ]

@@ -9,8 +9,10 @@ here, never from models or repository.
 
 from app.modules.identity.router import auth_router as auth_router
 from app.modules.identity.router import profile_router as profile_router
+from app.modules.identity.router import suitability_router as suitability_router
 
 __all__ = [
     "auth_router",
     "profile_router",
+    "suitability_router",
 ]

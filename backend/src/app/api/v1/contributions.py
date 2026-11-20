@@ -1,11 +1,14 @@
 import uuid
+from io import BytesIO
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_session
+from app.core.errors import ProblemDetails
 from app.core.jobs import enqueue_job
 from app.core.storage import get_storage_client
 from app.modules.catalog import normalize_gtin
@@ -22,6 +25,33 @@ router = APIRouter()
 
 MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+IMAGE_FORMATS = {
+    "JPEG": ("jpg", "image/jpeg"),
+    "PNG": ("png", "image/png"),
+    "WEBP": ("webp", "image/webp"),
+}
+
+
+async def _validated_photo(photo: UploadFile) -> tuple[bytes, str, str]:
+    if photo.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status_code=415, detail="Use a JPEG, PNG, or WebP photo.")
+    photo_bytes = await photo.read(MAX_PHOTO_SIZE + 1)
+    if not photo_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded photo file is empty.")
+    if len(photo_bytes) > MAX_PHOTO_SIZE:
+        raise HTTPException(status_code=413, detail="Photo file exceeds 10MB limit.")
+    try:
+        with Image.open(BytesIO(photo_bytes)) as image:
+            image_format = image.format
+            image.verify()
+    except (OSError, UnidentifiedImageError, Image.DecompressionBombError) as exc:
+        raise HTTPException(
+            status_code=415, detail="Use a valid JPEG, PNG, or WebP photo."
+        ) from exc
+    if image_format is None or image_format not in IMAGE_FORMATS:
+        raise HTTPException(status_code=415, detail="Use a JPEG, PNG, or WebP photo.")
+    extension, content_type = IMAGE_FORMATS[image_format]
+    return photo_bytes, extension, content_type
 
 
 class ContributionResponse(BaseModel):
@@ -33,7 +63,12 @@ class ContributionResponse(BaseModel):
     message: str
 
 
-@router.post("", response_model=ContributionResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "",
+    response_model=ContributionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={code: {"model": ProblemDetails} for code in (400, 413, 415, 422)},
+)
 async def submit_photo_contribution(
     barcode: Annotated[str, Form(description="Product barcode (GTIN-8, GTIN-12, or GTIN-13)")],
     photo: Annotated[UploadFile, File(description="Photo of product packaging ingredient label")],
@@ -49,31 +84,14 @@ async def submit_photo_contribution(
             detail=f"Invalid barcode: {exc}",
         ) from exc
 
-    # 2. Validate file type
-    if photo.content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported image type '{photo.content_type}'. Must be JPEG, PNG, or WebP.",
-        )
-
-    # Read and validate size
-    photo_bytes = await photo.read()
-    if len(photo_bytes) > MAX_PHOTO_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Photo file exceeds 10MB limit.",
-        )
-    if len(photo_bytes) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded photo file is empty.",
-        )
+    # Validate bounded input and preserve its actual detected image format.
+    photo_bytes, extension, content_type = await _validated_photo(photo)
 
     # 3. Store photo securely
     file_id = uuid.uuid7()
     storage = get_storage_client()
-    path = f"contributions/{file_id}.webp"
-    image_url = await storage.put_image(path, photo_bytes, "image/webp")
+    path = f"contributions/{file_id}.{extension}"
+    image_url = await storage.put_image(path, photo_bytes, content_type)
 
     # 4. Vision OCR via EnrichmentService
     settings = getattr(request.app.state, "settings", None)
