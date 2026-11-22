@@ -35,13 +35,13 @@ jobs:
       - name: Install dependencies (fails if package-lock.json is out of date)
         run: npm ci
 
-      # Types + lint + formatting + tests: the same command developers run before every commit.
+      # Types + lint + formatting: the same command developers run before every commit.
       - name: Quality gate
         run: npm run check
 
       # Every Expo-managed package must match the SDK. Catches a dependency bumped on its own.
       - name: Dependencies match the Expo SDK
-        run: npx expo install --check
+        run: npx expo install --check --npm
 
       # Informational for now: make it blocking once it has been green on main for a while.
       - name: Expo Doctor
