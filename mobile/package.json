@@ -100,7 +100,7 @@
     "workbox-cli": "^7.4.1"
   },
   "engines": {
-    "node": ">=20.19.4"
+    "node": ">=22.13.0"
   },
   "packageManager": "npm@10.9.0",
   "expo": {
