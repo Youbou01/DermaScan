@@ -57,7 +57,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-hook-form": "~7.76.1",
-    "react-i18next": "^17.1.13",
+    "react-i18next": "^18.0.3",
     "react-native": "0.88.1",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-maps": "1.29.11",
