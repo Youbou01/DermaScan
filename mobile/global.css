@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@import 'tailwindcss';
+@import 'uniwind';
+
+@import 'heroui-native/styles';
+
+/*
+ * HeroUI Native + Uniwind tokens
+ *
+ * HeroUI component variants compile to semantic utilities such as bg-accent,
+ * text-accent-foreground, bg-default, and text-foreground. The imported
+ * heroui-native/styles package defines the default semantic theme and maps it
+ * to --color-* Tailwind utilities.
+ *
+ * When changing brand colors, override semantic tokens inside Uniwind theme
+ * variants. Do not put --accent only in a plain :root block: web may look
+ * correct through CSS cascade order while Expo Go/native keeps HeroUI's
+ * default blue from the active light/dark theme table.
+ *
+ * Example:
+ *
+ * @layer theme {
+ *   :root {
+ *     @variant light {
+ *       --accent: oklch(0.63 0.18 148);
+ *       --accent-foreground: oklch(0.99 0 0);
+ *       --focus: var(--accent);
+ *     }
+ *
+ *     @variant dark {
+ *       --accent: oklch(0.63 0.18 148);
+ *       --accent-foreground: oklch(0.99 0 0);
+ *       --focus: var(--accent);
+ *     }
+ *   }
+ * }
+ */
+
+@layer theme {
+  :root {
+    @variant light {
+      --background: oklch(0.985 0.005 60);
+      --foreground: oklch(0.26 0.05 265);
+      --surface: oklch(1 0 0);
+      --accent: oklch(0.3 0.065 265);
+      --accent-foreground: oklch(1 0 0);
+      --muted: oklch(0.5 0.025 265);
+      --border: oklch(0.91 0.008 60);
+      --field: oklch(1 0 0);
+      --field-foreground: oklch(0.26 0.05 265);
+      --focus: oklch(0.3 0.065 265);
+      --default: oklch(0.95 0.014 60);
+      --default-foreground: oklch(0.26 0.05 265);
+      --success: oklch(0.45 0.1 160);
+      --warning: oklch(0.52 0.12 60);
+      --danger: oklch(0.51 0.17 25);
+    }
+    @variant dark {
+      --background: oklch(0.985 0.005 60);
+      --foreground: oklch(0.26 0.05 265);
+      --surface: oklch(1 0 0);
+      --accent: oklch(0.3 0.065 265);
+      --accent-foreground: oklch(1 0 0);
+      --muted: oklch(0.5 0.025 265);
+      --border: oklch(0.91 0.008 60);
+      --field: oklch(1 0 0);
+      --field-foreground: oklch(0.26 0.05 265);
+      --focus: oklch(0.3 0.065 265);
+      --default: oklch(0.95 0.014 60);
+      --default-foreground: oklch(0.26 0.05 265);
+      --success: oklch(0.45 0.1 160);
+      --warning: oklch(0.52 0.12 60);
+      --danger: oklch(0.51 0.17 25);
+    }
+  }
+}
+
+@source './node_modules/heroui-native/lib';

@@ -2,10 +2,15 @@
 module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  // React Native 0.88 / React 19 async rendering can exceed Jest's 5s default on Windows.
   testTimeout: 15000,
-  // Same `@/` alias as tsconfig.json.
-  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
-  testMatch: ['<rootDir>/src/**/*.test.{ts,tsx}'],
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.test.{ts,tsx}', '!src/app/**'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
+  testMatch: ['<rootDir>/**/__tests__/**/*.test.{ts,tsx}', '<rootDir>/**/*.test.{ts,tsx}'],
+  collectCoverageFrom: [
+    'lib/**/*.{ts,tsx}',
+    'components/**/*.{ts,tsx}',
+    '!lib/api/types.ts',
+    '!**/*.d.ts',
+  ],
 };

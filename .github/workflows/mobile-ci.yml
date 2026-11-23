@@ -41,7 +41,7 @@ jobs:
 
       # Every Expo-managed package must match the SDK. Catches a dependency bumped on its own.
       - name: Dependencies match the Expo SDK
-        run: npx expo install --check
+        run: npx expo install --check --npm
 
       # Informational for now: make it blocking once it has been green on main for a while.
       - name: Expo Doctor

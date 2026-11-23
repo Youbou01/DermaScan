@@ -21,10 +21,9 @@ uv run pre-commit install       # checks run automatically on every commit
 ### Mobile (only if you touch `mobile/`)
 ```bash
 cd mobile
-npm install && npx expo install --fix && npm run check
-cp .env.example .env            # set EXPO_PUBLIC_API_URL, see mobile/README.md
+npm install && npx expo install --check --npm && npm run check
 ```
-Full guide: `mobile/README.md`. Rules for people and AI assistants: `mobile/AGENTS.md`.
+Set `EXPO_PUBLIC_API_URL` if you need to point at a different backend. See `mobile/README.md`.
 
 ## What runs on every commit / PR
 | Check | Command | What it catches |
@@ -35,8 +34,8 @@ Full guide: `mobile/README.md`. Rules for people and AI assistants: `mobile/AGEN
 | Migrations | `alembic upgrade head`, `alembic check` | model changed without a migration |
 | Tests | `pytest` | regressions (integration tests use a real PostgreSQL) |
 
-Mobile (`mobile/`): `npm run check` = typecheck + ESLint + Prettier + Jest, run by pre-commit and by
-the **Mobile CI** workflow.
+| Lint + format (mobile) | `oxlint` / `oxfmt` | bugs, style, unused code |
+| Types (mobile) | `tsc --noEmit` | type errors, wrong signatures |
 
 If pre-commit rewrites files (formatting), re-stage them and commit again.
 Do **not** bypass hooks with `--no-verify`: CI runs the same checks and will fail anyway.
