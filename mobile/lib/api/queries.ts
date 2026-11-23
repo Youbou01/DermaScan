@@ -13,6 +13,7 @@ import type {
   Filters,
   HomeFeed,
   HomeSection,
+  OfferList,
   Page,
   Product,
   ProductDetail,
@@ -128,6 +129,18 @@ export function useSuitability(id: string, enabled: boolean) {
     enabled: !!uid && !!id && enabled,
     queryFn: ({ signal }) =>
       request<Suitability>('/products/' + id + '/suitability', { auth: true, signal }),
+  });
+}
+export function useOffers(id: string, enabled = true) {
+  const uid = useUserId();
+  return useQuery({
+    queryKey: ['offers', uid, id],
+    enabled: !!uid && !!id && enabled,
+    queryFn: ({ signal }) =>
+      request<OfferList>('/products/' + encodeURIComponent(id) + '/offers', {
+        auth: true,
+        signal,
+      }),
   });
 }
 export function useRoutines() {
