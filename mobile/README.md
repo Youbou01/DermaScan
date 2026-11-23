@@ -46,19 +46,19 @@ To customize your target backend, edit `.env`:
 
 ## Scripts
 
-| Script                 | Description                                                       |
-| :--------------------- | :---------------------------------------------------------------- |
-| `npm run check`        | **Complete Quality Gate**: typecheck + lint + format:check + test |
-| `npm test`             | Run Jest unit and integration tests                               |
-| `npm run typecheck`    | TypeScript type check (`tsc --noEmit`)                            |
-| `npm run lint`         | oxlint (type-aware linting)                                       |
-| `npm run format`       | oxfmt (autofix formatting)                                        |
-| `npm run format:check` | oxfmt (check formatting only)                                     |
-| `npm run api:generate` | Export backend OpenAPI schema and generate TypeScript types       |
-| `npm run api:types`    | Regenerate TypeScript schema from `openapi.json`                  |
-| `npm run export:web`   | Expo web export                                                   |
-| `npm run build:pwa`    | Web export + Workbox service worker                               |
-| `npm run expo-check`   | Verify Expo SDK dependency alignment                              |
+| Script                 | Description                                                       | When to use                                                            |
+| :--------------------- | :---------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| `npm run check`        | **Complete Quality Gate**: typecheck + lint + format:check + test | Before opening a PR or merging mobile changes                          |
+| `npm test`             | Run Jest unit and integration tests                               | When changing behavior or debugging a failing test                     |
+| `npm run typecheck`    | TypeScript type check (`tsc --noEmit`)                            | While developing typed code or investigating type errors               |
+| `npm run lint`         | oxlint (type-aware linting)                                       | After changing JavaScript/TypeScript code or before a PR               |
+| `npm run format`       | oxfmt (autofix formatting)                                        | To automatically format files after editing                            |
+| `npm run format:check` | oxfmt (check formatting only)                                     | To verify formatting without modifying files                           |
+| `npm run api:generate` | Export backend OpenAPI schema and generate TypeScript types       | After backend API changes that affect the mobile contract              |
+| `npm run api:types`    | Regenerate TypeScript schema from `openapi.json`                  | After updating `openapi.json` without regenerating it from the backend |
+| `npm run export:web`   | Expo web export                                                   | To create a static web build for preview or deployment                 |
+| `npm run build:pwa`    | Web export + Workbox service worker                               | To create the installable/offline-capable production PWA build         |
+| `npm run expo-check`   | Verify Expo SDK dependency alignment                              | After changing Expo dependencies or upgrading the Expo SDK             |
 
 ## Implemented routes
 
