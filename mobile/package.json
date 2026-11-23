@@ -50,7 +50,7 @@
     "expo-status-bar": "~58.0.5",
     "expo-system-ui": "~58.0.7",
     "heroui-native": "^1.0.11",
-    "i18next": "^26.7.2",
+    "i18next": "^27.2.2",
     "lucide-react-native": "^0.562.0",
     "pigeon-maps": "^0.22.1",
     "posthog-js": "^1.396.2",
