@@ -1,8 +1,9 @@
+import { env } from '@/lib/env';
+import { getActiveLanguage } from '@/lib/i18n/language-state';
 import { useSession } from '@/lib/session';
 import type { Session } from './types';
-export const API_BASE_URL =
-  (process.env.EXPO_PUBLIC_API_URL ?? 'https://dermascan-iorj.onrender.com').replace(/\/$/, '') +
-  '/api/v1';
+
+export const API_BASE_URL = env.apiBaseUrl;
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -63,7 +64,7 @@ export async function request<T>(
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
-        'Accept-Language': 'en',
+        'Accept-Language': getActiveLanguage(),
         ...(!isForm && options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(options.auth ? { Authorization: `Bearer ${session?.access_token}` } : {}),
       },
