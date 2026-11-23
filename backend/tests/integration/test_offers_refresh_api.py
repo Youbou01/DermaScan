@@ -1,6 +1,7 @@
 """End to end: refresh with the fixture source, then read through the offers endpoint."""
 
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import httpx
@@ -17,8 +18,18 @@ from app.modules.offers.sources import (
     FixtureAdapter,
 )
 from tests.factories import make_product
+from tests.offers_client import offers_http_client
 
 pytestmark = pytest.mark.usefixtures("migrated_database")
+
+
+@pytest.fixture
+async def client(
+    migrated_database: str, db_session: AsyncSession
+) -> AsyncIterator[httpx.AsyncClient]:
+    """The shared `client`, plus the offers router (registered by Dev 4 later)."""
+    async with offers_http_client(migrated_database, db_session) as http_client:
+        yield http_client
 
 
 async def _auth_headers(session: AsyncSession) -> dict[str, str]:

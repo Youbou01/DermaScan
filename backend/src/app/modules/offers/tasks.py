@@ -10,6 +10,7 @@ from app.core.config import Settings, get_settings
 from app.core.jobs import register_task
 from app.modules.catalog import CatalogService, ProductNotFoundError
 from app.modules.offers.refresh import refresh_product_offers
+from app.modules.offers.serpapi import SerpApiAdapter
 from app.modules.offers.sources import FixtureAdapter, PriceSourceAdapter
 
 logger = structlog.get_logger(__name__)
@@ -19,7 +20,9 @@ def build_price_source(settings: Settings) -> PriceSourceAdapter | None:
     """One source per run, chosen by PRICE_SOURCE. No automatic fallback between sources."""
     if settings.price_source == "fixture":
         return FixtureAdapter()
-    return None  # "serpapi" adapter is not implemented yet
+    if settings.price_source == "serpapi" and settings.serpapi_api_key:
+        return SerpApiAdapter(settings.serpapi_api_key)
+    return None  # "serpapi" selected but SERPAPI_API_KEY is missing
 
 
 @register_task("refresh_offers")

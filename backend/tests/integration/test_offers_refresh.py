@@ -194,10 +194,12 @@ async def test_task_does_not_fail_for_an_unknown_product(
     assert job.status == JobStatus.COMPLETED
 
 
-async def test_task_with_unsupported_source_stores_nothing_and_completes(
+async def test_task_with_serpapi_but_no_api_key_stores_nothing_and_completes(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    settings = get_settings().model_copy(update={"price_source": "serpapi"})
+    settings = get_settings().model_copy(
+        update={"price_source": "serpapi", "serpapi_api_key": None}
+    )
     monkeypatch.setattr(offers_tasks, "get_settings", lambda: settings)
     product = await _product(db_session, FIXTURE_NORMAL)
     job_id = await enqueue_job(db_session, "refresh_offers", {"product_id": str(product.id)})
