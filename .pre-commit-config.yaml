@@ -50,7 +50,7 @@ repos:
         pass_filenames: false
         files: ^mobile/
       - id: mobile-check
-        name: mobile check (types + lint + format)
+        name: mobile check (types + lint + format + tests)
         entry: npm --prefix mobile run check
         language: system
         pass_filenames: false

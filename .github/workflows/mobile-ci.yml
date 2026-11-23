@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies (fails if package-lock.json is out of date)
         run: npm ci
 
-      # Types + lint + formatting: the same command developers run before every commit.
+      # Types + lint + formatting + tests: the same command developers run before every commit.
       - name: Quality gate
         run: npm run check
 
