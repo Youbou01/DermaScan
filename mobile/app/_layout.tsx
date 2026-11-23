@@ -137,8 +137,13 @@ export default function RootLayout() {
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     if (__DEV__ && Platform.OS !== 'web' && !isExpoGo) {
       const timer = setTimeout(() => {
-        DevClient.closeMenu();
-        DevClient.hideMenu();
+        try {
+          DevClient.closeMenu();
+          DevClient.hideMenu();
+        } catch {
+          // expo-dev-menu native module may be null when not running inside a
+          // custom dev client build (e.g. plain `npx expo start`). Silently ignore.
+        }
       }, 1000);
       return () => clearTimeout(timer);
     }
