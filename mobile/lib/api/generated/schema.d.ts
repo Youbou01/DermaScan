@@ -244,6 +244,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/products/{product_id}/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List product reviews from app and external sources */
+    get: operations['reviews_list_product_reviews'];
+    put?: never;
+    /** Post a product review */
+    post: operations['reviews_create_product_review'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/products/{product_id}/suitability': {
     parameters: {
       query?: never;
@@ -411,6 +429,23 @@ export interface paths {
     put?: never;
     /** Toggle Routine Completion */
     post: operations['routines_toggle_routine_completion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/users/me/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the signed-in user's reviewed products history */
+    get: operations['reviews_list_my_reviews'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -604,6 +639,19 @@ export interface components {
       /** Status */
       status: string;
     };
+    /** CreateReviewIn */
+    CreateReviewIn: {
+      /**
+       * Body
+       * @description Review comment text.
+       */
+      body: string;
+      /**
+       * Rating
+       * @description Star rating from 1 to 5.
+       */
+      rating: number;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -738,6 +786,11 @@ export interface components {
      * @description Light product row for home shelves and search results (not the full detail page).
      */
     ProductCardOut: {
+      /**
+       * Avg Rating
+       * @description Average community rating (1.0-5.0), or null when unrated.
+       */
+      avg_rating?: number | null;
       /** Brand */
       brand: string | null;
       /** Category Slug */
@@ -751,6 +804,12 @@ export interface components {
       image_url: string | null;
       /** Name */
       name: string;
+      /**
+       * Review Count
+       * @description Total number of community reviews.
+       * @default 0
+       */
+      review_count: number;
       /**
        * Score
        * @description 0-100, or null when not scored.
@@ -767,6 +826,11 @@ export interface components {
     };
     /** ProductDetail */
     ProductDetail: {
+      /**
+       * Avg Rating
+       * @description Average community rating (1.0-5.0), or null when unrated.
+       */
+      avg_rating?: number | null;
       /**
        * Barcode
        * @description GTIN-13.
@@ -789,6 +853,12 @@ export interface components {
       ingredients: components['schemas']['ProductIngredientOut'][];
       /** Name */
       name: string;
+      /**
+       * Review Count
+       * @description Total number of community reviews.
+       * @default 0
+       */
+      review_count: number;
       /**
        * Score
        * @description 0-100, or null when the product is not scored.
@@ -863,8 +933,44 @@ export interface components {
        */
       summary?: string | null;
     };
+    /** ProductReviewsPageOut */
+    ProductReviewsPageOut: {
+      /**
+       * Avg Rating
+       * @description Average rating (1.0-5.0), or null when no rated reviews exist.
+       */
+      avg_rating: number | null;
+      /**
+       * External Source Status
+       * @description Status of external Reddit reviews cache.
+       * @enum {string}
+       */
+      external_source_status: 'fresh' | 'stale' | 'unavailable' | 'refreshing';
+      /** Items */
+      items: components['schemas']['ReviewOut'][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for next page, or null on the last page.
+       */
+      next_cursor: string | null;
+      /**
+       * Product Id
+       * Format: uuid
+       */
+      product_id: string;
+      /**
+       * Review Count
+       * @description Total number of reviews for this product.
+       */
+      review_count: number;
+    };
     /** ProductSummary */
     ProductSummary: {
+      /**
+       * Avg Rating
+       * @description Average community rating (1.0-5.0), or null when unrated.
+       */
+      avg_rating?: number | null;
       /**
        * Barcode
        * @description GTIN-13.
@@ -883,6 +989,12 @@ export interface components {
       image_url: string | null;
       /** Name */
       name: string;
+      /**
+       * Review Count
+       * @description Total number of community reviews.
+       * @default 0
+       */
+      review_count: number;
       /**
        * Score
        * @description 0-100, or null when the product is not scored.
@@ -995,6 +1107,39 @@ export interface components {
        */
       password: string;
     };
+    /** ReviewOut */
+    ReviewOut: {
+      /** Author Name */
+      author_name: string;
+      /** Body */
+      body: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** External Url */
+      external_url?: string | null;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Product Id
+       * Format: uuid
+       */
+      product_id: string;
+      /** Rating */
+      rating: number | null;
+      source: components['schemas']['ReviewSource'];
+    };
+    /**
+     * ReviewSource
+     * @description Origin of a product review.
+     * @enum {string}
+     */
+    ReviewSource: 'app' | 'reddit';
     /**
      * RiskAlertOut
      * @description One personal risk alert on a product.
@@ -1218,6 +1363,45 @@ export interface components {
        * @description User id.
        */
       id: string;
+    };
+    /** UserReviewHistoryItemOut */
+    UserReviewHistoryItemOut: {
+      /** Body */
+      body: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Product Brand */
+      product_brand: string | null;
+      /**
+       * Product Id
+       * Format: uuid
+       */
+      product_id: string;
+      /** Product Image Url */
+      product_image_url: string | null;
+      /** Product Name */
+      product_name: string;
+      /** Rating */
+      rating: number | null;
+      source: components['schemas']['ReviewSource'];
+    };
+    /** UserReviewsPageOut */
+    UserReviewsPageOut: {
+      /** Items */
+      items: components['schemas']['UserReviewHistoryItemOut'][];
+      /**
+       * Next Cursor
+       * @description Opaque cursor for next page, or null on the last page.
+       */
+      next_cursor: string | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -1722,6 +1906,10 @@ export interface operations {
         include?: string[] | null;
         /** @description Must contain none of these. */
         exclude?: string[] | null;
+        /** @description Sort criterion: 'score' (default) or 'rating'. */
+        sort?: 'score' | 'rating';
+        /** @description Sort direction: 'desc' (default) or 'asc'. */
+        direction?: 'desc' | 'asc';
         /** @description Page size. */
         limit?: number;
         /** @description Opaque `next_cursor` from the previous page. */
@@ -1819,6 +2007,113 @@ export interface operations {
         };
       };
       /** @description Malformed barcode or identifier. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  reviews_list_product_reviews: {
+    parameters: {
+      query?: {
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path: {
+        product_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductReviewsPageOut'];
+        };
+      };
+      /** @description Product not found. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Invalid identifier or cursor. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  reviews_create_product_review: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        product_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateReviewIn'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReviewOut'];
+        };
+      };
+      /** @description Authentication required. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Product not found. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Duplicate review for this product. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Invalid rating or review body. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -2449,6 +2744,49 @@ export interface operations {
         };
       };
       /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  reviews_list_my_reviews: {
+    parameters: {
+      query?: {
+        /** @description Page size. */
+        limit?: number;
+        /** @description Opaque `next_cursor` from the previous page. */
+        cursor?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['UserReviewsPageOut'];
+        };
+      };
+      /** @description Authentication required. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Invalid cursor. */
       422: {
         headers: {
           [name: string]: unknown;

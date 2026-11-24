@@ -16,9 +16,11 @@ import type {
   Page,
   Product,
   ProductDetail,
+  ProductReviewsPage,
   Profile,
   Routine,
   Suitability,
+  UserReviewsPage,
 } from './types';
 import { useSession } from '@/lib/session';
 export const notifyError = () => {
@@ -72,7 +74,9 @@ export function useProducts(filters: Filters, enabled = true) {
     filters.include?.length ||
     filters.exclude?.length ||
     filters.min_score !== undefined ||
-    filters.max_score !== undefined
+    filters.max_score !== undefined ||
+    filters.sort !== undefined ||
+    filters.direction !== undefined
   );
   return useInfiniteQuery({
     queryKey: ['products', filters],
@@ -127,5 +131,35 @@ export function useRoutines() {
     queryKey: privateKey('routines', uid),
     enabled: !!uid,
     queryFn: ({ signal }) => request<{ routines: Routine[] }>('/routines', { auth: true, signal }),
+  });
+}
+
+export function useProductReviews(productId: string, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: ['product-reviews', productId],
+    enabled: !!productId && enabled,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      request<ProductReviewsPage>(
+        `/products/${encodeURIComponent(productId)}/reviews` +
+          queryString({ limit: 20, cursor: pageParam }),
+        { signal },
+      ),
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
+  });
+}
+
+export function useMyReviews() {
+  const uid = useUserId();
+  return useInfiniteQuery({
+    queryKey: privateKey('my-reviews', uid),
+    enabled: !!uid,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      request<UserReviewsPage>(
+        '/users/me/reviews' + queryString({ limit: 20, cursor: pageParam }),
+        { auth: true, signal },
+      ),
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
   });
 }

@@ -8,10 +8,13 @@ import { Screen } from '@/components/Screen';
 import { AppText } from '@/components/AppText';
 import { ProductPhoto } from '@/components/ProductPhoto';
 import { AnalysisScore, Formula } from '@/components/Formula';
+import { RatingSummary } from '@/components/RatingSummary';
+import { ReviewCard } from '@/components/ReviewCard';
 import { DataState, LoadingState, SignInGate } from '@/components/DataState';
 import {
   useBlacklist,
   useProduct,
+  useProductReviews,
   useProfile,
   useSuitability,
   notifySuccess,
@@ -31,6 +34,7 @@ export default function ProductDetailScreen() {
   const [tab, setTab] = useState('ingredients');
   const [selected, setSelected] = useState<Ingredient | null>(null);
   const suitability = useSuitability(id, tab === 'compatibility' && !!profile.data?.skin_type);
+  const reviews = useProductReviews(id, tab === 'reviews');
   const mutation = useMutation({
     mutationFn: async (action: 'allergy' | 'ingredient' | 'product') => {
       if (action === 'allergy') {
@@ -105,6 +109,10 @@ export default function ProductDetailScreen() {
                 {product.data.barcode}
               </AppText>
             </View>
+            <RatingSummary
+              avgRating={product.data.avg_rating ?? null}
+              reviewCount={product.data.review_count ?? 0}
+            />
             <AnalysisScore analysis={product.data} />
             <Tabs
               value={tab}
@@ -120,6 +128,9 @@ export default function ProductDetailScreen() {
                 </Tabs.Trigger>
                 <Tabs.Trigger value="compatibility" className="flex-1">
                   <Tabs.Label numberOfLines={1}>For you</Tabs.Label>
+                </Tabs.Trigger>
+                <Tabs.Trigger value="reviews" className="flex-1">
+                  <Tabs.Label numberOfLines={1}>Reviews</Tabs.Label>
                 </Tabs.Trigger>
               </Tabs.List>
               <Tabs.Content value="ingredients">
@@ -207,6 +218,69 @@ export default function ProductDetailScreen() {
                         </Button>
                       </>
                     )
+                  )}
+                </View>
+              </Tabs.Content>
+              <Tabs.Content value="reviews">
+                <View style={{ paddingTop: 22, gap: 16 }}>
+                  {reviews.isPending ? (
+                    <LoadingState />
+                  ) : reviews.isError ? (
+                    <DataState
+                      error={reviews.error}
+                      onAction={() => {
+                        void reviews.refetch();
+                      }}
+                    />
+                  ) : (
+                    <>
+                      {reviews.data?.pages[0]?.external_source_status === 'unavailable' && (
+                        <View
+                          style={{
+                            backgroundColor: colors.orangeSoft,
+                            padding: 12,
+                            borderRadius: 10,
+                          }}
+                        >
+                          <AppText style={{ color: colors.orange, fontSize: 13 }}>
+                            External Reddit reviews are temporarily unavailable. Showing app reviews
+                            only.
+                          </AppText>
+                        </View>
+                      )}
+                      {(reviews.data?.pages.flatMap((p) => p.items) ?? []).length === 0 ? (
+                        <AppText style={{ color: colors.muted }}>No reviews yet.</AppText>
+                      ) : (
+                        (reviews.data?.pages.flatMap((p) => p.items) ?? []).map((item) => (
+                          <ReviewCard key={item.id} review={item} />
+                        ))
+                      )}
+                      {reviews.hasNextPage && (
+                        <Button
+                          variant="secondary"
+                          isDisabled={reviews.isFetchingNextPage}
+                          onPress={() => void reviews.fetchNextPage()}
+                        >
+                          <Button.Label>
+                            {reviews.isFetchingNextPage ? 'Loading…' : 'Load more reviews'}
+                          </Button.Label>
+                        </Button>
+                      )}
+                      <Button
+                        onPress={() => {
+                          if (uid) {
+                            router.push({
+                              pathname: '/review/new',
+                              params: { productId: id, productName: product.data.name },
+                            });
+                          } else {
+                            router.push('/account');
+                          }
+                        }}
+                      >
+                        <Button.Label>Post a review</Button.Label>
+                      </Button>
+                    </>
                   )}
                 </View>
               </Tabs.Content>

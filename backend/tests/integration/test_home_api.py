@@ -301,6 +301,8 @@ async def test_product_card_shape(client: httpx.AsyncClient, db_session: AsyncSe
         "score_band",
         "score_is_estimated",
         "category_slug",
+        "avg_rating",
+        "review_count",
     }
     assert card["id"] == str(product.id)
     assert card["category_slug"] == "moisturizer"

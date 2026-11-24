@@ -154,3 +154,9 @@ name = "identity internals are private"
 type = "protected"
 protected_modules = ["app.modules.identity.models", "app.modules.identity.repository"]
 allowed_importers = ["app.modules.identity"]
+
+[[tool.importlinter.contracts]]
+name = "reviews internals are private"
+type = "protected"
+protected_modules = ["app.modules.reviews.models", "app.modules.reviews.repository"]
+allowed_importers = ["app.modules.reviews"]

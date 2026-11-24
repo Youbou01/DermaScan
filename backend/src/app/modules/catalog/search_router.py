@@ -1,6 +1,6 @@
 """HTTP endpoints for product search and filters (included by catalog/router.py)."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 
@@ -66,6 +66,14 @@ async def filter_products(
     exclude: Annotated[
         list[str] | None, Query(max_length=10, description="Must contain none of these.")
     ] = None,
+    sort: Annotated[
+        Literal["score", "rating"],
+        Query(description="Sort criterion: 'score' (default) or 'rating'."),
+    ] = "score",
+    direction: Annotated[
+        Literal["desc", "asc"],
+        Query(description="Sort direction: 'desc' (default) or 'asc'."),
+    ] = "desc",
     limit: LimitQuery = DEFAULT_LIMIT,
     cursor: CursorQuery = None,
 ) -> Page[ProductSummary]:
@@ -77,6 +85,8 @@ async def filter_products(
         max_score=max_score,
         include=include,
         exclude=exclude,
+        sort=sort,
+        direction=direction,
         limit=limit,
         cursor=cursor,
         locale=locale,

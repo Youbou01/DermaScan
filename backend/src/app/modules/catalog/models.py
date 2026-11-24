@@ -105,6 +105,17 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "score_dirty",
             postgresql_where=text("score_dirty = true"),
         ),
+        CheckConstraint(
+            "avg_rating IS NULL OR (avg_rating >= 1.0 AND avg_rating <= 5.0)",
+            name="avg_rating_range",
+        ),
+        CheckConstraint("review_count >= 0", name="review_count_non_negative"),
+        Index(
+            "ix_product_avg_rating_id",
+            "avg_rating",
+            "id",
+            postgresql_where=text("avg_rating IS NOT NULL"),
+        ),
     )
 
     barcode: Mapped[str] = mapped_column(String(13), unique=True)
@@ -139,6 +150,8 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Boolean, default=False, server_default=text("false")
     )
     score_dirty: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    avg_rating: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
+    review_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     source_lang: Mapped[str | None] = mapped_column(String(2))
     name_i18n: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

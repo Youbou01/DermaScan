@@ -9,7 +9,7 @@
     "expo-check": "expo install --check --npm",
     "export:web": "expo export -p web",
     "build:pwa": "expo export -p web && workbox generateSW workbox-config.js",
-    "api:generate": "uv run --project ../backend python scripts/export-openapi.py && npm run api:types",
+    "api:generate": "uv run --project ../backend python ../backend/scripts/export_openapi.py && npm run api:types",
     "api:types": "openapi-typescript openapi.json -o lib/api/generated/schema.d.ts",
     "lint": "oxlint --type-aware --type-check",
     "lint:css": "node scripts/lint-css.mjs",

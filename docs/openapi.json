@@ -250,6 +250,31 @@
         "title": "ContributionResponse",
         "type": "object"
       },
+      "CreateReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "description": "Review comment text.",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "rating": {
+            "description": "Star rating from 1 to 5.",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rating",
+          "body"
+        ],
+        "title": "CreateReviewIn",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -532,6 +557,18 @@
       "ProductCardOut": {
         "description": "Light product row for home shelves and search results (not the full detail page).",
         "properties": {
+          "avg_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average community rating (1.0-5.0), or null when unrated.",
+            "title": "Avg Rating"
+          },
           "brand": {
             "anyOf": [
               {
@@ -573,6 +610,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "review_count": {
+            "default": 0,
+            "description": "Total number of community reviews.",
+            "title": "Review Count",
+            "type": "integer"
           },
           "score": {
             "anyOf": [
@@ -618,6 +661,18 @@
       },
       "ProductDetail": {
         "properties": {
+          "avg_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average community rating (1.0-5.0), or null when unrated.",
+            "title": "Avg Rating"
+          },
           "barcode": {
             "description": "GTIN-13.",
             "title": "Barcode",
@@ -671,6 +726,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "review_count": {
+            "default": 0,
+            "description": "Total number of community reviews.",
+            "title": "Review Count",
+            "type": "integer"
           },
           "score": {
             "anyOf": [
@@ -840,8 +901,86 @@
         "title": "ProductIngredientOut",
         "type": "object"
       },
+      "ProductReviewsPageOut": {
+        "properties": {
+          "avg_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average rating (1.0-5.0), or null when no rated reviews exist.",
+            "title": "Avg Rating"
+          },
+          "external_source_status": {
+            "description": "Status of external Reddit reviews cache.",
+            "enum": [
+              "fresh",
+              "stale",
+              "unavailable",
+              "refreshing"
+            ],
+            "title": "External Source Status",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for next page, or null on the last page.",
+            "title": "Next Cursor"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "review_count": {
+            "description": "Total number of reviews for this product.",
+            "title": "Review Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id",
+          "avg_rating",
+          "review_count",
+          "external_source_status",
+          "items",
+          "next_cursor"
+        ],
+        "title": "ProductReviewsPageOut",
+        "type": "object"
+      },
       "ProductSummary": {
         "properties": {
+          "avg_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average community rating (1.0-5.0), or null when unrated.",
+            "title": "Avg Rating"
+          },
           "barcode": {
             "description": "GTIN-13.",
             "title": "Barcode",
@@ -888,6 +1027,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "review_count": {
+            "default": 0,
+            "description": "Total number of community reviews.",
+            "title": "Review Count",
+            "type": "integer"
           },
           "score": {
             "anyOf": [
@@ -1102,6 +1247,78 @@
         ],
         "title": "RegisterRequest",
         "type": "object"
+      },
+      "ReviewOut": {
+        "properties": {
+          "author_name": {
+            "title": "Author Name",
+            "type": "string"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "external_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReviewSource"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "source",
+          "author_name",
+          "rating",
+          "body",
+          "created_at"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
+      "ReviewSource": {
+        "description": "Origin of a product review.",
+        "enum": [
+          "app",
+          "reddit"
+        ],
+        "title": "ReviewSource",
+        "type": "string"
       },
       "RiskAlertOut": {
         "description": "One personal risk alert on a product.",
@@ -1529,6 +1746,111 @@
           "display_name"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "UserReviewHistoryItemOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "product_brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Brand"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "product_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Image Url"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReviewSource"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "product_name",
+          "product_brand",
+          "product_image_url",
+          "rating",
+          "body",
+          "source",
+          "created_at"
+        ],
+        "title": "UserReviewHistoryItemOut",
+        "type": "object"
+      },
+      "UserReviewsPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserReviewHistoryItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque cursor for next page, or null on the last page.",
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "UserReviewsPageOut",
         "type": "object"
       },
       "ValidationError": {
@@ -2342,6 +2664,38 @@
             }
           },
           {
+            "description": "Sort criterion: 'score' (default) or 'rating'.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "score",
+              "description": "Sort criterion: 'score' (default) or 'rating'.",
+              "enum": [
+                "score",
+                "rating"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction: 'desc' (default) or 'asc'.",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "description": "Sort direction: 'desc' (default) or 'asc'.",
+              "enum": [
+                "desc",
+                "asc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
             "description": "Page size.",
             "in": "query",
             "name": "limit",
@@ -2530,6 +2884,177 @@
         "summary": "Get a product by id",
         "tags": [
           "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/reviews": {
+      "get": {
+        "operationId": "reviews_list_product_reviews",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductReviewsPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Product not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid identifier or cursor."
+          }
+        },
+        "summary": "List product reviews from app and external sources",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "post": {
+        "operationId": "reviews_create_product_review",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication required."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Product not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Duplicate review for this product."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid rating or review body."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post a product review",
+        "tags": [
+          "reviews"
         ]
       }
     },
@@ -3363,6 +3888,86 @@
         "summary": "Toggle Routine Completion",
         "tags": [
           "routines"
+        ]
+      }
+    },
+    "/api/v1/users/me/reviews": {
+      "get": {
+        "operationId": "reviews_list_my_reviews",
+        "parameters": [
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserReviewsPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication required."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid cursor."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List the signed-in user's reviewed products history",
+        "tags": [
+          "reviews"
         ]
       }
     },

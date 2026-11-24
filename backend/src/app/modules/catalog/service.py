@@ -130,6 +130,8 @@ class CatalogService:
             score_band=RiskLevel(product.score_band),
             score_coverage=product.score_coverage,
             score_is_estimated=product.score_is_estimated,
+            avg_rating=float(product.avg_rating) if product.avg_rating is not None else None,
+            review_count=product.review_count or 0,
             summary=(
                 pick_translation(product.summary_i18n, locale)
                 if product.summary_i18n
@@ -734,6 +736,27 @@ class CatalogService:
         await self._session.flush()
         return claimed
 
+    async def update_product_rating_stats(
+        self,
+        product_id: uuid.UUID,
+        avg_rating: Decimal | None,
+        review_count: int,
+    ) -> None:
+        """Update denormalized rating aggregates transactionally (caller commits)."""
+        await self._session.execute(
+            update(Product)
+            .where(Product.id == product_id)
+            .values(avg_rating=avg_rating, review_count=review_count)
+        )
+        await self._session.flush()
+
+    async def get_product_cards_by_ids(
+        self, product_ids: Collection[uuid.UUID], locale: str
+    ) -> dict[uuid.UUID, ProductCardOut]:
+        """Return lightweight product cards for a set of product IDs."""
+        products = await self._products.get_by_ids(product_ids)
+        return {product.id: _routine_product_card(product, locale) for product in products}
+
 
 def make_product_ingredient_out(
     position: int, raw_text: str, info: IngredientInfo | None
@@ -806,6 +829,8 @@ def _routine_product_card(product: Product, locale: str) -> ProductCardOut:
         score_band=RiskLevel(product.score_band) if product.score is not None else None,
         score_is_estimated=product.score_is_estimated,
         category_slug=product.primary_category.slug if product.primary_category else None,
+        avg_rating=float(product.avg_rating) if product.avg_rating is not None else None,
+        review_count=product.review_count or 0,
     )
 
 

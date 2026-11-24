@@ -165,6 +165,13 @@ class IdentityService:
                 )
         await self._commit()
 
+    async def get_user_display_name(self, user_id: uuid.UUID) -> str:
+        """Return the public display name for a user account."""
+        user = await self._repository.get_user_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("Account no longer exists.")
+        return user.display_name
+
     # ---------------------------------------------------------------- suitability
 
     async def get_suitability(
