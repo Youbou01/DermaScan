@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { PressableFeedback } from 'heroui-native';
+import { Star } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { AppText } from '@/components/AppText';
 import { ProductPhoto } from '@/components/ProductPhoto';
@@ -34,8 +35,26 @@ export function ProductCard({ product }: { product: Product }) {
         >
           {product.name}
         </AppText>
-        <View style={{ alignItems: 'flex-start', marginTop: 3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
           <ScoreBadge score={product.score} band={product.score_band} />
+          {product.avg_rating != null && (product.review_count ?? 0) > 0 && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 3,
+                backgroundColor: colors.peach,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}
+            >
+              <Star size={11} color={colors.amber} fill={colors.amber} />
+              <AppText weight="bold" style={{ fontSize: 11, color: colors.ink }}>
+                {product.avg_rating.toFixed(1)}
+              </AppText>
+            </View>
+          )}
         </View>
       </View>
     </PressableFeedback>

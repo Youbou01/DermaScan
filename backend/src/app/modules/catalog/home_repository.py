@@ -26,6 +26,8 @@ class ProductCardRow:
     rotation_key: str | None = None
     name_i18n: dict[str, str] | None = None
     score_is_estimated: bool = False
+    avg_rating: float | None = None
+    review_count: int = 0
 
 
 class HomeRepository:
@@ -82,6 +84,8 @@ class HomeRepository:
                 rotation_key=rot_key,
                 name_i18n=product.name_i18n,
                 score_is_estimated=product.score_is_estimated,
+                avg_rating=float(product.avg_rating) if product.avg_rating is not None else None,
+                review_count=product.review_count or 0,
             )
             for product, brand_name, category_slug, rot_key in rows
         ]
@@ -120,6 +124,8 @@ class HomeRepository:
                 created_at=product.created_at,
                 name_i18n=product.name_i18n,
                 score_is_estimated=product.score_is_estimated,
+                avg_rating=float(product.avg_rating) if product.avg_rating is not None else None,
+                review_count=product.review_count or 0,
             )
             for product, brand_name, category_slug in rows
         ]

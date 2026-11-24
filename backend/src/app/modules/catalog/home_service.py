@@ -139,6 +139,8 @@ def _card(row: ProductCardRow, locale: str = DEFAULT_LOCALE) -> ProductCardOut:
         score_band=row.score_band if row.score is not None else None,
         category_slug=row.category_slug,
         score_is_estimated=row.score_is_estimated,
+        avg_rating=row.avg_rating,
+        review_count=row.review_count,
     )
 
 

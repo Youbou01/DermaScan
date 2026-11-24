@@ -17,3 +17,7 @@ class ProductSummary(BaseModel):
     score: int | None = Field(description="0-100, or null when the product is not scored.")
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_is_estimated: bool = False
+    avg_rating: float | None = Field(
+        default=None, description="Average community rating (1.0-5.0), or null when unrated."
+    )
+    review_count: int = Field(default=0, description="Total number of community reviews.")

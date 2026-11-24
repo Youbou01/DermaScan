@@ -209,6 +209,8 @@ export default function RootLayout() {
               <Stack.Screen name="analysis" options={{ title: 'Read a label' }} />
               <Stack.Screen name="contribute" options={{ title: 'Submit a product' }} />
               <Stack.Screen name="categories" options={{ title: 'Categories' }} />
+              <Stack.Screen name="review/new" options={{ title: 'Submit your review' }} />
+              <Stack.Screen name="my-reviews" options={{ title: 'My reviews' }} />
             </Stack>
             <InstallPrompt />
           </QueryClientProvider>

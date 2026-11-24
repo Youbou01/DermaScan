@@ -59,6 +59,10 @@ class ProductDetail(BaseModel):
     score_band: RiskLevel = Field(description="'unknown' means insufficient data, NOT safe.")
     score_coverage: float | None = Field(description="Share (0-1) of ingredients we could rate.")
     score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
+    avg_rating: float | None = Field(
+        default=None, description="Average community rating (1.0-5.0), or null when unrated."
+    )
+    review_count: int = Field(default=0, description="Total number of community reviews.")
     summary: str | None = Field(
         default=None,
         description="Localized plain-language product summary. Scored products always have a fallback.",
@@ -81,6 +85,10 @@ class ProductCardOut(BaseModel):
     )
     score_is_estimated: bool = Field(default=False, description="True when confidence K < 0.60.")
     category_slug: str | None
+    avg_rating: float | None = Field(
+        default=None, description="Average community rating (1.0-5.0), or null when unrated."
+    )
+    review_count: int = Field(default=0, description="Total number of community reviews.")
 
 
 class RoutineProductData(BaseModel):
