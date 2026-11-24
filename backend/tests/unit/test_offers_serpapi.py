@@ -112,6 +112,9 @@ def test_product_name_is_searched_then_the_stores_are_read() -> None:
     assert [r.url.params["engine"] for r in seen] == ["google_shopping", "google_immersive_product"]
     assert seen[0].url.params["q"] == "Acme Day Cream"
     assert seen[0].url.params["gl"] == "fr"
+    assert seen[0].url.params["google_domain"] == "google.fr"
+    assert seen[0].url.params["location"] == "France"
+    assert "no_cache" not in seen[0].url.params
     second = seen[1].url.params
     assert second.get("page_token") == "demo-value"
     assert seen[1].url.params["more_stores"] == "true"
@@ -121,7 +124,7 @@ def test_product_name_is_searched_then_the_stores_are_read() -> None:
 def test_no_results_gives_an_empty_list() -> None:
     offers, seen = _run({}, {}, "Acme Day Cream")
     assert offers == []
-    assert len(seen) == 1
+    assert len(seen) == 3
 
 
 def test_empty_name_makes_no_request() -> None:
@@ -143,14 +146,14 @@ def test_a_link_outside_serpapi_is_never_followed() -> None:
     }
     offers, seen = _run(shopping, {}, "Acme Day Cream")
     assert offers == []
-    assert len(seen) == 1
+    assert len(seen) == 3
 
 
 def test_a_row_that_does_not_match_the_product_name_is_skipped() -> None:
     other = {"title": "Garnier Olia 4", "serpapi_immersive_product_api": OTHER}
     offers, seen = _run({"Acme Day Cream": {"shopping_results": [other]}}, {}, "Acme Day Cream")
     assert offers == []
-    assert len(seen) == 1
+    assert len(seen) == 3
 
 
 def test_the_first_matching_row_is_used_even_when_it_is_not_first() -> None:
@@ -211,6 +214,29 @@ def test_prices_far_from_the_typical_one_are_dropped() -> None:
         }
     }
     assert [o.retailer_name for o in parse_stores(data)] == ["Shop A", "Shop B", "Shop C"]
+
+
+def test_an_empty_first_search_is_retried_without_cache() -> None:
+    seen: list[httpx.Request] = []
+    immersive = {"product_results": {"stores": [_store("Shop A", 10, "https://shop-a.fr/p")]}}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.params["engine"] == "google_immersive_product":
+            return httpx.Response(200, json=immersive)
+        return httpx.Response(200, json=NO_RESULTS if len(seen) == 1 else SHOPPING)
+
+    async def go() -> list[Any]:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await SerpApiAdapter("test-key", client=client).fetch_offers(
+                "", "Acme Day Cream"
+            )
+
+    offers = asyncio.run(go())
+    assert len(offers) == 1
+    assert len(seen) == 3
+    assert "no_cache" not in seen[0].url.params
+    assert seen[1].url.params["no_cache"] == "true"
 
 
 def test_http_error_raises_without_leaking_the_api_key() -> None:

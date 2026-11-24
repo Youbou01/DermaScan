@@ -18,6 +18,7 @@ logger = structlog.get_logger(__name__)
 SERPAPI_URL = "https://serpapi.com/search.json"
 _CURRENCY_SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP"}
 _MAX_OFFERS = 10
+_ATTEMPTS = 3
 # Words that mark a different listing (gift, pack...) unless the product name has them too.
 _EXTRA_WORDS = {"gift", "cadeau", "free", "gratuit", "pack", "coffret", "kit", "mini", "sample"}
 
@@ -137,12 +138,16 @@ class SerpApiAdapter:
         client: httpx.AsyncClient | None = None,
         gl: str = "fr",
         hl: str = "fr",
+        google_domain: str = "google.fr",
+        location: str = "France",
         timeout: float = 15.0,
     ) -> None:
         self._api_key = api_key
         self._client = client
         self._gl = gl
         self._hl = hl
+        self._google_domain = google_domain
+        self._location = location
         self._timeout = timeout
 
     async def fetch_offers(self, barcode: str, product_name: str) -> list[RawOffer]:
@@ -153,16 +158,24 @@ class SerpApiAdapter:
         # A category path or fewer than 3 distinctive words identifies no product.
         if "/" in query or len(wanted) < 3:
             return []
-        rows = (await self._search(query)).get("shopping_results")
-        if not isinstance(rows, list):
-            return []
-        candidates = [
-            row
-            for row in rows
-            if isinstance(row, dict)
-            and _matches(wanted, row.get("title"))
-            and str(row.get("serpapi_immersive_product_api", "")).startswith(_SERPAPI_PREFIX)
-        ]
+        # Google Shopping results are unstable (the same query sometimes returns unrelated
+        # products), so a search without any matching row is repeated, skipping the cache.
+        candidates: list[Any] = []
+        for attempt in range(_ATTEMPTS):
+            data = await self._search(query, fresh=attempt > 0)
+            rows = data.get("shopping_results")
+            if isinstance(rows, list):
+                candidates = [
+                    row
+                    for row in rows
+                    if isinstance(row, dict)
+                    and _matches(wanted, row.get("title"))
+                    and str(row.get("serpapi_immersive_product_api", "")).startswith(
+                        _SERPAPI_PREFIX
+                    )
+                ]
+            if candidates:
+                break
         if not candidates:
             return []
         # Prefer a listing sold by several shops (the best-known one); ties keep Google's order.
@@ -172,14 +185,18 @@ class SerpApiAdapter:
         )
         return parse_stores(await self._get(url))
 
-    async def _search(self, query: str) -> dict[str, Any]:
-        params = {
+    async def _search(self, query: str, *, fresh: bool = False) -> dict[str, Any]:
+        params: dict[str, str] = {
             "engine": "google_shopping",
             "q": query,
             "gl": self._gl,
             "hl": self._hl,
+            "google_domain": self._google_domain,
+            "location": self._location,
             "api_key": self._api_key,
         }
+        if fresh:
+            params["no_cache"] = "true"
         return await self._get(SERPAPI_URL, params)
 
     async def _get(

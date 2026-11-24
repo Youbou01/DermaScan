@@ -33,6 +33,8 @@ chosen per run by `PRICE_SOURCE`. Options considered:
    request (`more_stores=true`) of the chosen result, which lists the shops with direct links.
    The free plan therefore covers roughly 125 products per month (whether the second request is
    counted was not verified).
+   When no result matches, the search is repeated up to 3 times (repeats skip the cache), because
+   real results are unstable. Worst case: 4 searches per product.
 4. **Barcodes do not work.** Google Shopping has no GTIN lookup: in real calls a barcode query
    returned unrelated products (a toy motorbike, a helmet, a video game), and the barcode
    appeared in responses only as an echo of the query. The adapter searches by "brand + name".
@@ -52,6 +54,11 @@ chosen per run by `PRICE_SOURCE`. Options considered:
 - **Results are not stable.** The same query returned very different result lists in consecutive
   real calls (with caching disabled, none of the results were the product asked for). Cached
   results can hide this for an hour. Expect empty offer lists for many products.
+- Measured instability: 5 uncached searches of the same query gave 17, 12, 0, 12, 0 matching rows
+  (`gl=fr`, `hl=fr`) and 12, 17, 17, 17, 0 with `google_domain=google.fr` and `location=France`,
+  which is why the adapter uses the second setting and retries. Tiny sample: the difference between
+  the two settings may be chance. Empty results after 3 attempts are still possible; existing offers
+  are then kept.
 - Generic names without a brand ("Daily Moisture") get no offers. A matching row can still be a
   similar product (for example another size or texture of the same brand).
 - Real-call evidence is small: a handful of products, mostly from one session. It is not a
