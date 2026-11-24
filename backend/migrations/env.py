@@ -15,10 +15,12 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 import app.core.jobs
 import app.modules.catalog.models
+import app.modules.dermatologists.models
 import app.modules.enrichment.models
 import app.modules.identity.models
 import app.modules.ingestion.models
 import app.modules.ingredients.models
+import app.modules.personal_library.models
 import app.modules.routines.models
 from app.core.config import get_settings
 from app.core.orm import Base
@@ -29,10 +31,12 @@ from app.core.orm import Base
 _REGISTERED_MODELS = (
     app.core.jobs,
     app.modules.catalog.models,
+    app.modules.dermatologists.models,
     app.modules.enrichment.models,
     app.modules.identity.models,
     app.modules.ingestion.models,
     app.modules.ingredients.models,
+    app.modules.personal_library.models,
     app.modules.routines.models,
 )
 

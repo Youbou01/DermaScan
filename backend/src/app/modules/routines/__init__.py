@@ -6,7 +6,9 @@ from app.modules.routines.schemas import (
     RecommendedRoutinesOut,
     RoutineConflictOut,
     RoutineDataOut,
+    RoutineShareOut,
     RoutinesListOut,
+    SharedRoutineOut,
 )
 from app.modules.routines.service import RoutineService
 
@@ -16,6 +18,8 @@ __all__ = [
     "RoutineConflictOut",
     "RoutineDataOut",
     "RoutineService",
+    "RoutineShareOut",
     "RoutinesListOut",
+    "SharedRoutineOut",
     "routines_router",
 ]

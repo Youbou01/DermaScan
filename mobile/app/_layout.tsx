@@ -12,7 +12,9 @@ import {
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import { colors } from '@/lib/theme';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { I18nextProvider } from 'react-i18next';
+import i18n, { initializeI18n } from '@/lib/i18n/i18n';
 import * as DevClient from 'expo-dev-client';
 import { HeroUINativeProvider } from 'heroui-native';
 import { Uniwind } from 'uniwind';
@@ -65,6 +67,17 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const [i18nReady, setI18nReady] = useState(i18n.isInitialized);
+
+  useEffect(() => {
+    let active = true;
+    void initializeI18n().then(() => {
+      if (active) setI18nReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     return useSession.subscribe((state, previous) => {
@@ -161,44 +174,46 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (loaded || error) {
+    if ((loaded || error) && i18nReady) {
       void SplashScreen.hideAsync();
     }
-  }, [loaded, error]);
+  }, [loaded, error, i18nReady]);
 
-  if (!loaded && !error) {
+  if ((!loaded && !error) || !i18nReady) {
     return null;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <HeroUINativeProvider>
-        <QueryClientProvider client={queryClient}>
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: colors.background },
-              headerTintColor: colors.ink,
-              headerTitleStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
-              headerShadowVisible: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ title: 'Home', headerShown: false }} />
-            <Stack.Screen name="product/[id]" options={{ title: 'Product details' }} />
-            <Stack.Screen name="scan" options={{ title: 'Scan a product' }} />
-            <Stack.Screen name="account" options={{ title: 'Account' }} />
-            <Stack.Screen name="profile" options={{ title: 'Skin profile' }} />
-            <Stack.Screen name="avoidance" options={{ title: 'Products you avoid' }} />
-            <Stack.Screen name="routines" options={{ title: 'Your routines' }} />
-            <Stack.Screen name="routine/add" options={{ title: 'Add a routine step' }} />
-            <Stack.Screen name="recommendations" options={{ title: 'Recommendations' }} />
-            <Stack.Screen name="analysis" options={{ title: 'Read a label' }} />
-            <Stack.Screen name="contribute" options={{ title: 'Submit a product' }} />
-            <Stack.Screen name="categories" options={{ title: 'Categories' }} />
-          </Stack>
-          <InstallPrompt />
-        </QueryClientProvider>
-      </HeroUINativeProvider>
-    </GestureHandlerRootView>
+    <I18nextProvider i18n={i18n}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <HeroUINativeProvider>
+          <QueryClientProvider client={queryClient}>
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.ink,
+                headerTitleStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+                headerShadowVisible: false,
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ title: 'Home', headerShown: false }} />
+              <Stack.Screen name="product/[id]" options={{ title: 'Product details' }} />
+              <Stack.Screen name="scan" options={{ title: 'Scan a product' }} />
+              <Stack.Screen name="account" options={{ title: 'Account' }} />
+              <Stack.Screen name="profile" options={{ title: 'Skin profile' }} />
+              <Stack.Screen name="avoidance" options={{ title: 'Products you avoid' }} />
+              <Stack.Screen name="routines" options={{ title: 'Your routines' }} />
+              <Stack.Screen name="routine/add" options={{ title: 'Add a routine step' }} />
+              <Stack.Screen name="recommendations" options={{ title: 'Recommendations' }} />
+              <Stack.Screen name="analysis" options={{ title: 'Read a label' }} />
+              <Stack.Screen name="contribute" options={{ title: 'Submit a product' }} />
+              <Stack.Screen name="categories" options={{ title: 'Categories' }} />
+            </Stack>
+            <InstallPrompt />
+          </QueryClientProvider>
+        </HeroUINativeProvider>
+      </GestureHandlerRootView>
+    </I18nextProvider>
   );
 }

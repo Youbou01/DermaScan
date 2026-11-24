@@ -110,6 +110,11 @@ class IdentityService:
     async def get_profile(self, user_id: uuid.UUID) -> ProfileOut:
         return await self._build_profile(user_id)
 
+    async def get_saved_skin_type(self, user_id: uuid.UUID) -> str | None:
+        """Return only the preference needed for personalization, never the health profile."""
+        profile = await self._repository.get_profile(user_id)
+        return profile.skin_type.value if profile and profile.skin_type else None
+
     async def put_profile(self, user_id: uuid.UUID, payload: ProfileUpdateIn) -> ProfileOut:
         await self._require_user(user_id)
         resolved_allergy_ids = await self._resolve_and_ensure_ingredients(

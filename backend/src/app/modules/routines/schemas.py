@@ -1,6 +1,7 @@
 """Pydantic schemas and public DTOs for the routines module."""
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -87,3 +88,64 @@ class RecommendedRoutinesOut(BaseModel):
     skin_type: str
     morning: list[RoutineStepOut]
     evening: list[RoutineStepOut]
+
+
+class CreateRoutineShareIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expires_in_days: int = Field(default=7, ge=1, le=30)
+
+
+class RoutineShareOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: uuid.UUID
+    share_token: str = Field(
+        description="Secret token. It is returned only when the link is created."
+    )
+    created_at: datetime
+    expires_at: datetime
+
+
+class RoutineShareLinkSummaryOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: uuid.UUID
+    created_at: datetime
+    expires_at: datetime
+    view_count: int
+    last_viewed_at: datetime | None
+
+
+class RoutineShareLinksOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    links: list[RoutineShareLinkSummaryOut]
+
+
+class SharedRoutineStepOut(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    step_order: int
+    step_type: RoutineStepType
+    product: ProductCardOut
+    active_ingredients: list[str] = Field(default_factory=list)
+
+
+class SharedRoutineOut(BaseModel):
+    """Allowlisted public view. It intentionally has no owner or health-profile fields."""
+
+    model_config = ConfigDict(frozen=True)
+
+    slot: RoutineSlot
+    expires_at: datetime
+    steps: list[SharedRoutineStepOut]
+
+
+class CopySharedRoutineIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    destination_slot: RoutineSlot
+    confirm_replace: Literal[True] = Field(
+        description="Must be true after the recipient confirms the selected destination slot."
+    )

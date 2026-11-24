@@ -16,9 +16,14 @@ import type {
   Page,
   Product,
   ProductDetail,
+  ProductCardsPage,
   Profile,
   Routine,
+  DermatologistGuidance,
+  RoutineShareLinks,
+  SavedProductStatus,
   Suitability,
+  Slot,
 } from './types';
 import { useSession } from '@/lib/session';
 export const notifyError = () => {
@@ -127,5 +132,73 @@ export function useRoutines() {
     queryKey: privateKey('routines', uid),
     enabled: !!uid,
     queryFn: ({ signal }) => request<{ routines: Routine[] }>('/routines', { auth: true, signal }),
+  });
+}
+
+export function useSavedProducts() {
+  const uid = useUserId();
+  return useInfiniteQuery({
+    queryKey: privateKey('library-saved', uid),
+    enabled: !!uid,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      request<ProductCardsPage>('/library/saved' + queryString({ limit: 50, cursor: pageParam }), {
+        auth: true,
+        signal,
+      }),
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
+  });
+}
+
+export function useRecentlyViewed() {
+  const uid = useUserId();
+  return useInfiniteQuery({
+    queryKey: privateKey('library-recent', uid),
+    enabled: !!uid,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      request<ProductCardsPage>(
+        '/library/recently-viewed' + queryString({ limit: 20, cursor: pageParam }),
+        { auth: true, signal },
+      ),
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
+  });
+}
+
+export function useSavedProduct(productId: string) {
+  const uid = useUserId();
+  return useQuery({
+    queryKey: [...privateKey('library-saved-status', uid), productId],
+    enabled: !!uid && !!productId,
+    queryFn: ({ signal }) =>
+      request<SavedProductStatus>(`/library/saved/${encodeURIComponent(productId)}`, {
+        auth: true,
+        signal,
+      }),
+  });
+}
+
+export function useRoutineShareLinks(slot: Slot) {
+  const uid = useUserId();
+  return useQuery({
+    queryKey: [...privateKey('routine-shares', uid), slot],
+    enabled: !!uid,
+    queryFn: ({ signal }) =>
+      request<RoutineShareLinks>(`/routines/${slot}/shares`, {
+        auth: true,
+        signal,
+      }),
+  });
+}
+
+export function useDermatologistGuidance() {
+  const uid = useUserId();
+  return useQuery({
+    queryKey: ['dermatologist-guidance', uid],
+    queryFn: ({ signal }) =>
+      request<DermatologistGuidance>('/dermatologists/recommendations', {
+        auth: !!uid,
+        signal,
+      }),
   });
 }

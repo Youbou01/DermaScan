@@ -15,20 +15,24 @@ For every screen, record **Pass**, **Fail**, or **N/A with a reason** for each a
 
 ## Implemented Routes Audit Checklist
 
-| Route              | Functionality                                | Accessibility Status | Notes                                                  |
-| :----------------- | :------------------------------------------- | :------------------- | :----------------------------------------------------- |
-| `/(tabs)/index`    | Home shelves, search, categories             | Complete             | Touch targets $\ge 44$pt, HeroUI accessible primitives |
-| `/categories`      | Category tree                                | Complete             | Accessible list navigation                             |
-| `/product/[id]`    | Product detail & score breakdown             | Complete             | High-contrast badges, ingredient disclosure            |
-| `/scan`            | Camera barcode scanner & manual entry        | Complete             | VoiceOver labels on torch/input, web fallback          |
-| `/analysis`        | Ingredient label OCR analysis                | Complete             | Clear text alternatives for photo capture              |
-| `/routines`        | Routine CRUD & daily habit completion        | Complete             | Haptic feedback and clear action button labels         |
-| `/routine/add`     | Routine step builder                         | Complete             | Step type selectors and reordering affordances         |
-| `/recommendations` | Conflict-free routine suggestions            | Complete             | Skin-type segmented control                            |
-| `/account`         | Sign-in & registration                       | Complete             | Secure input fields, clear error announcements         |
-| `/profile`         | Skin profile, health conditions & allergies  | Complete             | Multi-select condition tags                            |
-| `/avoidance`       | Avoided / blacklisted products & ingredients | Complete             | Clear deletion and addition affordances                |
-| `/contribute`      | Photo contribution upload                    | Complete             | High-contrast form controls and photo picker           |
+| Route                      | Functionality                                | Accessibility Status    | Notes                                                         |
+| :------------------------- | :------------------------------------------- | :---------------------- | :------------------------------------------------------------ |
+| `/(tabs)/index`            | Home shelves, search, categories             | Complete                | Touch targets $\ge 44$pt, HeroUI accessible primitives        |
+| `/categories`              | Category tree                                | Complete                | Accessible list navigation                                    |
+| `/product/[id]`            | Product detail & score breakdown             | Complete                | High-contrast badges, ingredient disclosure                   |
+| `/scan`                    | Camera barcode scanner & manual entry        | Complete                | VoiceOver labels on torch/input, web fallback                 |
+| `/analysis`                | Ingredient label OCR analysis                | Complete                | Clear text alternatives for photo capture                     |
+| `/routines`                | Routine CRUD & daily habit completion        | Complete                | Haptic feedback and clear action button labels                |
+| `/routine/add`             | Routine step builder                         | Complete                | Step type selectors and reordering affordances                |
+| `/recommendations`         | Conflict-free routine suggestions            | Complete                | Skin-type segmented control                                   |
+| `/account`                 | Sign-in & registration                       | Complete                | Secure input fields, clear error announcements                |
+| `/profile`                 | Skin profile, health conditions & allergies  | Complete                | Multi-select condition tags                                   |
+| `/avoidance`               | Avoided / blacklisted products & ingredients | Complete                | Clear deletion and addition affordances                       |
+| `/contribute`              | Photo contribution upload                    | Complete                | High-contrast form controls and photo picker                  |
+| `/library/saved`           | Saved product list and remove action         | Pending device sign-off | Account-private list, accessible product/action labels        |
+| `/library/recently-viewed` | Recently viewed product history              | Pending device sign-off | Account-private list, accessible product navigation           |
+| `/dermatologists`          | Curated dermatologist guidance               | Pending device sign-off | Source links, credential text, and informational notice       |
+| `/shared-routine/[token]`  | Public routine view and confirmed copy       | Pending device sign-off | Public view works logged out; copy requires slot confirmation |
 
 ## Per-screen sign-off template
 

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Button, FieldError, Tabs } from 'heroui-native';
+import { Bookmark, BookmarkCheck } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useMutation } from '@tanstack/react-query';
@@ -18,19 +20,54 @@ import {
   privateKey,
   queryClient,
   useUserId,
+  useSavedProduct,
 } from '@/lib/api/queries';
 import { ApiError, errorMessage, request } from '@/lib/api/client';
 import type { Ingredient, Profile, ProfileInput } from '@/lib/api/types';
 import { colors } from '@/lib/theme';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const uid = useUserId();
   const product = useProduct(id);
+  const savedStatus = useSavedProduct(id);
   const profile = useProfile();
   const blacklist = useBlacklist();
   const [tab, setTab] = useState('ingredients');
   const [selected, setSelected] = useState<Ingredient | null>(null);
   const suitability = useSuitability(id, tab === 'compatibility' && !!profile.data?.skin_type);
+  const viewMutation = useMutation({
+    mutationFn: (productId: string) =>
+      request(`/library/recently-viewed/${encodeURIComponent(productId)}`, {
+        method: 'PUT',
+        auth: true,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: privateKey('library-recent', uid) });
+    },
+  });
+  const recordView = viewMutation.mutate;
+  const lastViewedKey = useRef('');
+  const loadedProductId = product.data?.id;
+  useEffect(() => {
+    if (!uid || !loadedProductId) return;
+    const key = `${uid}:${loadedProductId}`;
+    if (lastViewedKey.current === key) return;
+    lastViewedKey.current = key;
+    recordView(loadedProductId);
+  }, [uid, loadedProductId, recordView]);
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      request(`/library/saved/${encodeURIComponent(id)}`, {
+        method: savedStatus.data?.saved ? 'DELETE' : 'PUT',
+        auth: true,
+      }),
+    onSuccess: () => {
+      notifySuccess();
+      void queryClient.invalidateQueries({ queryKey: privateKey('library-saved-status', uid) });
+      void queryClient.invalidateQueries({ queryKey: privateKey('library-saved', uid) });
+    },
+  });
   const mutation = useMutation({
     mutationFn: async (action: 'allergy' | 'ingredient' | 'product') => {
       if (action === 'allergy') {
@@ -104,6 +141,45 @@ export default function ProductDetailScreen() {
               <AppText style={{ fontSize: 11, color: colors.muted }}>
                 {product.data.barcode}
               </AppText>
+              {uid && (
+                <>
+                  <Button
+                    variant="secondary"
+                    isDisabled={
+                      savedStatus.isPending || savedStatus.isError || saveMutation.isPending
+                    }
+                    accessibilityLabel={
+                      savedStatus.data?.saved ? t('library.unsave') : t('library.save')
+                    }
+                    onPress={() => saveMutation.mutate()}
+                    style={{ alignSelf: 'flex-start', minHeight: 44 }}
+                  >
+                    {savedStatus.data?.saved ? (
+                      <BookmarkCheck size={18} color={colors.ink} />
+                    ) : (
+                      <Bookmark size={18} color={colors.ink} />
+                    )}
+                    <Button.Label>
+                      {saveMutation.isPending
+                        ? t('common.loading')
+                        : savedStatus.data?.saved
+                          ? t('library.saved')
+                          : t('library.save')}
+                    </Button.Label>
+                  </Button>
+                  {savedStatus.isError && (
+                    <DataState
+                      error={savedStatus.error}
+                      onAction={() => {
+                        void savedStatus.refetch();
+                      }}
+                    />
+                  )}
+                  {saveMutation.isError && (
+                    <FieldError>{errorMessage(saveMutation.error)}</FieldError>
+                  )}
+                </>
+              )}
             </View>
             <AnalysisScore analysis={product.data} />
             <Tabs

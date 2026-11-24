@@ -212,3 +212,110 @@ async def test_recommendations_are_complete_and_filter_unsuitable_candidates(
         for step in routine
     }
     assert "Alcohol Serum" not in recommended_names
+
+
+async def test_shared_routine_is_allowlisted_copy_requires_confirmation_and_can_be_revoked(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    owner_headers = await _auth_headers(db_session)
+    source_product = make_product(name="Shared moisturizer")
+    existing_product = make_product(name="Recipient's old cleanser")
+    db_session.add_all([source_product, existing_product])
+    await db_session.flush()
+
+    source = await client.put(
+        "/api/v1/routines/morning",
+        headers=owner_headers,
+        json={
+            "steps": [
+                {
+                    "step_order": 1,
+                    "step_type": "moisturizer",
+                    "product_id": str(source_product.id),
+                    "notes": "private note that must not be shared",
+                }
+            ]
+        },
+    )
+    assert source.status_code == 200
+
+    created = await client.post(
+        "/api/v1/routines/morning/share",
+        headers=owner_headers,
+        json={"expires_in_days": 7},
+    )
+    assert created.status_code == 201
+    share = created.json()
+    token = share["share_token"]
+
+    public = await client.get(f"/api/v1/routines/shared/{token}")
+    assert public.status_code == 200
+    body = public.json()
+    assert set(body) == {"slot", "expires_at", "steps"}
+    assert body["slot"] == "morning"
+    assert set(body["steps"][0]) == {
+        "step_order",
+        "step_type",
+        "product",
+        "active_ingredients",
+    }
+    assert "private note that must not be shared" not in public.text
+    assert "routine-user@example.test" not in public.text
+    assert "user_id" not in public.text
+    assert "health_conditions" not in public.text
+
+    recipient = UserAccount(
+        email="routine-recipient@example.test",
+        password_hash=hash_password("test-password"),
+        display_name="Recipient",
+    )
+    db_session.add(recipient)
+    await db_session.flush()
+    recipient_headers = {"Authorization": f"Bearer {create_access_token(recipient.id)}"}
+    previous = await client.put(
+        "/api/v1/routines/evening",
+        headers=recipient_headers,
+        json={
+            "steps": [
+                {
+                    "step_order": 1,
+                    "step_type": "cleanser",
+                    "product_id": str(existing_product.id),
+                }
+            ]
+        },
+    )
+    assert previous.status_code == 200
+
+    missing_confirmation = await client.post(
+        f"/api/v1/routines/shared/{token}/copy",
+        headers=recipient_headers,
+        json={"destination_slot": "evening"},
+    )
+    assert missing_confirmation.status_code == 422
+
+    copied = await client.post(
+        f"/api/v1/routines/shared/{token}/copy",
+        headers=recipient_headers,
+        json={"destination_slot": "evening", "confirm_replace": True},
+    )
+    assert copied.status_code == 200
+    copied_body = copied.json()
+    assert copied_body["slot"] == "evening"
+    assert [step["product"]["id"] for step in copied_body["steps"]] == [str(source_product.id)]
+    assert copied_body["steps"][0]["notes"] is None
+
+    links = await client.get("/api/v1/routines/morning/shares", headers=owner_headers)
+    assert links.status_code == 200
+    [link] = links.json()["links"]
+    assert link["id"] == share["id"]
+    assert link["view_count"] >= 2
+    assert link["last_viewed_at"] is not None
+
+    denied = await client.delete(
+        f"/api/v1/routines/shares/{share['id']}", headers=recipient_headers
+    )
+    assert denied.status_code == 404
+    revoked = await client.delete(f"/api/v1/routines/shares/{share['id']}", headers=owner_headers)
+    assert revoked.status_code == 204
+    assert (await client.get(f"/api/v1/routines/shared/{token}")).status_code == 404

@@ -3,7 +3,13 @@
   "singleQuote": true,
   "trailingComma": "all",
   "printWidth": 100,
-  "ignorePatterns": ["uniwind-types.d.ts", "lib/database.types.ts", "lib/database.constants.ts"],
+  "ignorePatterns": [
+    "uniwind-types.d.ts",
+    "lib/database.types.ts",
+    "lib/database.constants.ts",
+    "lib/api/generated/schema.d.ts",
+    "openapi.json"
+  ],
   "sortTailwindcss": {
     "functions": ["clsx", "cn", "cva", "tw"]
   }

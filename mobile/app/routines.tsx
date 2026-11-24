@@ -1,18 +1,28 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Share, View } from 'react-native';
 import { Button, Input, FieldError, Label } from 'heroui-native';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ScreenList } from '@/components/ScreenList';
 import { AppText } from '@/components/AppText';
 import { Conflicts } from '@/components/Conflicts';
 import { DataState, LoadingState, SignInGate } from '@/components/DataState';
-import { useRoutines, useUserId, notifySuccess, queryClient, privateKey } from '@/lib/api/queries';
+import {
+  useRoutines,
+  useRoutineShareLinks,
+  useUserId,
+  notifySuccess,
+  queryClient,
+  privateKey,
+} from '@/lib/api/queries';
 import { errorMessage, request } from '@/lib/api/client';
 import { routineInputs, findRoutine } from '@/lib/routines';
-import type { Routine, RoutineStep, Slot } from '@/lib/api/types';
+import { sharedRoutinePath } from '@/lib/routineShare';
+import type { Routine, RoutineShare, RoutineStep, Slot } from '@/lib/api/types';
 import { colors } from '@/lib/theme';
 function StepRow({
   step,
@@ -103,9 +113,11 @@ function StepRow({
   );
 }
 export default function RoutinesScreen() {
+  const { t } = useTranslation();
   const uid = useUserId();
   const result = useRoutines();
   const [slot, setSlot] = useState<Slot>('morning');
+  const shareLinks = useRoutineShareLinks(slot);
   const [notice, setNotice] = useState('');
   const routine = findRoutine(result.data?.routines ?? [], slot);
   const mutation = useMutation({
@@ -142,6 +154,37 @@ export default function RoutinesScreen() {
       notifySuccess();
       setNotice('Routine updated.');
       void queryClient.invalidateQueries({ queryKey: privateKey('routines', uid) });
+    },
+  });
+  const createShare = useMutation({
+    mutationFn: () =>
+      request<RoutineShare>(`/routines/${slot}/share`, {
+        method: 'POST',
+        auth: true,
+        body: { expires_in_days: 7 },
+      }),
+    onSuccess: (link) => {
+      notifySuccess();
+      setNotice(t('routineShare.created'));
+      void queryClient.invalidateQueries({
+        queryKey: [...privateKey('routine-shares', uid), slot],
+      });
+      const url = Linking.createURL(sharedRoutinePath(link.share_token));
+      void Share.share({ message: `${t('routineShare.publicTitle')}\n${url}`, url });
+    },
+  });
+  const revokeShare = useMutation({
+    mutationFn: (shareId: string) =>
+      request(`/routines/shares/${encodeURIComponent(shareId)}`, {
+        method: 'DELETE',
+        auth: true,
+      }),
+    onSuccess: () => {
+      notifySuccess();
+      setNotice(t('routineShare.revoked'));
+      void queryClient.invalidateQueries({
+        queryKey: [...privateKey('routine-shares', uid), slot],
+      });
     },
   });
   return (
@@ -249,6 +292,77 @@ export default function RoutinesScreen() {
             <Button variant="tertiary" onPress={() => router.push('/recommendations')}>
               <Button.Label>Find recommendations</Button.Label>
             </Button>
+            {!!routine?.steps.length && (
+              <View
+                style={{
+                  gap: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                  paddingTop: 18,
+                }}
+              >
+                <Button
+                  isDisabled={createShare.isPending || result.isPending}
+                  variant="secondary"
+                  style={{ minHeight: 48 }}
+                  onPress={() => createShare.mutate()}
+                >
+                  <Button.Label>
+                    {createShare.isPending ? t('routineShare.creating') : t('routineShare.share')}
+                  </Button.Label>
+                </Button>
+                {createShare.isError && <FieldError>{errorMessage(createShare.error)}</FieldError>}
+                {revokeShare.isError && <FieldError>{errorMessage(revokeShare.error)}</FieldError>}
+                {shareLinks.isError ? (
+                  <DataState
+                    error={shareLinks.error}
+                    onAction={() => {
+                      void shareLinks.refetch();
+                    }}
+                  />
+                ) : (
+                  !!shareLinks.data?.links.length && (
+                    <View style={{ gap: 8 }}>
+                      <AppText weight="semibold">{t('routineShare.activeLinks')}</AppText>
+                      {shareLinks.data.links.map((link) => (
+                        <View
+                          key={link.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                            borderBottomWidth: 1,
+                            borderBottomColor: colors.border,
+                            paddingVertical: 8,
+                          }}
+                        >
+                          <View style={{ flex: 1, gap: 4 }}>
+                            <AppText style={{ color: colors.muted, fontSize: 12 }}>
+                              {t('routineShare.expires', {
+                                date: new Date(link.expires_at).toLocaleDateString(),
+                              })}
+                            </AppText>
+                            <AppText style={{ color: colors.muted, fontSize: 12 }}>
+                              {t('routineShare.views', { count: link.view_count })}
+                            </AppText>
+                          </View>
+                          <Button
+                            size="sm"
+                            variant="tertiary"
+                            isDisabled={revokeShare.isPending}
+                            style={{ minHeight: 44 }}
+                            onPress={() => revokeShare.mutate(link.id)}
+                          >
+                            <Button.Label>{t('routineShare.revoke')}</Button.Label>
+                          </Button>
+                        </View>
+                      ))}
+                    </View>
+                  )
+                )}
+              </View>
+            )}
           </View>
         ) : undefined
       }
