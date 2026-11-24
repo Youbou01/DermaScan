@@ -16,6 +16,14 @@ from app.modules.offers.sources import FixtureAdapter, PriceSourceAdapter
 logger = structlog.get_logger(__name__)
 
 
+def search_name(name: str, brand: str | None) -> str:
+    """Brand plus name, so that a generic name does not match another brand's product."""
+    clean = (brand or "").strip()
+    if clean and clean.lower() not in name.lower():
+        return f"{clean} {name}"
+    return name
+
+
 def build_price_source(settings: Settings) -> PriceSourceAdapter | None:
     """One source per run, chosen by PRICE_SOURCE. No automatic fallback between sources."""
     if settings.price_source == "fixture":
@@ -49,7 +57,7 @@ async def refresh_offers_task(payload: dict[str, Any], session: AsyncSession) ->
         session,
         product_id=product_id,
         barcode=product.barcode,
-        product_name=product.name,
+        product_name=search_name(product.name, product.brand),
         adapter=adapter,
         source=settings.price_source,
     )

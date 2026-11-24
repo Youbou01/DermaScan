@@ -1,6 +1,9 @@
 """Real price source: Google Shopping results through SerpApi (https://serpapi.com)."""
 
+import re
+import unicodedata
 from decimal import Decimal, InvalidOperation
+from statistics import median
 from typing import Any
 from urllib.parse import urlparse
 
@@ -15,6 +18,8 @@ logger = structlog.get_logger(__name__)
 SERPAPI_URL = "https://serpapi.com/search.json"
 _CURRENCY_SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP"}
 _MAX_OFFERS = 10
+# Words that mark a different listing (gift, pack...) unless the product name has them too.
+_EXTRA_WORDS = {"gift", "cadeau", "free", "gratuit", "pack", "coffret", "kit", "mini", "sample"}
 
 
 class SerpApiError(Exception):
@@ -39,55 +44,91 @@ def _currency(price_text: object) -> str | None:
     return None
 
 
-def parse_results(data: dict[str, Any]) -> list[RawOffer]:
-    """Turn a SerpApi response into offers: one per shop domain, cheapest first.
+_SERPAPI_PREFIX = "https://serpapi.com/"
 
-    Google Shopping gives no stock information, so every listed offer counts as in stock.
-    Rows without a direct shop link, a known currency or a positive price are skipped.
+
+def _text(value: object) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value)
+    return value if isinstance(value, str) else ""
+
+
+def _stock(details: object) -> StockState:
+    """Google writes 'En stock en ligne' in the offer details; anything else is unknown."""
+    return StockState.IN_STOCK if "en stock" in _text(details).lower() else StockState.UNKNOWN
+
+
+def _tokens(text: str) -> set[str]:
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+    return {t for t in re.findall(r"[a-z0-9]+", plain) if len(t) >= 3 or t.isdigit()}
+
+
+def _matches(wanted: set[str], title: object) -> bool:
+    """True when the result title contains every distinctive word of the product name."""
+    if not wanted or not isinstance(title, str):
+        return False
+    found = _tokens(title)
+    return wanted <= found and not ((found & _EXTRA_WORDS) - wanted)
+
+
+def _amount(value: object) -> Decimal | None:
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        return None
+    try:
+        price = Decimal(str(value)).quantize(Decimal("0.01"))
+    except InvalidOperation:
+        return None
+    return price if price > 0 else None
+
+
+def parse_stores(data: dict[str, Any]) -> list[RawOffer]:
+    """Turn a SerpApi immersive-product response into offers: one per shop, cheapest first.
+
+    Shops without a direct link, a known currency or a positive price are skipped.
+    The price is the item price (shipping is not included).
     """
-    rows: list[Any] = []
-    for key in ("shopping_results", "inline_shopping_results"):
-        block = data.get(key)
-        if isinstance(block, list):
-            rows.extend(block)
+    product = data.get("product_results")
+    block = product.get("stores") if isinstance(product, dict) else None
+    rows: list[Any] = block if isinstance(block, list) else []
 
     best: dict[str, RawOffer] = {}
     for row in rows:
         if not isinstance(row, dict):
             continue
         link = row.get("link")
-        source = row.get("source")
-        amount = row.get("extracted_price")
-        if not (isinstance(link, str) and isinstance(source, str) and source.strip()):
-            continue
-        if isinstance(amount, bool) or not isinstance(amount, int | float):
+        name = row.get("name")
+        if not (isinstance(link, str) and isinstance(name, str) and name.strip()):
             continue
         host = _host(link)
         currency = _currency(row.get("price"))
-        if host is None or _is_google(host) or currency is None:
-            continue
-        try:
-            price = Decimal(str(amount)).quantize(Decimal("0.01"))
-        except InvalidOperation:
-            continue
-        if price <= 0:
+        price = _amount(row.get("extracted_price"))
+        if host is None or _is_google(host) or currency is None or price is None:
             continue
         offer = RawOffer(
-            retailer_name=source.strip(),
+            retailer_name=name.strip(),
             retailer_domain=host,
             price=price,
             currency=currency,
             url=link,
-            stock_state=StockState.IN_STOCK,
+            stock_state=_stock(row.get("details_and_offers")),
         )
         current = best.get(host)
         if current is None or offer.price < current.price:
             best[host] = offer
-    return sorted(best.values(), key=lambda o: (o.price, o.retailer_name))[:_MAX_OFFERS]
+    offers = list(best.values())
+    if offers:
+        # A price far from the typical one is almost surely another product or pack size.
+        typical = median(o.price for o in offers)
+        offers = [o for o in offers if typical / 2 <= o.price <= typical * 2]
+    return sorted(offers, key=lambda o: (o.price, o.retailer_name))[:_MAX_OFFERS]
 
 
 class SerpApiAdapter:
-    """Searches Google Shopping by barcode first, then by product name."""
+    """Finds the product on Google Shopping by name, then reads its stores (2 searches).
+
+    Only a result whose title contains every distinctive word of the product name is used:
+    no offers are better than the offers of another product.
+    """
 
     def __init__(
         self,
@@ -105,13 +146,31 @@ class SerpApiAdapter:
         self._timeout = timeout
 
     async def fetch_offers(self, barcode: str, product_name: str) -> list[RawOffer]:
-        for query in (barcode, product_name):
-            if not query.strip():
-                continue
-            offers = parse_results(await self._search(query))
-            if offers:
-                return offers
-        return []
+        # Google Shopping has no barcode lookup: a barcode query returns unrelated products.
+        del barcode
+        query = product_name.strip()
+        wanted = _tokens(query)
+        # A category path or fewer than 3 distinctive words identifies no product.
+        if "/" in query or len(wanted) < 3:
+            return []
+        rows = (await self._search(query)).get("shopping_results")
+        if not isinstance(rows, list):
+            return []
+        candidates = [
+            row
+            for row in rows
+            if isinstance(row, dict)
+            and _matches(wanted, row.get("title"))
+            and str(row.get("serpapi_immersive_product_api", "")).startswith(_SERPAPI_PREFIX)
+        ]
+        if not candidates:
+            return []
+        # Prefer a listing sold by several shops (the best-known one); ties keep Google's order.
+        chosen = max(candidates, key=lambda row: row.get("multiple_sources") is True)
+        url = httpx.URL(chosen["serpapi_immersive_product_api"]).copy_merge_params(
+            {"more_stores": "true", "api_key": self._api_key}
+        )
+        return parse_stores(await self._get(url))
 
     async def _search(self, query: str) -> dict[str, Any]:
         params = {
@@ -121,12 +180,17 @@ class SerpApiAdapter:
             "hl": self._hl,
             "api_key": self._api_key,
         }
+        return await self._get(SERPAPI_URL, params)
+
+    async def _get(
+        self, url: str | httpx.URL, params: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         try:
             if self._client is not None:
-                response = await self._client.get(SERPAPI_URL, params=params)
+                response = await self._client.get(url, params=params)
             else:
                 async with httpx.AsyncClient(timeout=self._timeout) as client:
-                    response = await client.get(SERPAPI_URL, params=params)
+                    response = await client.get(url, params=params)
             response.raise_for_status()
             data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
