@@ -17,6 +17,13 @@ from app.main import create_app
 def export_openapi() -> str:
     database_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db")
     app = create_app(Settings(database_url=database_url))
+    env_file = BACKEND_DIR / ".env"
+    settings = (
+        Settings(_env_file=env_file)
+        if env_file.exists()
+        else Settings(database_url="postgresql+asyncpg://dev:dev@localhost/dev")
+    )
+    app = create_app(settings)
     schema = app.openapi()
     content = json.dumps(schema, indent=2, sort_keys=True) + "\n"
 

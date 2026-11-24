@@ -23,6 +23,7 @@ async def get_saved_skin_type(session: AsyncSession, user_id: uuid.UUID) -> str 
 
 
 __all__ = [
+    "IdentityService",
     "auth_router",
     "get_saved_skin_type",
     "profile_router",

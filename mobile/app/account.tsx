@@ -70,6 +70,9 @@ export default function AccountScreen() {
           <Button variant="secondary" onPress={() => router.push('/dermatologists')}>
             <Button.Label>{t('guidance.title')}</Button.Label>
           </Button>
+          <Button variant="secondary" onPress={() => router.push('/my-reviews')}>
+            <Button.Label>My reviews</Button.Label>
+          </Button>
           <Button
             variant="tertiary"
             isDisabled={signOut.isPending}

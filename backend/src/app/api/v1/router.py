@@ -8,6 +8,7 @@ from app.modules.dermatologists import dermatologists_router
 from app.modules.enrichment import analysis_router
 from app.modules.identity import auth_router, profile_router, suitability_router
 from app.modules.personal_library import personal_library_router
+from app.modules.reviews import product_reviews_router, user_reviews_router
 from app.modules.routines import routines_router
 
 router = APIRouter()
@@ -16,6 +17,8 @@ router.include_router(categories_router, prefix="/categories", tags=["categories
 router.include_router(home_router, prefix="/home", tags=["home"])
 router.include_router(catalog_router, prefix="/products", tags=["products"])
 router.include_router(suitability_router, prefix="/products", tags=["products"])
+router.include_router(product_reviews_router, prefix="/products", tags=["reviews"])
+router.include_router(user_reviews_router, prefix="/users/me", tags=["reviews"])
 router.include_router(contributions_router, prefix="/contributions", tags=["contributions"])
 router.include_router(auth_router, prefix="/auth", tags=["auth"])
 router.include_router(profile_router, prefix="/profile", tags=["profile"])

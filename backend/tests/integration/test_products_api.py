@@ -29,6 +29,8 @@ PRODUCT_KEYS = {
     "score_band",
     "score_coverage",
     "score_is_estimated",
+    "avg_rating",
+    "review_count",
     "summary",
     "ingredients",
 }

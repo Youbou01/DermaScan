@@ -29,6 +29,10 @@ export default function Home() {
   const [section, setSection] = useState('top_rated');
   const [showFilters, setShowFilters] = useState(false);
   const [band, setBand] = useState<RiskBand | undefined>();
+  const [sort, setSort] = useState<'score' | 'rating'>('score');
+  const [direction, setDirection] = useState<'desc' | 'asc'>('desc');
+  const [minScore, setMinScore] = useState<number | undefined>();
+  const [maxScore, setMaxScore] = useState<number | undefined>();
   const [include, setInclude] = useState('');
   const [exclude, setExclude] = useState('');
   const [applied, setApplied] = useState<Pick<Filters, 'include' | 'exclude'>>({});
@@ -42,11 +46,24 @@ export default function Home() {
     debounced ||
     category ||
     band ||
+    minScore !== undefined ||
+    maxScore !== undefined ||
     applied.include?.length ||
-    applied.exclude?.length
+    applied.exclude?.length ||
+    sort !== 'score' ||
+    direction !== 'desc'
   );
   const search = useProducts(
-    { q: debounced || undefined, category: category || undefined, band, ...applied },
+    {
+      q: debounced || undefined,
+      category: category || undefined,
+      band,
+      min_score: minScore,
+      max_score: maxScore,
+      sort,
+      direction,
+      ...applied,
+    },
     filtering,
   );
   const shelf = useShelf(section);
@@ -60,6 +77,10 @@ export default function Home() {
     setInclude('');
     setExclude('');
     setApplied({});
+    setSort('score');
+    setDirection('desc');
+    setMinScore(undefined);
+    setMaxScore(undefined);
     void Haptics.selectionAsync();
   };
   return (
@@ -338,8 +359,74 @@ export default function Home() {
                 ))}
               </View>
             )}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                marginBottom: 18,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <AppText weight="medium" style={{ fontSize: 13, color: colors.muted }}>
+                  Sort:
+                </AppText>
+                <Button
+                  size="sm"
+                  variant={sort === 'score' ? 'primary' : 'secondary'}
+                  onPress={() => {
+                    setSort('score');
+                    void Haptics.selectionAsync();
+                  }}
+                >
+                  <Button.Label>Score</Button.Label>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={sort === 'rating' ? 'primary' : 'secondary'}
+                  onPress={() => {
+                    setSort('rating');
+                    void Haptics.selectionAsync();
+                  }}
+                >
+                  <Button.Label>Rating</Button.Label>
+                </Button>
+              </View>
+
+              <Button
+                size="sm"
+                variant="tertiary"
+                onPress={() => {
+                  setDirection(direction === 'desc' ? 'asc' : 'desc');
+                  void Haptics.selectionAsync();
+                }}
+              >
+                <Button.Label>{direction === 'desc' ? 'Best first' : 'Lowest first'}</Button.Label>
+              </Button>
+            </View>
             {showFilters && (
               <View style={{ gap: 12, marginBottom: 24 }}>
+                <AppText weight="medium">Minimum score</AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {[
+                    { label: 'Any', value: undefined },
+                    { label: '50+', value: 50 },
+                    { label: '75+', value: 75 },
+                  ].map((chip) => (
+                    <Button
+                      size="sm"
+                      variant={minScore === chip.value ? 'primary' : 'secondary'}
+                      key={chip.label}
+                      onPress={() => {
+                        setMinScore(chip.value);
+                        void Haptics.selectionAsync();
+                      }}
+                    >
+                      <Button.Label>{chip.label}</Button.Label>
+                    </Button>
+                  ))}
+                </View>
                 <AppText weight="medium">Score band</AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {(['low', 'moderate', 'high'] as const).map((value) => (

@@ -13,6 +13,8 @@ export type Product = {
   score: number | null;
   score_band: RiskBand | null;
   score_is_estimated?: boolean;
+  avg_rating?: number | null;
+  review_count?: number;
 };
 export type Category = { slug: string; name: string; children?: Category[] };
 export type Ingredient = {
@@ -133,5 +135,47 @@ export type Filters = {
   max_score?: number;
   include?: string[];
   exclude?: string[];
+  sort?: 'score' | 'rating';
+  direction?: 'desc' | 'asc';
 };
 export type Contribution = { id: string; barcode: string; status: string; message: string };
+
+export type ReviewSource = 'app' | 'reddit';
+export type ExternalReviewStatus = 'fresh' | 'stale' | 'unavailable' | 'refreshing';
+export type Review = {
+  id: string;
+  product_id: string;
+  source: ReviewSource;
+  author_name: string;
+  rating: number | null;
+  body: string;
+  external_url: string | null;
+  created_at: string;
+};
+export type ProductReviewsPage = {
+  product_id: string;
+  avg_rating: number | null;
+  review_count: number;
+  external_source_status: ExternalReviewStatus;
+  items: Review[];
+  next_cursor: string | null;
+};
+export type CreateReviewInput = {
+  rating: number;
+  body: string;
+};
+export type UserReviewHistoryItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  product_brand: string | null;
+  product_image_url: string | null;
+  rating: number | null;
+  body: string;
+  source: ReviewSource;
+  created_at: string;
+};
+export type UserReviewsPage = {
+  items: UserReviewHistoryItem[];
+  next_cursor: string | null;
+};

@@ -166,3 +166,9 @@ name = "dermatologists internals are private"
 type = "protected"
 protected_modules = ["app.modules.dermatologists.models", "app.modules.dermatologists.repository"]
 allowed_importers = ["app.modules.dermatologists"]
+
+[[tool.importlinter.contracts]]
+name = "reviews internals are private"
+type = "protected"
+protected_modules = ["app.modules.reviews.models", "app.modules.reviews.repository"]
+allowed_importers = ["app.modules.reviews"]
