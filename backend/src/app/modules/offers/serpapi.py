@@ -1,5 +1,6 @@
 """Real price source: Google Shopping results through SerpApi (https://serpapi.com)."""
 
+import logging
 import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
@@ -14,6 +15,9 @@ from app.modules.offers.enums import StockState
 from app.modules.offers.sources import RawOffer
 
 logger = structlog.get_logger(__name__)
+
+# httpx logs every request URL at INFO, and the SerpApi URL contains the API key.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 SERPAPI_URL = "https://serpapi.com/search.json"
 _CURRENCY_SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP"}
