@@ -2,7 +2,9 @@
 
 import uuid
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from hashlib import sha256
+from secrets import token_urlsafe
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,17 +16,26 @@ from app.modules.routines.conflict_engine import (
 )
 from app.modules.routines.enums import RoutineSlot, RoutineStepType
 from app.modules.routines.exceptions import (
+    EmptyRoutineShareError,
     InvalidRoutineStepsError,
     RoutineProductNotFoundError,
+    RoutineShareLinkNotFoundError,
 )
-from app.modules.routines.models import Routine
+from app.modules.routines.models import Routine, RoutineShareLink
 from app.modules.routines.repository import RoutineRepository
 from app.modules.routines.schemas import (
     ConflictCheckOut,
+    CopySharedRoutineIn,
+    CreateRoutineShareIn,
     RecommendedRoutinesOut,
     RoutineDataOut,
+    RoutineShareLinksOut,
+    RoutineShareLinkSummaryOut,
+    RoutineShareOut,
     RoutineStepIn,
     RoutineStepOut,
+    SharedRoutineOut,
+    SharedRoutineStepOut,
 )
 
 _DRY_OR_SENSITIVE_AVOIDED_INCI = frozenset({"ALCOHOL DENAT.", "SODIUM LAURYL SULFATE"})
@@ -120,6 +131,109 @@ class RoutineService:
             locale,
         )
         return RecommendedRoutinesOut(skin_type=skin_type, morning=morning, evening=evening)
+
+    async def create_share_link(
+        self,
+        user_id: uuid.UUID,
+        slot: RoutineSlot,
+        payload: CreateRoutineShareIn,
+    ) -> RoutineShareOut:
+        routine = await self._repository.get_for_user_slot(user_id, slot)
+        if routine is None:
+            raise RoutineShareLinkNotFoundError("Create a routine before sharing it.")
+        if not routine.steps:
+            raise EmptyRoutineShareError
+        now = datetime.now(UTC)
+        token = token_urlsafe(32)
+        link = RoutineShareLink(
+            routine_id=routine.id,
+            token_hash=_token_hash(token),
+            created_at=now,
+            expires_at=now + timedelta(days=payload.expires_in_days),
+        )
+        await self._repository.add_share_link(link)
+        return RoutineShareOut(
+            id=link.id,
+            share_token=token,
+            created_at=link.created_at,
+            expires_at=link.expires_at,
+        )
+
+    async def list_share_links(self, user_id: uuid.UUID, slot: RoutineSlot) -> RoutineShareLinksOut:
+        links = await self._repository.list_active_share_links(user_id, slot, datetime.now(UTC))
+        return RoutineShareLinksOut(
+            links=[
+                RoutineShareLinkSummaryOut(
+                    id=link.id,
+                    created_at=link.created_at,
+                    expires_at=link.expires_at,
+                    view_count=link.view_count,
+                    last_viewed_at=link.last_viewed_at,
+                )
+                for link in links
+            ]
+        )
+
+    async def revoke_share_link(self, user_id: uuid.UUID, share_id: uuid.UUID) -> None:
+        link = await self._repository.get_owned_share_link(share_id, user_id)
+        if link is None:
+            raise RoutineShareLinkNotFoundError
+        if link.revoked_at is None:
+            link.revoked_at = datetime.now(UTC)
+
+    async def shared_routine(self, token: str, locale: str) -> SharedRoutineOut:
+        link, routine = await self._resolve_shared_routine(token, record_view=True)
+        product_map = await self._products_or_raise(
+            [step.product_id for step in routine.steps], locale
+        )
+        return SharedRoutineOut(
+            slot=routine.slot,
+            expires_at=link.expires_at,
+            steps=[
+                SharedRoutineStepOut(
+                    step_order=step.step_order,
+                    step_type=step.step_type,
+                    product=product_map[step.product_id].product,
+                    active_ingredients=extract_actives(
+                        list(product_map[step.product_id].ingredient_inci_names),
+                        product_map[step.product_id].category_slug,
+                    ),
+                )
+                for step in routine.steps
+            ],
+        )
+
+    async def copy_shared_routine(
+        self,
+        user_id: uuid.UUID,
+        token: str,
+        payload: CopySharedRoutineIn,
+        locale: str,
+    ) -> RoutineDataOut:
+        _, source = await self._resolve_shared_routine(token, record_view=True)
+        steps = [
+            RoutineStepIn(
+                step_order=step.step_order,
+                step_type=step.step_type,
+                product_id=step.product_id,
+                notes=None,
+            )
+            for step in source.steps
+        ]
+        return await self.replace_routine(user_id, payload.destination_slot, steps, locale)
+
+    async def _resolve_shared_routine(
+        self, token: str, *, record_view: bool
+    ) -> tuple[RoutineShareLink, Routine]:
+        link = await self._repository.get_active_share_link(
+            _token_hash(token), datetime.now(UTC), record_view=record_view
+        )
+        if link is None:
+            raise RoutineShareLinkNotFoundError
+        routine = await self._repository.get_by_id(link.routine_id)
+        if routine is None:
+            raise RoutineShareLinkNotFoundError
+        return link, routine
 
     async def _to_out(self, routine: Routine, locale: str, completed_today: bool) -> RoutineDataOut:
         product_map = await self._products_or_raise(
@@ -239,3 +353,7 @@ def _is_compatible_with_skin_type(candidate: RoutineProductData, skin_type: str)
 
 def _today() -> date:
     return datetime.now(UTC).date()
+
+
+def _token_hash(token: str) -> str:
+    return sha256(token.encode("utf-8")).hexdigest()

@@ -1,14 +1,14 @@
 """SQL access for routines. Other modules use RoutineService instead."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Select, delete, select
+from sqlalchemy import Select, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.routines.enums import RoutineSlot
-from app.modules.routines.models import Routine, RoutineCompletionLog, RoutineStep
+from app.modules.routines.models import Routine, RoutineCompletionLog, RoutineShareLink, RoutineStep
 
 
 class RoutineRepository:
@@ -29,6 +29,10 @@ class RoutineRepository:
 
     async def get_for_user_slot(self, user_id: uuid.UUID, slot: RoutineSlot) -> Routine | None:
         statement = self._with_steps().where(Routine.user_id == user_id, Routine.slot == slot)
+        return (await self._session.scalars(statement)).unique().one_or_none()
+
+    async def get_by_id(self, routine_id: uuid.UUID) -> Routine | None:
+        statement = self._with_steps().where(Routine.id == routine_id)
         return (await self._session.scalars(statement)).unique().one_or_none()
 
     async def get_or_create_for_user_slot(self, user_id: uuid.UUID, slot: RoutineSlot) -> Routine:
@@ -90,6 +94,68 @@ class RoutineRepository:
         self._session.add(RoutineCompletionLog(routine_id=routine_id, completed_date=day))
         await self._session.flush()
         return True
+
+    async def add_share_link(self, link: RoutineShareLink) -> None:
+        self._session.add(link)
+        await self._session.flush()
+
+    async def list_active_share_links(
+        self, user_id: uuid.UUID, slot: RoutineSlot, now: datetime
+    ) -> list[RoutineShareLink]:
+        statement = (
+            select(RoutineShareLink)
+            .join(Routine, Routine.id == RoutineShareLink.routine_id)
+            .where(
+                Routine.user_id == user_id,
+                Routine.slot == slot,
+                RoutineShareLink.revoked_at.is_(None),
+                RoutineShareLink.expires_at > now,
+            )
+            .order_by(RoutineShareLink.created_at.desc(), RoutineShareLink.id.desc())
+        )
+        return list((await self._session.scalars(statement)).all())
+
+    async def get_active_share_link(
+        self, token_hash: str, now: datetime, *, record_view: bool
+    ) -> RoutineShareLink | None:
+        link = await self._session.scalar(
+            select(RoutineShareLink).where(
+                RoutineShareLink.token_hash == token_hash,
+                RoutineShareLink.revoked_at.is_(None),
+                RoutineShareLink.expires_at > now,
+            )
+        )
+        if link is None or not record_view:
+            return link
+        updated_id = await self._session.scalar(
+            update(RoutineShareLink)
+            .where(
+                RoutineShareLink.id == link.id,
+                RoutineShareLink.revoked_at.is_(None),
+                RoutineShareLink.expires_at > now,
+            )
+            .values(
+                view_count=RoutineShareLink.view_count + 1,
+                last_viewed_at=now,
+            )
+            .returning(RoutineShareLink.id)
+            .execution_options(synchronize_session=False)
+        )
+        if updated_id is None:
+            return None
+        link.view_count += 1
+        link.last_viewed_at = now
+        return link
+
+    async def get_owned_share_link(
+        self, share_id: uuid.UUID, user_id: uuid.UUID
+    ) -> RoutineShareLink | None:
+        statement = (
+            select(RoutineShareLink)
+            .join(Routine, Routine.id == RoutineShareLink.routine_id)
+            .where(RoutineShareLink.id == share_id, Routine.user_id == user_id)
+        )
+        return await self._session.scalar(statement)
 
 
 def _default_name(slot: RoutineSlot) -> str:

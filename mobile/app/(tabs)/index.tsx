@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCategories, useProducts, useShelf } from '@/lib/api/queries';
@@ -20,6 +21,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { DataState, LoadingState } from '@/components/DataState';
 const setCategory = (value: string) => router.setParams({ category: value });
 export default function Home() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -230,6 +232,26 @@ export default function Home() {
                 <Button.Label numberOfLines={1}>Skin profile</Button.Label>
               </Button>
             </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -22, marginBottom: 18 }}
+              contentContainerStyle={{ paddingHorizontal: 22, gap: 8 }}
+            >
+              <Button size="sm" variant="tertiary" onPress={() => router.push('/library/saved')}>
+                <Button.Label>{t('library.savedTitle')}</Button.Label>
+              </Button>
+              <Button
+                size="sm"
+                variant="tertiary"
+                onPress={() => router.push('/library/recently-viewed')}
+              >
+                <Button.Label>{t('library.recentTitle')}</Button.Label>
+              </Button>
+              <Button size="sm" variant="tertiary" onPress={() => router.push('/dermatologists')}>
+                <Button.Label>{t('guidance.title')}</Button.Label>
+              </Button>
+            </ScrollView>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}

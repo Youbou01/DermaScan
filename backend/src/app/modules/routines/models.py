@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
+    DateTime,
     ForeignKey,
+    Index,
+    Integer,
     SmallInteger,
     String,
     Text,
     UniqueConstraint,
+    func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,3 +80,23 @@ class RoutineCompletionLog(UUIDPrimaryKeyMixin, Base):
         ForeignKey("routine.id", ondelete="CASCADE"), index=True
     )
     completed_date: Mapped[date] = mapped_column(Date)
+
+
+class RoutineShareLink(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "routine_share_link"
+    __table_args__ = (
+        CheckConstraint("view_count >= 0", name="view_count_nonnegative"),
+        Index("ix_routine_share_link_routine_created", "routine_id", "created_at"),
+    )
+
+    routine_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("routine.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    view_count: Mapped[int] = mapped_column(Integer, server_default=text("0"), nullable=False)
+    last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -11,9 +11,14 @@ from app.core.security import CurrentUserIdDep
 from app.modules.routines.enums import RoutineSlot
 from app.modules.routines.schemas import (
     ConflictCheckOut,
+    CopySharedRoutineIn,
+    CreateRoutineShareIn,
     RecommendedRoutinesOut,
     RoutineDataOut,
+    RoutineShareLinksOut,
+    RoutineShareOut,
     RoutinesListOut,
+    SharedRoutineOut,
     UpdateRoutineIn,
 )
 from app.modules.routines.service import RoutineService
@@ -90,5 +95,67 @@ async def toggle_routine_completion(
     locale: LocaleDep,
 ) -> RoutineDataOut:
     result = await service.toggle_completion(user_id, slot, locale)
+    await session.commit()
+    return result
+
+
+@router.post(
+    "/{slot}/share",
+    status_code=201,
+    response_model=RoutineShareOut,
+    responses=_ERRORS,
+    summary="Create a shareable link for my routine",
+)
+async def create_routine_share_link(
+    slot: RoutineSlot,
+    payload: CreateRoutineShareIn,
+    service: ServiceDep,
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+) -> RoutineShareOut:
+    result = await service.create_share_link(user_id, slot, payload)
+    await session.commit()
+    return result
+
+
+@router.get("/{slot}/shares", response_model=RoutineShareLinksOut, responses=_ERRORS)
+async def get_routine_share_links(
+    slot: RoutineSlot, service: ServiceDep, user_id: CurrentUserIdDep
+) -> RoutineShareLinksOut:
+    return await service.list_share_links(user_id, slot)
+
+
+@router.delete(
+    "/shares/{share_id}", status_code=204, responses=_ERRORS, summary="Revoke a shared routine link"
+)
+async def revoke_routine_share_link(
+    share_id: uuid.UUID,
+    service: ServiceDep,
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+) -> None:
+    await service.revoke_share_link(user_id, share_id)
+    await session.commit()
+
+
+@router.get("/shared/{token}", response_model=SharedRoutineOut, responses=_ERRORS)
+async def get_shared_routine(
+    token: str, service: ServiceDep, session: SessionDep, locale: LocaleDep
+) -> SharedRoutineOut:
+    result = await service.shared_routine(token, locale)
+    await session.commit()
+    return result
+
+
+@router.post("/shared/{token}/copy", response_model=RoutineDataOut, responses=_ERRORS)
+async def copy_shared_routine(
+    token: str,
+    payload: CopySharedRoutineIn,
+    service: ServiceDep,
+    session: SessionDep,
+    user_id: CurrentUserIdDep,
+    locale: LocaleDep,
+) -> RoutineDataOut:
+    result = await service.copy_shared_routine(user_id, token, payload, locale)
     await session.commit()
     return result

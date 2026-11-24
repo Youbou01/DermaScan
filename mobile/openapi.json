@@ -1,1795 +1,30 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "Skincare API",
-    "version": "0.1.0"
-  },
-  "paths": {
-    "/health/live": {
-      "get": {
-        "tags": ["health"],
-        "summary": "Live",
-        "operationId": "health_live",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Live"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health/ready": {
-      "get": {
-        "tags": ["health"],
-        "summary": "Ready",
-        "operationId": "health_ready",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Ready"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/categories": {
-      "get": {
-        "tags": ["categories"],
-        "summary": "List the category tree",
-        "description": "Top-level categories with children. Names follow `Accept-Language`.",
-        "operationId": "categories_list_categories",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CategoryNodeOut"
-                  },
-                  "type": "array",
-                  "title": "Response Categories List Categories"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/home": {
-      "get": {
-        "tags": ["home"],
-        "summary": "Home feed sections",
-        "description": "Category grid, top-rated (daily rotation), and recently added. Each product shelf\nhas its own `next_cursor` for infinite scroll.",
-        "operationId": "home_get_home_feed",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "description": "Page size for product shelves.",
-              "default": 10,
-              "title": "Limit"
-            },
-            "description": "Page size for product shelves."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HomeFeedOut"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid cursor or limit.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/home/sections/{section_id}": {
-      "get": {
-        "tags": ["home"],
-        "summary": "Load more items for one home section",
-        "operationId": "home_get_home_section",
-        "parameters": [
-          {
-            "name": "section_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Section Id"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Opaque cursor from a previous page.",
-              "title": "Cursor"
-            },
-            "description": "Opaque cursor from a previous page."
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "description": "Page size.",
-              "default": 10,
-              "title": "Limit"
-            },
-            "description": "Page size."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HomeSectionOut"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid cursor or limit.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown section.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/products/search": {
-      "get": {
-        "tags": ["products"],
-        "summary": "Search products by name (accent-insensitive, typo-tolerant)",
-        "operationId": "products_search_products",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 100,
-              "description": "Name to look for.",
-              "title": "Q"
-            },
-            "description": "Name to look for."
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 50,
-              "minimum": 1,
-              "description": "Page size.",
-              "default": 20,
-              "title": "Limit"
-            },
-            "description": "Page size."
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Opaque `next_cursor` from the previous page.",
-              "title": "Cursor"
-            },
-            "description": "Opaque `next_cursor` from the previous page."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page_ProductSummary_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Invalid query, cursor or score range.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/products/filter": {
-      "get": {
-        "tags": ["products"],
-        "summary": "Filter scored products, best score first",
-        "operationId": "products_filter_products",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 100
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Optional product name or brand search query.",
-              "title": "Q"
-            },
-            "description": "Optional product name or brand search query."
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Category slug; child categories are included.",
-              "title": "Category"
-            },
-            "description": "Category slug; child categories are included."
-          },
-          {
-            "name": "band",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RiskLevel"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "One or more score bands.",
-              "title": "Band"
-            },
-            "description": "One or more score bands."
-          },
-          {
-            "name": "min_score",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 100,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Min Score"
-            }
-          },
-          {
-            "name": "max_score",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 100,
-                  "minimum": 0
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Max Score"
-            }
-          },
-          {
-            "name": "include",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Must contain all of these.",
-              "title": "Include"
-            },
-            "description": "Must contain all of these."
-          },
-          {
-            "name": "exclude",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Must contain none of these.",
-              "title": "Exclude"
-            },
-            "description": "Must contain none of these."
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 50,
-              "minimum": 1,
-              "description": "Page size.",
-              "default": 20,
-              "title": "Limit"
-            },
-            "description": "Page size."
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Opaque `next_cursor` from the previous page.",
-              "title": "Cursor"
-            },
-            "description": "Opaque `next_cursor` from the previous page."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Page_ProductSummary_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Invalid query, cursor or score range.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/products/by-barcode/{barcode}": {
-      "get": {
-        "tags": ["products"],
-        "summary": "Get a product by scanning its barcode",
-        "description": "EAN-13, UPC-A and EAN-8 are accepted (spaces and hyphens are ignored); the product is\nstored and returned under its 13-digit form. A valid barcode we do not know is a 404\nwith type `urn:skincare:problem:product-not-found`; a malformed one is a 422\n`invalid-barcode`.",
-        "operationId": "products_get_product_by_barcode",
-        "parameters": [
-          {
-            "name": "barcode",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Barcode"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such product.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed barcode or identifier.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/products/{product_id}": {
-      "get": {
-        "tags": ["products"],
-        "summary": "Get a product by id",
-        "operationId": "products_get_product",
-        "parameters": [
-          {
-            "name": "product_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Product Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductDetail"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such product.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed barcode or identifier.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/products/{product_id}/suitability": {
-      "get": {
-        "tags": ["products"],
-        "summary": "Does this product suit my profile?",
-        "operationId": "products_get_suitability",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "product_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Product Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuitabilityOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown product id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contributions": {
-      "post": {
-        "tags": ["contributions"],
-        "summary": "Submit Photo Contribution",
-        "operationId": "contributions_submit_photo_contribution",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_contributions_submit_photo_contribution"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContributionResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Content Too Large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported Media Type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/register": {
-      "post": {
-        "tags": ["auth"],
-        "summary": "Create an account",
-        "operationId": "auth_register",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthTokensOut"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Email already registered.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/login": {
-      "post": {
-        "tags": ["auth"],
-        "summary": "Sign in with email and password",
-        "operationId": "auth_login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthTokensOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid credentials or token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/refresh": {
-      "post": {
-        "tags": ["auth"],
-        "summary": "Get a new access token from a refresh token",
-        "operationId": "auth_refresh",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AccessTokenOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid credentials or token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/profile": {
-      "get": {
-        "tags": ["profile"],
-        "summary": "Get my health profile",
-        "operationId": "profile_get_profile",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
-      "put": {
-        "tags": ["profile"],
-        "summary": "Replace my health profile and allergies",
-        "operationId": "profile_put_profile",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProfileUpdateIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/profile/blacklist": {
-      "get": {
-        "tags": ["profile"],
-        "summary": "List my blacklisted products and ingredients",
-        "operationId": "profile_get_blacklist",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BlacklistOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/profile/blacklist/products/{product_id}": {
-      "post": {
-        "tags": ["profile"],
-        "summary": "Blacklist a product",
-        "operationId": "profile_blacklist_product",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "product_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Product Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown product or ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["profile"],
-        "summary": "Remove a product from my blacklist",
-        "operationId": "profile_unblacklist_product",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "product_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Product Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown product or ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/profile/blacklist/ingredients/{ingredient_id}": {
-      "post": {
-        "tags": ["profile"],
-        "summary": "Blacklist an ingredient",
-        "operationId": "profile_blacklist_ingredient",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ingredient_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Ingredient Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown product or ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["profile"],
-        "summary": "Remove an ingredient from my blacklist",
-        "operationId": "profile_unblacklist_ingredient",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ingredient_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Ingredient Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "description": "Missing or invalid access token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Unknown product or ingredient id.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Malformed or invalid request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/analysis/ocr": {
-      "post": {
-        "tags": ["analysis"],
-        "summary": "Analyze Ocr Photo",
-        "description": "Transcribe and analyse an unlisted product label in the request/response cycle.",
-        "operationId": "analysis_analyze_ocr_photo",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_analysis_analyze_ocr_photo"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstantAnalysisOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Content Too Large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported Media Type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/analysis/text": {
-      "post": {
-        "tags": ["analysis"],
-        "summary": "Analyze Ingredient Text",
-        "description": "Analyse manually pasted ingredients with the same matching and scoring pipeline.",
-        "operationId": "analysis_analyze_ingredient_text",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TextAnalysisIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstantAnalysisOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Content Too Large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported Media Type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/routines": {
-      "get": {
-        "tags": ["routines"],
-        "summary": "Get Routines",
-        "operationId": "routines_get_routines",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoutinesListOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/routines/recommendations": {
-      "get": {
-        "tags": ["routines"],
-        "summary": "Get Recommendations",
-        "operationId": "routines_get_recommendations",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "skin_type",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "enum": ["normal", "dry", "oily", "combination", "sensitive"],
-              "type": "string",
-              "default": "normal",
-              "title": "Skin Type"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecommendedRoutinesOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
-    },
-    "/api/v1/routines/{slot}": {
-      "put": {
-        "tags": ["routines"],
-        "summary": "Replace Routine",
-        "operationId": "routines_replace_routine",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "slot",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/RoutineSlot"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateRoutineIn"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoutineDataOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
-    },
-    "/api/v1/routines/{slot}/check-conflict/{product_id}": {
-      "post": {
-        "tags": ["routines"],
-        "summary": "Check Product Conflict",
-        "operationId": "routines_check_product_conflict",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "slot",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/RoutineSlot"
-            }
-          },
-          {
-            "name": "product_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Product Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConflictCheckOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
-    },
-    "/api/v1/routines/{slot}/complete": {
-      "post": {
-        "tags": ["routines"],
-        "summary": "Toggle Routine Completion",
-        "operationId": "routines_toggle_routine_completion",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "slot",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/RoutineSlot"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoutineDataOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          }
-        }
-      }
-    }
-  },
   "components": {
     "schemas": {
       "AccessTokenOut": {
+        "description": "Response of POST /auth/refresh.",
         "properties": {
           "access_token": {
-            "type": "string",
+            "description": "New short-lived JWT.",
             "title": "Access Token",
-            "description": "New short-lived JWT."
+            "type": "string"
           },
           "token_type": {
-            "type": "string",
             "const": "bearer",
-            "title": "Token Type",
+            "default": "bearer",
             "description": "Always 'bearer'.",
-            "default": "bearer"
+            "title": "Token Type",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["access_token"],
+        "required": [
+          "access_token"
+        ],
         "title": "AccessTokenOut",
-        "description": "Response of POST /auth/refresh."
+        "type": "object"
       },
       "AlertCode": {
-        "type": "string",
+        "description": "Machine-readable type of a personal risk alert (frozen contract, sprint 2 section 7).",
         "enum": [
           "pregnancy_contraindication",
           "allergy_match",
@@ -1797,81 +32,91 @@
           "skin_type_mismatch"
         ],
         "title": "AlertCode",
-        "description": "Machine-readable type of a personal risk alert (frozen contract, sprint 2 section 7)."
+        "type": "string"
       },
       "AlertSeverity": {
-        "type": "string",
-        "enum": ["high", "medium"],
-        "title": "AlertSeverity"
+        "enum": [
+          "high",
+          "medium"
+        ],
+        "title": "AlertSeverity",
+        "type": "string"
       },
       "AuthTokensOut": {
+        "description": "Response of POST /auth/register and POST /auth/login.",
         "properties": {
           "access_token": {
-            "type": "string",
+            "description": "Short-lived JWT sent as Authorization: Bearer.",
             "title": "Access Token",
-            "description": "Short-lived JWT sent as Authorization: Bearer."
+            "type": "string"
           },
           "refresh_token": {
-            "type": "string",
+            "description": "Long-lived JWT used only at POST /auth/refresh.",
             "title": "Refresh Token",
-            "description": "Long-lived JWT used only at POST /auth/refresh."
+            "type": "string"
           },
           "token_type": {
-            "type": "string",
             "const": "bearer",
-            "title": "Token Type",
+            "default": "bearer",
             "description": "Always 'bearer'.",
-            "default": "bearer"
+            "title": "Token Type",
+            "type": "string"
           },
           "user": {
             "$ref": "#/components/schemas/UserOut",
             "description": "The authenticated user."
           }
         },
-        "type": "object",
-        "required": ["access_token", "refresh_token", "user"],
+        "required": [
+          "access_token",
+          "refresh_token",
+          "user"
+        ],
         "title": "AuthTokensOut",
-        "description": "Response of POST /auth/register and POST /auth/login."
+        "type": "object"
       },
       "BlacklistOut": {
+        "description": "Response of GET /profile/blacklist.",
         "properties": {
-          "product_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Product Ids",
-            "description": "Blacklisted product ids."
-          },
           "ingredient_ids": {
+            "description": "Blacklisted ingredient ids.",
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             },
-            "type": "array",
             "title": "Ingredient Ids",
-            "description": "Blacklisted ingredient ids."
+            "type": "array"
+          },
+          "product_ids": {
+            "description": "Blacklisted product ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Product Ids",
+            "type": "array"
           }
         },
-        "type": "object",
-        "required": ["product_ids", "ingredient_ids"],
+        "required": [
+          "product_ids",
+          "ingredient_ids"
+        ],
         "title": "BlacklistOut",
-        "description": "Response of GET /profile/blacklist."
+        "type": "object"
       },
       "Body_analysis_analyze_ocr_photo": {
         "properties": {
           "photo": {
-            "type": "string",
             "contentMediaType": "application/octet-stream",
+            "description": "JPEG, PNG, or WebP ingredient-label photo.",
             "title": "Photo",
-            "description": "JPEG, PNG, or WebP ingredient-label photo."
+            "type": "string"
           },
           "product_name": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 255
+                "maxLength": 255,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -1880,111 +125,251 @@
             "title": "Product Name"
           }
         },
-        "type": "object",
-        "required": ["photo"],
-        "title": "Body_analysis_analyze_ocr_photo"
+        "required": [
+          "photo"
+        ],
+        "title": "Body_analysis_analyze_ocr_photo",
+        "type": "object"
       },
       "Body_contributions_submit_photo_contribution": {
         "properties": {
           "barcode": {
-            "type": "string",
+            "description": "Product barcode (GTIN-8, GTIN-12, or GTIN-13)",
             "title": "Barcode",
-            "description": "Product barcode (GTIN-8, GTIN-12, or GTIN-13)"
+            "type": "string"
           },
           "photo": {
-            "type": "string",
             "contentMediaType": "application/octet-stream",
+            "description": "Photo of product packaging ingredient label",
             "title": "Photo",
-            "description": "Photo of product packaging ingredient label"
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["barcode", "photo"],
-        "title": "Body_contributions_submit_photo_contribution"
+        "required": [
+          "barcode",
+          "photo"
+        ],
+        "title": "Body_contributions_submit_photo_contribution",
+        "type": "object"
       },
       "CategoryNodeOut": {
+        "description": "A category in the browse tree (top-level or child).",
         "properties": {
-          "slug": {
-            "type": "string",
-            "title": "Slug",
-            "description": "Stable key shared with the mobile app and seed files."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Display name in the response language (English fallback)."
-          },
           "children": {
             "items": {
               "$ref": "#/components/schemas/CategoryNodeOut"
             },
-            "type": "array",
-            "title": "Children"
+            "title": "Children",
+            "type": "array"
+          },
+          "name": {
+            "description": "Display name in the response language (English fallback).",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Stable key shared with the mobile app and seed files.",
+            "title": "Slug",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["slug", "name"],
+        "required": [
+          "slug",
+          "name"
+        ],
         "title": "CategoryNodeOut",
-        "description": "A category in the browse tree (top-level or child)."
+        "type": "object"
       },
       "CategoryOut": {
         "properties": {
-          "slug": {
-            "type": "string",
-            "title": "Slug",
-            "description": "Stable key, e.g. 'moisturizer'. Use it for icons and i18n."
-          },
           "name": {
-            "type": "string",
+            "description": "Display name in the response language (English fallback).",
             "title": "Name",
-            "description": "Display name in the response language (English fallback)."
+            "type": "string"
+          },
+          "slug": {
+            "description": "Stable key, e.g. 'moisturizer'. Use it for icons and i18n.",
+            "title": "Slug",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["slug", "name"],
-        "title": "CategoryOut"
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "CategoryOut",
+        "type": "object"
       },
       "ConflictCheckOut": {
         "properties": {
-          "has_conflict": {
-            "type": "boolean",
-            "title": "Has Conflict"
-          },
           "conflicts": {
             "items": {
               "$ref": "#/components/schemas/RoutineConflictOut"
             },
-            "type": "array",
-            "title": "Conflicts"
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "has_conflict": {
+            "title": "Has Conflict",
+            "type": "boolean"
           }
         },
-        "type": "object",
-        "required": ["has_conflict", "conflicts"],
-        "title": "ConflictCheckOut"
+        "required": [
+          "has_conflict",
+          "conflicts"
+        ],
+        "title": "ConflictCheckOut",
+        "type": "object"
       },
       "ContributionResponse": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
           "barcode": {
-            "type": "string",
-            "title": "Barcode"
+            "title": "Barcode",
+            "type": "string"
           },
-          "status": {
-            "type": "string",
-            "title": "Status"
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
           },
           "message": {
-            "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["id", "barcode", "status", "message"],
-        "title": "ContributionResponse"
+        "required": [
+          "id",
+          "barcode",
+          "status",
+          "message"
+        ],
+        "title": "ContributionResponse",
+        "type": "object"
+      },
+      "CopySharedRoutineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_replace": {
+            "const": true,
+            "description": "Must be true after the recipient confirms the selected destination slot.",
+            "title": "Confirm Replace",
+            "type": "boolean"
+          },
+          "destination_slot": {
+            "$ref": "#/components/schemas/RoutineSlot"
+          }
+        },
+        "required": [
+          "destination_slot",
+          "confirm_replace"
+        ],
+        "title": "CopySharedRoutineIn",
+        "type": "object"
+      },
+      "CreateRoutineShareIn": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_in_days": {
+            "default": 7,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Expires In Days",
+            "type": "integer"
+          }
+        },
+        "title": "CreateRoutineShareIn",
+        "type": "object"
+      },
+      "DermatologistOut": {
+        "properties": {
+          "credentials": {
+            "title": "Credentials",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "is_verified": {
+            "description": "Credential details were checked against the linked source.",
+            "title": "Is Verified",
+            "type": "boolean"
+          },
+          "specialty": {
+            "title": "Specialty",
+            "type": "string"
+          },
+          "verification_source_url": {
+            "title": "Verification Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "credentials",
+          "specialty",
+          "is_verified",
+          "verification_source_url"
+        ],
+        "title": "DermatologistOut",
+        "type": "object"
+      },
+      "DermatologistRecommendationOut": {
+        "properties": {
+          "advice": {
+            "title": "Advice",
+            "type": "string"
+          },
+          "dermatologist": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DermatologistOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "related_products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductCardOut"
+            },
+            "title": "Related Products",
+            "type": "array"
+          },
+          "source_title": {
+            "title": "Source Title",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dermatologist",
+          "title",
+          "advice",
+          "source_title",
+          "source_url",
+          "related_products"
+        ],
+        "title": "DermatologistRecommendationOut",
+        "type": "object"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1992,18 +377,23 @@
             "items": {
               "$ref": "#/components/schemas/ValidationError"
             },
-            "type": "array",
-            "title": "Detail"
+            "title": "Detail",
+            "type": "array"
           }
         },
-        "type": "object",
-        "title": "HTTPValidationError"
+        "title": "HTTPValidationError",
+        "type": "object"
       },
       "HealthCondition": {
-        "type": "string",
-        "enum": ["eczema", "rosacea", "acne_prone", "psoriasis"],
+        "description": "Closed list of health conditions the suitability engine understands.",
+        "enum": [
+          "eczema",
+          "rosacea",
+          "acne_prone",
+          "psoriasis"
+        ],
         "title": "HealthCondition",
-        "description": "Closed list of health conditions the suitability engine understands."
+        "type": "string"
       },
       "HomeFeedOut": {
         "properties": {
@@ -2011,30 +401,22 @@
             "items": {
               "$ref": "#/components/schemas/HomeSectionOut"
             },
-            "type": "array",
-            "title": "Sections"
+            "title": "Sections",
+            "type": "array"
           }
         },
-        "type": "object",
-        "required": ["sections"],
-        "title": "HomeFeedOut"
+        "required": [
+          "sections"
+        ],
+        "title": "HomeFeedOut",
+        "type": "object"
       },
       "HomeSectionOut": {
         "properties": {
           "id": {
-            "type": "string",
+            "description": "Stable section id, e.g. 'top_rated'.",
             "title": "Id",
-            "description": "Stable section id, e.g. 'top_rated'."
-          },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "description": "Section kind for the client layout."
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "Localized section title."
+            "type": "string"
           },
           "items": {
             "items": {
@@ -2047,8 +429,8 @@
                 }
               ]
             },
-            "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "type": "array"
           },
           "next_cursor": {
             "anyOf": [
@@ -2059,20 +441,45 @@
                 "type": "null"
               }
             ],
-            "title": "Next Cursor",
-            "description": "Opaque cursor for the next page, or null."
+            "description": "Opaque cursor for the next page, or null.",
+            "title": "Next Cursor"
+          },
+          "title": {
+            "description": "Localized section title.",
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "description": "Section kind for the client layout.",
+            "title": "Type",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["id", "type", "title", "items", "next_cursor"],
-        "title": "HomeSectionOut"
+        "required": [
+          "id",
+          "type",
+          "title",
+          "items",
+          "next_cursor"
+        ],
+        "title": "HomeSectionOut",
+        "type": "object"
       },
       "InstantAnalysisOut": {
+        "description": "Synchronous score and ingredient projection for an unlisted product label.",
         "properties": {
           "extracted_text": {
-            "type": "string",
+            "description": "Extracted or submitted ingredient text.",
             "title": "Extracted Text",
-            "description": "Extracted or submitted ingredient text."
+            "type": "string"
+          },
+          "ingredients": {
+            "description": "Parsed ingredient breakdown in label order.",
+            "items": {
+              "$ref": "#/components/schemas/ProductIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
           },
           "score": {
             "anyOf": [
@@ -2083,40 +490,31 @@
                 "type": "null"
               }
             ],
-            "title": "Score",
-            "description": "Calculated score (0-100), or null if unrateable."
+            "description": "Calculated score (0-100), or null if unrateable.",
+            "title": "Score"
           },
           "score_band": {
             "$ref": "#/components/schemas/RiskLevel",
             "description": "Risk band: low, moderate, high, or unknown."
           },
           "score_coverage": {
-            "type": "number",
+            "description": "Share of parsed ingredients recognized by the ingredient reference.",
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Score Coverage",
-            "description": "Share of parsed ingredients recognized by the ingredient reference."
+            "type": "number"
           },
           "score_is_estimated": {
-            "type": "boolean",
+            "default": false,
             "title": "Score Is Estimated",
-            "default": false
+            "type": "boolean"
           },
           "summary": {
-            "type": "string",
+            "description": "Plain-language formulation overview.",
             "title": "Summary",
-            "description": "Plain-language formulation overview."
-          },
-          "ingredients": {
-            "items": {
-              "$ref": "#/components/schemas/ProductIngredientOut"
-            },
-            "type": "array",
-            "title": "Ingredients",
-            "description": "Parsed ingredient breakdown in label order."
+            "type": "string"
           }
         },
-        "type": "object",
         "required": [
           "extracted_text",
           "score",
@@ -2126,36 +524,39 @@
           "ingredients"
         ],
         "title": "InstantAnalysisOut",
-        "description": "Synchronous score and ingredient projection for an unlisted product label."
+        "type": "object"
       },
       "LoginRequest": {
+        "description": "Body of POST /auth/login.",
         "properties": {
           "email": {
-            "type": "string",
+            "description": "Account email.",
             "maxLength": 255,
             "title": "Email",
-            "description": "Account email."
+            "type": "string"
           },
           "password": {
-            "type": "string",
+            "description": "Plain password.",
             "maxLength": 128,
             "title": "Password",
-            "description": "Plain password."
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "title": "LoginRequest",
-        "description": "Body of POST /auth/login."
+        "type": "object"
       },
-      "Page_ProductSummary_": {
+      "Page_ProductCardOut_": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/ProductSummary"
+              "$ref": "#/components/schemas/ProductCardOut"
             },
-            "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "type": "array"
           },
           "next_cursor": {
             "anyOf": [
@@ -2166,28 +567,49 @@
                 "type": "null"
               }
             ],
-            "title": "Next Cursor",
-            "description": "Pass it as `cursor` to get the next page. Null on the last page."
+            "description": "Pass it as `cursor` to get the next page. Null on the last page.",
+            "title": "Next Cursor"
           }
         },
-        "type": "object",
-        "required": ["items", "next_cursor"],
-        "title": "Page[ProductSummary]"
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ProductCardOut]",
+        "type": "object"
+      },
+      "Page_ProductSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pass it as `cursor` to get the next page. Null on the last page.",
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ProductSummary]",
+        "type": "object"
       },
       "ProblemDetails": {
+        "description": "Error body. Declared so it appears in the OpenAPI schema (typed client).",
         "properties": {
-          "type": {
-            "type": "string",
-            "title": "Type"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "status": {
-            "type": "integer",
-            "title": "Status"
-          },
           "detail": {
             "anyOf": [
               {
@@ -2198,6 +620,21 @@
               }
             ],
             "title": "Detail"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
           },
           "instance": {
             "anyOf": [
@@ -2221,38 +658,30 @@
             ],
             "title": "Request Id"
           },
-          "errors": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Errors"
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["type", "title", "status"],
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
         "title": "ProblemDetails",
-        "description": "Error body. Declared so it appears in the OpenAPI schema (typed client)."
+        "type": "object"
       },
       "ProductCardOut": {
+        "description": "Light product row for home shelves and search results (not the full detail page).",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
           "brand": {
             "anyOf": [
               {
@@ -2263,6 +692,22 @@
               }
             ],
             "title": "Brand"
+          },
+          "category_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Slug"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
           },
           "image_url": {
             "anyOf": [
@@ -2275,6 +720,10 @@
             ],
             "title": "Image Url"
           },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
           "score": {
             "anyOf": [
               {
@@ -2284,8 +733,8 @@
                 "type": "null"
               }
             ],
-            "title": "Score",
-            "description": "0-100, or null when not scored."
+            "description": "0-100, or null when not scored.",
+            "title": "Score"
           },
           "score_band": {
             "anyOf": [
@@ -2299,43 +748,30 @@
             "description": "Null when the product has no score; 'unknown' means insufficient data."
           },
           "score_is_estimated": {
-            "type": "boolean",
-            "title": "Score Is Estimated",
+            "default": false,
             "description": "True when confidence K < 0.60.",
-            "default": false
-          },
-          "category_slug": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Slug"
+            "title": "Score Is Estimated",
+            "type": "boolean"
           }
         },
-        "type": "object",
-        "required": ["id", "name", "brand", "image_url", "score", "score_band", "category_slug"],
+        "required": [
+          "id",
+          "name",
+          "brand",
+          "image_url",
+          "score",
+          "score_band",
+          "category_slug"
+        ],
         "title": "ProductCardOut",
-        "description": "Light product row for home shelves and search results (not the full detail page)."
+        "type": "object"
       },
       "ProductDetail": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
           "barcode": {
-            "type": "string",
+            "description": "GTIN-13.",
             "title": "Barcode",
-            "description": "GTIN-13."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
+            "type": "string"
           },
           "brand": {
             "anyOf": [
@@ -2348,6 +784,21 @@
             ],
             "title": "Brand"
           },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategoryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
           "image_url": {
             "anyOf": [
               {
@@ -2359,15 +810,17 @@
             ],
             "title": "Image Url"
           },
-          "category": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CategoryOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "ingredients": {
+            "description": "In label order.",
+            "items": {
+              "$ref": "#/components/schemas/ProductIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
           },
           "score": {
             "anyOf": [
@@ -2378,8 +831,8 @@
                 "type": "null"
               }
             ],
-            "title": "Score",
-            "description": "0-100, or null when the product is not scored."
+            "description": "0-100, or null when the product is not scored.",
+            "title": "Score"
           },
           "score_band": {
             "$ref": "#/components/schemas/RiskLevel",
@@ -2394,14 +847,14 @@
                 "type": "null"
               }
             ],
-            "title": "Score Coverage",
-            "description": "Share (0-1) of ingredients we could rate."
+            "description": "Share (0-1) of ingredients we could rate.",
+            "title": "Score Coverage"
           },
           "score_is_estimated": {
-            "type": "boolean",
-            "title": "Score Is Estimated",
+            "default": false,
             "description": "True when confidence K < 0.60.",
-            "default": false
+            "title": "Score Is Estimated",
+            "type": "boolean"
           },
           "summary": {
             "anyOf": [
@@ -2412,19 +865,10 @@
                 "type": "null"
               }
             ],
-            "title": "Summary",
-            "description": "Localized plain-language product summary. Scored products always have a fallback."
-          },
-          "ingredients": {
-            "items": {
-              "$ref": "#/components/schemas/ProductIngredientOut"
-            },
-            "type": "array",
-            "title": "Ingredients",
-            "description": "In label order."
+            "description": "Localized plain-language product summary. Scored products always have a fallback.",
+            "title": "Summary"
           }
         },
-        "type": "object",
         "required": [
           "id",
           "barcode",
@@ -2437,19 +881,22 @@
           "score_coverage",
           "ingredients"
         ],
-        "title": "ProductDetail"
+        "title": "ProductDetail",
+        "type": "object"
       },
       "ProductIngredientOut": {
         "properties": {
-          "position": {
-            "type": "integer",
-            "title": "Position",
-            "description": "1-based position on the label (decreasing amount)."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "The ingredient exactly as printed on this product's label."
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rating confidence 0.0-1.0.",
+            "title": "Confidence"
           },
           "inci_name": {
             "anyOf": [
@@ -2460,29 +907,36 @@
                 "type": "null"
               }
             ],
-            "title": "Inci Name",
-            "description": "Standard INCI name, when the ingredient is recognized."
+            "description": "Standard INCI name, when the ingredient is recognized.",
+            "title": "Inci Name"
           },
-          "matched": {
-            "type": "boolean",
-            "title": "Matched",
-            "description": "False when we do not recognize this ingredient yet."
-          },
-          "risk_level": {
-            "$ref": "#/components/schemas/RiskLevel",
-            "description": "'unknown' when not recognized or not rated."
-          },
-          "rationale": {
+          "ingredient_id": {
             "anyOf": [
               {
+                "format": "uuid",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Rationale",
-            "description": "Why it is rated this way, in the response language."
+            "description": "Ingredient id when recognized; None when not matched.",
+            "title": "Ingredient Id"
+          },
+          "matched": {
+            "description": "False when we do not recognize this ingredient yet.",
+            "title": "Matched",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The ingredient exactly as printed on this product's label.",
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "description": "1-based position on the label (decreasing amount).",
+            "title": "Position",
+            "type": "integer"
           },
           "rating": {
             "anyOf": [
@@ -2493,8 +947,24 @@
                 "type": "null"
               }
             ],
-            "title": "Rating",
-            "description": "0.0-10.0 scale, 10 = least concern."
+            "description": "0.0-10.0 scale, 10 = least concern.",
+            "title": "Rating"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it is rated this way, in the response language.",
+            "title": "Rationale"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel",
+            "description": "'unknown' when not recognized or not rated."
           },
           "summary": {
             "anyOf": [
@@ -2505,54 +975,27 @@
                 "type": "null"
               }
             ],
-            "title": "Summary",
-            "description": "Plain-language function summary."
-          },
-          "confidence": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence",
-            "description": "Rating confidence 0.0-1.0."
-          },
-          "ingredient_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ingredient Id",
-            "description": "Ingredient id when recognized; None when not matched."
+            "description": "Plain-language function summary.",
+            "title": "Summary"
           }
         },
-        "type": "object",
-        "required": ["position", "name", "inci_name", "matched", "risk_level", "rationale"],
-        "title": "ProductIngredientOut"
+        "required": [
+          "position",
+          "name",
+          "inci_name",
+          "matched",
+          "risk_level",
+          "rationale"
+        ],
+        "title": "ProductIngredientOut",
+        "type": "object"
       },
       "ProductSummary": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
           "barcode": {
-            "type": "string",
+            "description": "GTIN-13.",
             "title": "Barcode",
-            "description": "GTIN-13."
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
+            "type": "string"
           },
           "brand": {
             "anyOf": [
@@ -2565,17 +1008,6 @@
             ],
             "title": "Brand"
           },
-          "image_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Url"
-          },
           "category_slug": {
             "anyOf": [
               {
@@ -2587,6 +1019,26 @@
             ],
             "title": "Category Slug"
           },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
           "score": {
             "anyOf": [
               {
@@ -2596,30 +1048,64 @@
                 "type": "null"
               }
             ],
-            "title": "Score",
-            "description": "0-100, or null when the product is not scored."
+            "description": "0-100, or null when the product is not scored.",
+            "title": "Score"
           },
           "score_band": {
             "$ref": "#/components/schemas/RiskLevel",
             "description": "'unknown' means insufficient data, NOT safe."
           },
           "score_is_estimated": {
-            "type": "boolean",
+            "default": false,
             "title": "Score Is Estimated",
-            "default": false
+            "type": "boolean"
           }
         },
-        "type": "object",
-        "required": ["id", "barcode", "name", "brand", "image_url", "score", "score_band"],
-        "title": "ProductSummary"
+        "required": [
+          "id",
+          "barcode",
+          "name",
+          "brand",
+          "image_url",
+          "score",
+          "score_band"
+        ],
+        "title": "ProductSummary",
+        "type": "object"
       },
       "ProfileOut": {
+        "description": "Response of GET and PUT /profile.",
         "properties": {
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id",
-            "description": "Owner of the profile."
+          "allergy_ingredient_ids": {
+            "description": "Declared allergy ingredient ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Allergy Ingredient Ids",
+            "type": "array"
+          },
+          "blacklisted_product_ids": {
+            "description": "Blacklisted product ids.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Blacklisted Product Ids",
+            "type": "array"
+          },
+          "health_conditions": {
+            "description": "Declared health conditions.",
+            "items": {
+              "$ref": "#/components/schemas/HealthCondition"
+            },
+            "title": "Health Conditions",
+            "type": "array"
+          },
+          "is_pregnant_or_nursing": {
+            "description": "Pregnancy or nursing flag.",
+            "title": "Is Pregnant Or Nursing",
+            "type": "boolean"
           },
           "skin_type": {
             "anyOf": [
@@ -2632,39 +1118,13 @@
             ],
             "description": "Declared skin type, or null."
           },
-          "is_pregnant_or_nursing": {
-            "type": "boolean",
-            "title": "Is Pregnant Or Nursing",
-            "description": "Pregnancy or nursing flag."
-          },
-          "health_conditions": {
-            "items": {
-              "$ref": "#/components/schemas/HealthCondition"
-            },
-            "type": "array",
-            "title": "Health Conditions",
-            "description": "Declared health conditions."
-          },
-          "allergy_ingredient_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Allergy Ingredient Ids",
-            "description": "Declared allergy ingredient ids."
-          },
-          "blacklisted_product_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Blacklisted Product Ids",
-            "description": "Blacklisted product ids."
+          "user_id": {
+            "description": "Owner of the profile.",
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
           }
         },
-        "type": "object",
         "required": [
           "user_id",
           "skin_type",
@@ -2674,10 +1134,34 @@
           "blacklisted_product_ids"
         ],
         "title": "ProfileOut",
-        "description": "Response of GET and PUT /profile."
+        "type": "object"
       },
       "ProfileUpdateIn": {
+        "description": "Body of PUT /profile: full replacement of the editable profile fields.",
         "properties": {
+          "allergy_ingredient_ids": {
+            "description": "Ingredient ids the user declares an allergy to.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Allergy Ingredient Ids",
+            "type": "array"
+          },
+          "health_conditions": {
+            "description": "Declared health conditions (closed list).",
+            "items": {
+              "$ref": "#/components/schemas/HealthCondition"
+            },
+            "title": "Health Conditions",
+            "type": "array"
+          },
+          "is_pregnant_or_nursing": {
+            "default": false,
+            "description": "Pregnancy or nursing flag.",
+            "title": "Is Pregnant Or Nursing",
+            "type": "boolean"
+          },
           "skin_type": {
             "anyOf": [
               {
@@ -2688,194 +1172,214 @@
               }
             ],
             "description": "Declared skin type, or null."
-          },
-          "is_pregnant_or_nursing": {
-            "type": "boolean",
-            "title": "Is Pregnant Or Nursing",
-            "description": "Pregnancy or nursing flag.",
-            "default": false
-          },
-          "health_conditions": {
-            "items": {
-              "$ref": "#/components/schemas/HealthCondition"
-            },
-            "type": "array",
-            "title": "Health Conditions",
-            "description": "Declared health conditions (closed list)."
-          },
-          "allergy_ingredient_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Allergy Ingredient Ids",
-            "description": "Ingredient ids the user declares an allergy to."
           }
         },
-        "type": "object",
         "title": "ProfileUpdateIn",
-        "description": "Body of PUT /profile: full replacement of the editable profile fields."
+        "type": "object"
+      },
+      "RecommendationsOut": {
+        "properties": {
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/DermatologistRecommendationOut"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "recommendations",
+          "disclaimer"
+        ],
+        "title": "RecommendationsOut",
+        "type": "object"
       },
       "RecommendedRoutinesOut": {
         "properties": {
-          "skin_type": {
-            "type": "string",
-            "title": "Skin Type"
+          "evening": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepOut"
+            },
+            "title": "Evening",
+            "type": "array"
           },
           "morning": {
             "items": {
               "$ref": "#/components/schemas/RoutineStepOut"
             },
-            "type": "array",
-            "title": "Morning"
+            "title": "Morning",
+            "type": "array"
           },
-          "evening": {
-            "items": {
-              "$ref": "#/components/schemas/RoutineStepOut"
-            },
-            "type": "array",
-            "title": "Evening"
+          "skin_type": {
+            "title": "Skin Type",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["skin_type", "morning", "evening"],
-        "title": "RecommendedRoutinesOut"
+        "required": [
+          "skin_type",
+          "morning",
+          "evening"
+        ],
+        "title": "RecommendedRoutinesOut",
+        "type": "object"
       },
       "RefreshRequest": {
+        "description": "Body of POST /auth/refresh.",
         "properties": {
           "refresh_token": {
-            "type": "string",
+            "description": "Refresh token received at register or login.",
             "title": "Refresh Token",
-            "description": "Refresh token received at register or login."
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["refresh_token"],
+        "required": [
+          "refresh_token"
+        ],
         "title": "RefreshRequest",
-        "description": "Body of POST /auth/refresh."
+        "type": "object"
       },
       "RegisterRequest": {
+        "description": "Body of POST /auth/register.",
         "properties": {
-          "email": {
-            "type": "string",
-            "maxLength": 255,
-            "title": "Email",
-            "description": "Account email, stored trimmed and lowercase."
-          },
-          "password": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
-            "title": "Password",
-            "description": "Plain password, 8-128 chars."
-          },
           "display_name": {
-            "type": "string",
+            "description": "Name shown in the app.",
             "maxLength": 100,
             "minLength": 1,
             "title": "Display Name",
-            "description": "Name shown in the app."
+            "type": "string"
+          },
+          "email": {
+            "description": "Account email, stored trimmed and lowercase.",
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "Plain password, 8-128 chars.",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["email", "password", "display_name"],
+        "required": [
+          "email",
+          "password",
+          "display_name"
+        ],
         "title": "RegisterRequest",
-        "description": "Body of POST /auth/register."
+        "type": "object"
       },
       "RiskAlertOut": {
+        "description": "One personal risk alert on a product.",
         "properties": {
           "code": {
             "$ref": "#/components/schemas/AlertCode",
             "description": "Machine-readable alert type."
           },
+          "detail": {
+            "description": "Explanation in the response language.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "ingredient_name": {
+            "description": "INCI name of the triggering ingredient.",
+            "title": "Ingredient Name",
+            "type": "string"
+          },
           "severity": {
             "$ref": "#/components/schemas/AlertSeverity",
             "description": "'high' or 'medium'."
           },
-          "ingredient_name": {
-            "type": "string",
-            "title": "Ingredient Name",
-            "description": "INCI name of the triggering ingredient."
-          },
           "title": {
-            "type": "string",
+            "description": "Short alert title in the response language.",
             "title": "Title",
-            "description": "Short alert title in the response language."
-          },
-          "detail": {
-            "type": "string",
-            "title": "Detail",
-            "description": "Explanation in the response language."
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["code", "severity", "ingredient_name", "title", "detail"],
+        "required": [
+          "code",
+          "severity",
+          "ingredient_name",
+          "title",
+          "detail"
+        ],
         "title": "RiskAlertOut",
-        "description": "One personal risk alert on a product."
+        "type": "object"
       },
       "RiskLevel": {
-        "type": "string",
-        "enum": ["low", "moderate", "high", "unknown"],
+        "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe.",
+        "enum": [
+          "low",
+          "moderate",
+          "high",
+          "unknown"
+        ],
         "title": "RiskLevel",
-        "description": "Semantic concern level. The API returns this; the mobile app maps it to\ncolour + icon + label (never colour alone). UNKNOWN is never treated as safe."
+        "type": "string"
       },
       "RoutineConflictOut": {
         "properties": {
           "code": {
-            "type": "string",
+            "description": "Stable error/warning code, e.g. 'retinoid_x_acid'.",
             "title": "Code",
-            "description": "Stable error/warning code, e.g. 'retinoid_x_acid'."
-          },
-          "severity": {
-            "type": "string",
-            "enum": ["high", "moderate"],
-            "title": "Severity",
-            "description": "High severity indicates active damage risk; moderate indicates irritation/reduced efficacy."
-          },
-          "product_a_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Product A Id"
-          },
-          "product_b_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Product B Id"
-          },
-          "product_a_name": {
-            "type": "string",
-            "title": "Product A Name"
-          },
-          "product_b_name": {
-            "type": "string",
-            "title": "Product B Name"
-          },
-          "ingredient_a": {
-            "type": "string",
-            "title": "Ingredient A"
-          },
-          "ingredient_b": {
-            "type": "string",
-            "title": "Ingredient B"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "Localized warning title."
+            "type": "string"
           },
           "detail": {
-            "type": "string",
+            "description": "Plain-language chemical reason for the conflict.",
             "title": "Detail",
-            "description": "Plain-language chemical reason for the conflict."
+            "type": "string"
+          },
+          "ingredient_a": {
+            "title": "Ingredient A",
+            "type": "string"
+          },
+          "ingredient_b": {
+            "title": "Ingredient B",
+            "type": "string"
+          },
+          "product_a_id": {
+            "format": "uuid",
+            "title": "Product A Id",
+            "type": "string"
+          },
+          "product_a_name": {
+            "title": "Product A Name",
+            "type": "string"
+          },
+          "product_b_id": {
+            "format": "uuid",
+            "title": "Product B Id",
+            "type": "string"
+          },
+          "product_b_name": {
+            "title": "Product B Name",
+            "type": "string"
           },
           "resolution": {
-            "type": "string",
+            "description": "Actionable suggestion to resolve the conflict.",
             "title": "Resolution",
-            "description": "Actionable suggestion to resolve the conflict."
+            "type": "string"
+          },
+          "severity": {
+            "description": "High severity indicates active damage risk; moderate indicates irritation/reduced efficacy.",
+            "enum": [
+              "high",
+              "moderate"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "description": "Localized warning title.",
+            "title": "Title",
+            "type": "string"
           }
         },
-        "type": "object",
         "required": [
           "code",
           "severity",
@@ -2889,115 +1393,212 @@
           "detail",
           "resolution"
         ],
-        "title": "RoutineConflictOut"
+        "title": "RoutineConflictOut",
+        "type": "object"
       },
       "RoutineDataOut": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "slot": {
-            "$ref": "#/components/schemas/RoutineSlot"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
           "completed_today": {
-            "type": "boolean",
-            "title": "Completed Today"
-          },
-          "steps": {
-            "items": {
-              "$ref": "#/components/schemas/RoutineStepOut"
-            },
-            "type": "array",
-            "title": "Steps"
+            "title": "Completed Today",
+            "type": "boolean"
           },
           "conflicts": {
             "items": {
               "$ref": "#/components/schemas/RoutineConflictOut"
             },
-            "type": "array",
-            "title": "Conflicts"
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/RoutineSlot"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
           }
         },
-        "type": "object",
-        "required": ["id", "slot", "name", "completed_today", "steps", "conflicts"],
-        "title": "RoutineDataOut"
+        "required": [
+          "id",
+          "slot",
+          "name",
+          "completed_today",
+          "steps",
+          "conflicts"
+        ],
+        "title": "RoutineDataOut",
+        "type": "object"
+      },
+      "RoutineShareLinkSummaryOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_viewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Viewed At"
+          },
+          "view_count": {
+            "title": "View Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "expires_at",
+          "view_count",
+          "last_viewed_at"
+        ],
+        "title": "RoutineShareLinkSummaryOut",
+        "type": "object"
+      },
+      "RoutineShareLinksOut": {
+        "properties": {
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/RoutineShareLinkSummaryOut"
+            },
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "required": [
+          "links"
+        ],
+        "title": "RoutineShareLinksOut",
+        "type": "object"
+      },
+      "RoutineShareOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "share_token": {
+            "description": "Secret token. It is returned only when the link is created.",
+            "title": "Share Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "share_token",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "RoutineShareOut",
+        "type": "object"
       },
       "RoutineSlot": {
-        "type": "string",
-        "enum": ["morning", "evening"],
-        "title": "RoutineSlot"
+        "enum": [
+          "morning",
+          "evening"
+        ],
+        "title": "RoutineSlot",
+        "type": "string"
       },
       "RoutineStepIn": {
+        "additionalProperties": false,
         "properties": {
-          "step_order": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Step Order",
-            "description": "1-based step position."
-          },
-          "step_type": {
-            "$ref": "#/components/schemas/RoutineStepType",
-            "description": "Category/type: cleanser, toner, serum, moisturizer, sunscreen, treatment."
-          },
-          "product_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Product Id"
-          },
           "notes": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 500
+                "maxLength": 500,
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Notes"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "step_order": {
+            "description": "1-based step position.",
+            "minimum": 1.0,
+            "title": "Step Order",
+            "type": "integer"
+          },
+          "step_type": {
+            "$ref": "#/components/schemas/RoutineStepType",
+            "description": "Category/type: cleanser, toner, serum, moisturizer, sunscreen, treatment."
           }
         },
-        "additionalProperties": false,
-        "type": "object",
-        "required": ["step_order", "step_type", "product_id"],
-        "title": "RoutineStepIn"
+        "required": [
+          "step_order",
+          "step_type",
+          "product_id"
+        ],
+        "title": "RoutineStepIn",
+        "type": "object"
       },
       "RoutineStepOut": {
         "properties": {
+          "active_ingredients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Ingredients",
+            "type": "array"
+          },
           "id": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Id"
-          },
-          "step_order": {
-            "type": "integer",
-            "title": "Step Order"
-          },
-          "step_type": {
-            "$ref": "#/components/schemas/RoutineStepType"
-          },
-          "product": {
-            "$ref": "#/components/schemas/ProductCardOut"
-          },
-          "active_ingredients": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Active Ingredients"
           },
           "notes": {
             "anyOf": [
@@ -3009,16 +1610,37 @@
               }
             ],
             "title": "Notes"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductCardOut"
+          },
+          "step_order": {
+            "title": "Step Order",
+            "type": "integer"
+          },
+          "step_type": {
+            "$ref": "#/components/schemas/RoutineStepType"
           }
         },
-        "type": "object",
-        "required": ["step_order", "step_type", "product"],
-        "title": "RoutineStepOut"
+        "required": [
+          "step_order",
+          "step_type",
+          "product"
+        ],
+        "title": "RoutineStepOut",
+        "type": "object"
       },
       "RoutineStepType": {
-        "type": "string",
-        "enum": ["cleanser", "toner", "serum", "moisturizer", "sunscreen", "treatment"],
-        "title": "RoutineStepType"
+        "enum": [
+          "cleanser",
+          "toner",
+          "serum",
+          "moisturizer",
+          "sunscreen",
+          "treatment"
+        ],
+        "title": "RoutineStepType",
+        "type": "string"
       },
       "RoutinesListOut": {
         "properties": {
@@ -3026,57 +1648,133 @@
             "items": {
               "$ref": "#/components/schemas/RoutineDataOut"
             },
-            "type": "array",
-            "title": "Routines"
+            "title": "Routines",
+            "type": "array"
           }
         },
-        "type": "object",
-        "required": ["routines"],
-        "title": "RoutinesListOut"
+        "required": [
+          "routines"
+        ],
+        "title": "RoutinesListOut",
+        "type": "object"
+      },
+      "SavedProductStatusOut": {
+        "properties": {
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "saved"
+        ],
+        "title": "SavedProductStatusOut",
+        "type": "object"
+      },
+      "SharedRoutineOut": {
+        "description": "Allowlisted public view. It intentionally has no owner or health-profile fields.",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "slot": {
+            "$ref": "#/components/schemas/RoutineSlot"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SharedRoutineStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slot",
+          "expires_at",
+          "steps"
+        ],
+        "title": "SharedRoutineOut",
+        "type": "object"
+      },
+      "SharedRoutineStepOut": {
+        "properties": {
+          "active_ingredients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Active Ingredients",
+            "type": "array"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductCardOut"
+          },
+          "step_order": {
+            "title": "Step Order",
+            "type": "integer"
+          },
+          "step_type": {
+            "$ref": "#/components/schemas/RoutineStepType"
+          }
+        },
+        "required": [
+          "step_order",
+          "step_type",
+          "product"
+        ],
+        "title": "SharedRoutineStepOut",
+        "type": "object"
       },
       "SkinType": {
-        "type": "string",
-        "enum": ["normal", "dry", "oily", "combination", "sensitive"],
+        "description": "Self-declared skin type stored on the user profile.",
+        "enum": [
+          "normal",
+          "dry",
+          "oily",
+          "combination",
+          "sensitive"
+        ],
         "title": "SkinType",
-        "description": "Self-declared skin type stored on the user profile."
+        "type": "string"
       },
       "SuitabilityOut": {
+        "description": "Response of GET /products/{product_id}/suitability.",
         "properties": {
+          "alerts": {
+            "description": "Alerts, most severe first.",
+            "items": {
+              "$ref": "#/components/schemas/RiskAlertOut"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "has_risk_alert": {
+            "description": "True when there is an alert or a blacklist match.",
+            "title": "Has Risk Alert",
+            "type": "boolean"
+          },
+          "is_blacklisted": {
+            "description": "True for a blacklisted product or ingredient.",
+            "title": "Is Blacklisted",
+            "type": "boolean"
+          },
           "product_id": {
-            "type": "string",
+            "description": "Product the verdict is about.",
             "format": "uuid",
             "title": "Product Id",
-            "description": "Product the verdict is about."
+            "type": "string"
           },
           "suits_profile": {
-            "type": "boolean",
+            "description": "True only when the verdict is 'suitable'.",
             "title": "Suits Profile",
-            "description": "True only when the verdict is 'suitable'."
+            "type": "boolean"
           },
           "verdict": {
             "$ref": "#/components/schemas/Verdict",
             "description": "suitable, caution or avoid."
-          },
-          "has_risk_alert": {
-            "type": "boolean",
-            "title": "Has Risk Alert",
-            "description": "True when there is an alert or a blacklist match."
-          },
-          "is_blacklisted": {
-            "type": "boolean",
-            "title": "Is Blacklisted",
-            "description": "True for a blacklisted product or ingredient."
-          },
-          "alerts": {
-            "items": {
-              "$ref": "#/components/schemas/RiskAlertOut"
-            },
-            "type": "array",
-            "title": "Alerts",
-            "description": "Alerts, most severe first."
           }
         },
-        "type": "object",
         "required": [
           "product_id",
           "suits_profile",
@@ -3086,78 +1784,93 @@
           "alerts"
         ],
         "title": "SuitabilityOut",
-        "description": "Response of GET /products/{product_id}/suitability."
+        "type": "object"
       },
       "TextAnalysisIn": {
+        "additionalProperties": false,
+        "description": "A manually entered ingredient label for immediate, non-persistent analysis.",
         "properties": {
-          "text": {
-            "type": "string",
-            "maxLength": 10000,
-            "minLength": 3,
-            "title": "Text",
-            "description": "Raw ingredient label text."
-          },
           "product_name": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 255
+                "maxLength": 255,
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Product Name"
+          },
+          "text": {
+            "description": "Raw ingredient label text.",
+            "maxLength": 10000,
+            "minLength": 3,
+            "title": "Text",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "title": "TextAnalysisIn",
-        "description": "A manually entered ingredient label for immediate, non-persistent analysis."
+        "type": "object"
       },
       "UpdateRoutineIn": {
+        "additionalProperties": false,
         "properties": {
           "steps": {
+            "description": "Full ordered list of steps to replace existing routine.",
             "items": {
               "$ref": "#/components/schemas/RoutineStepIn"
             },
-            "type": "array",
             "title": "Steps",
-            "description": "Full ordered list of steps to replace existing routine."
+            "type": "array"
           }
         },
-        "additionalProperties": false,
-        "type": "object",
-        "required": ["steps"],
-        "title": "UpdateRoutineIn"
+        "required": [
+          "steps"
+        ],
+        "title": "UpdateRoutineIn",
+        "type": "object"
       },
       "UserOut": {
+        "description": "Public view of a user account.",
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id",
-            "description": "User id."
+          "display_name": {
+            "description": "Name shown in the app.",
+            "title": "Display Name",
+            "type": "string"
           },
           "email": {
-            "type": "string",
+            "description": "Account email.",
             "title": "Email",
-            "description": "Account email."
+            "type": "string"
           },
-          "display_name": {
-            "type": "string",
-            "title": "Display Name",
-            "description": "Name shown in the app."
+          "id": {
+            "description": "User id.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["id", "email", "display_name"],
+        "required": [
+          "id",
+          "email",
+          "display_name"
+        ],
         "title": "UserOut",
-        "description": "Public view of a user account."
+        "type": "object"
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -3169,39 +1882,2697 @@
                 }
               ]
             },
-            "type": "array",
-            "title": "Location"
+            "title": "Location",
+            "type": "array"
           },
           "msg": {
-            "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "type": "string"
           },
           "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
+            "title": "Error Type",
+            "type": "string"
           }
         },
-        "type": "object",
-        "required": ["loc", "msg", "type"],
-        "title": "ValidationError"
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       },
       "Verdict": {
-        "type": "string",
-        "enum": ["suitable", "caution", "avoid"],
-        "title": "Verdict"
+        "enum": [
+          "suitable",
+          "caution",
+          "avoid"
+        ],
+        "title": "Verdict",
+        "type": "string"
       }
     },
     "securitySchemes": {
       "HTTPBearer": {
-        "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Skincare API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/analysis/ocr": {
+      "post": {
+        "description": "Transcribe and analyse an unlisted product label in the request/response cycle.",
+        "operationId": "analysis_analyze_ocr_photo",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_analysis_analyze_ocr_photo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstantAnalysisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Analyze Ocr Photo",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/v1/analysis/text": {
+      "post": {
+        "description": "Analyse manually pasted ingredients with the same matching and scoring pipeline.",
+        "operationId": "analysis_analyze_ingredient_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextAnalysisIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstantAnalysisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Analyze Ingredient Text",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "auth_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid credentials or token."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Sign in with email and password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "auth_refresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid credentials or token."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Get a new access token from a refresh token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "auth_register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthTokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Email already registered."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "summary": "Create an account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "description": "Top-level categories with children. Names follow `Accept-Language`.",
+        "operationId": "categories_list_categories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryNodeOut"
+                  },
+                  "title": "Response Categories List Categories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List the category tree",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/api/v1/contributions": {
+      "post": {
+        "operationId": "contributions_submit_photo_contribution",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_contributions_submit_photo_contribution"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Submit Photo Contribution",
+        "tags": [
+          "contributions"
+        ]
+      }
+    },
+    "/api/v1/dermatologists/recommendations": {
+      "get": {
+        "operationId": "dermatologists_get_recommendations",
+        "parameters": [
+          {
+            "description": "Optional skin type. Omit to use a signed-in user's saved preference.",
+            "in": "query",
+            "name": "skin_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "normal",
+                    "dry",
+                    "oily",
+                    "combination",
+                    "sensitive"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional skin type. Omit to use a signed-in user's saved preference.",
+              "title": "Skin Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get curated dermatologist skin care guidance",
+        "tags": [
+          "dermatologists"
+        ]
+      }
+    },
+    "/api/v1/home": {
+      "get": {
+        "description": "Category grid, top-rated (daily rotation), and recently added. Each product shelf\nhas its own `next_cursor` for infinite scroll.",
+        "operationId": "home_get_home_feed",
+        "parameters": [
+          {
+            "description": "Page size for product shelves.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Page size for product shelves.",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeFeedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid cursor or limit."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Home feed sections",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    "/api/v1/home/sections/{section_id}": {
+      "get": {
+        "operationId": "home_get_home_section",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": {
+              "title": "Section Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque cursor from a previous page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Page size.",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeSectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid cursor or limit."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown section."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Load more items for one home section",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    "/api/v1/library/recently-viewed": {
+      "get": {
+        "operationId": "library_get_recently_viewed",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductCardOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recently Viewed",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/v1/library/recently-viewed/{product_id}": {
+      "put": {
+        "operationId": "library_record_recently_viewed",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record a product in my recently viewed list",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/v1/library/saved": {
+      "get": {
+        "operationId": "library_get_saved_products",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductCardOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Saved Products",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/v1/library/saved/{product_id}": {
+      "delete": {
+        "operationId": "library_unsave_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a product from my library",
+        "tags": [
+          "library"
+        ]
+      },
+      "get": {
+        "operationId": "library_get_saved_product_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedProductStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check whether a product is in my library",
+        "tags": [
+          "library"
+        ]
+      },
+      "put": {
+        "operationId": "library_save_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save a product to my library",
+        "tags": [
+          "library"
+        ]
+      }
+    },
+    "/api/v1/products/by-barcode/{barcode}": {
+      "get": {
+        "description": "EAN-13, UPC-A and EAN-8 are accepted (spaces and hyphens are ignored); the product is\nstored and returned under its 13-digit form. A valid barcode we do not know is a 404\nwith type `urn:skincare:problem:product-not-found`; a malformed one is a 422\n`invalid-barcode`.",
+        "operationId": "products_get_product_by_barcode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "barcode",
+            "required": true,
+            "schema": {
+              "title": "Barcode",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "No such product."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed barcode or identifier."
+          }
+        },
+        "summary": "Get a product by scanning its barcode",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/filter": {
+      "get": {
+        "operationId": "products_filter_products",
+        "parameters": [
+          {
+            "description": "Optional product name or brand search query.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional product name or brand search query.",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Category slug; child categories are included.",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Category slug; child categories are included.",
+              "title": "Category"
+            }
+          },
+          {
+            "description": "One or more score bands.",
+            "in": "query",
+            "name": "band",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/RiskLevel"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One or more score bands.",
+              "title": "Band"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Score"
+            }
+          },
+          {
+            "description": "Must contain all of these.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Must contain all of these.",
+              "title": "Include"
+            }
+          },
+          {
+            "description": "Must contain none of these.",
+            "in": "query",
+            "name": "exclude",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Must contain none of these.",
+              "title": "Exclude"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid query, cursor or score range."
+          }
+        },
+        "summary": "Filter scored products, best score first",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/search": {
+      "get": {
+        "operationId": "products_search_products",
+        "parameters": [
+          {
+            "description": "Name to look for.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Name to look for.",
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Page size.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque `next_cursor` from the previous page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque `next_cursor` from the previous page.",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ProductSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Invalid query, cursor or score range."
+          }
+        },
+        "summary": "Search products by name (accent-insensitive, typo-tolerant)",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}": {
+      "get": {
+        "operationId": "products_get_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "No such product."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed barcode or identifier."
+          }
+        },
+        "summary": "Get a product by id",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/suitability": {
+      "get": {
+        "operationId": "products_get_suitability",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuitabilityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Does this product suit my profile?",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "operationId": "profile_get_profile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get my health profile",
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "operationId": "profile_put_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace my health profile and allergies",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/profile/blacklist": {
+      "get": {
+        "operationId": "profile_get_blacklist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlacklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List my blacklisted products and ingredients",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/profile/blacklist/ingredients/{ingredient_id}": {
+      "delete": {
+        "operationId": "profile_unblacklist_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove an ingredient from my blacklist",
+        "tags": [
+          "profile"
+        ]
+      },
+      "post": {
+        "operationId": "profile_blacklist_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Blacklist an ingredient",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/profile/blacklist/products/{product_id}": {
+      "delete": {
+        "operationId": "profile_unblacklist_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove a product from my blacklist",
+        "tags": [
+          "profile"
+        ]
+      },
+      "post": {
+        "operationId": "profile_blacklist_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Missing or invalid access token."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unknown product or ingredient id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Malformed or invalid request."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Blacklist a product",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/routines": {
+      "get": {
+        "operationId": "routines_get_routines",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutinesListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Routines",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/recommendations": {
+      "get": {
+        "operationId": "routines_get_recommendations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "skin_type",
+            "required": false,
+            "schema": {
+              "default": "normal",
+              "enum": [
+                "normal",
+                "dry",
+                "oily",
+                "combination",
+                "sensitive"
+              ],
+              "title": "Skin Type",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendedRoutinesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recommendations",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/shared/{token}": {
+      "get": {
+        "operationId": "routines_get_shared_routine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedRoutineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get Shared Routine",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/shared/{token}/copy": {
+      "post": {
+        "operationId": "routines_copy_shared_routine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopySharedRoutineIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Copy Shared Routine",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/shares/{share_id}": {
+      "delete": {
+        "operationId": "routines_revoke_routine_share_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke a shared routine link",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/{slot}": {
+      "put": {
+        "operationId": "routines_replace_routine",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoutineIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Routine",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/{slot}/check-conflict/{product_id}": {
+      "post": {
+        "operationId": "routines_check_product_conflict",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          },
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Product Conflict",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/{slot}/complete": {
+      "post": {
+        "operationId": "routines_toggle_routine_completion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineDataOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Toggle Routine Completion",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/{slot}/share": {
+      "post": {
+        "operationId": "routines_create_routine_share_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoutineShareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineShareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a shareable link for my routine",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/api/v1/routines/{slot}/shares": {
+      "get": {
+        "operationId": "routines_get_routine_share_links",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RoutineSlot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineShareLinksOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Routine Share Links",
+        "tags": [
+          "routines"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "health_live",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Live",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "health_ready",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Ready",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "health"
+        ]
       }
     }
   }

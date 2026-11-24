@@ -154,3 +154,15 @@ name = "identity internals are private"
 type = "protected"
 protected_modules = ["app.modules.identity.models", "app.modules.identity.repository"]
 allowed_importers = ["app.modules.identity"]
+
+[[tool.importlinter.contracts]]
+name = "personal library internals are private"
+type = "protected"
+protected_modules = ["app.modules.personal_library.models", "app.modules.personal_library.repository"]
+allowed_importers = ["app.modules.personal_library"]
+
+[[tool.importlinter.contracts]]
+name = "dermatologists internals are private"
+type = "protected"
+protected_modules = ["app.modules.dermatologists.models", "app.modules.dermatologists.repository"]
+allowed_importers = ["app.modules.dermatologists"]

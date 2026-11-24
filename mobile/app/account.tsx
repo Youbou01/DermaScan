@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Button, Input, TextField, Label, FieldError } from 'heroui-native';
 import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { Screen } from '@/components/Screen';
 import { AppText } from '@/components/AppText';
@@ -12,6 +13,7 @@ import { signIn, errorMessage } from '@/lib/api/client';
 import { notifySuccess } from '@/lib/api/queries';
 import { colors } from '@/lib/theme';
 export default function AccountScreen() {
+  const { t } = useTranslation();
   const session = useSession((state) => state.session);
   const ready = useSession((state) => state.ready);
   const storageError = useSession((state) => state.storageError);
@@ -58,6 +60,15 @@ export default function AccountScreen() {
           </Button>
           <Button variant="secondary" onPress={() => router.push('/recommendations')}>
             <Button.Label>Recommendations</Button.Label>
+          </Button>
+          <Button variant="secondary" onPress={() => router.push('/library/saved')}>
+            <Button.Label>{t('library.savedTitle')}</Button.Label>
+          </Button>
+          <Button variant="secondary" onPress={() => router.push('/library/recently-viewed')}>
+            <Button.Label>{t('library.recentTitle')}</Button.Label>
+          </Button>
+          <Button variant="secondary" onPress={() => router.push('/dermatologists')}>
+            <Button.Label>{t('guidance.title')}</Button.Label>
           </Button>
           <Button
             variant="tertiary"

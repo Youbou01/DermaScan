@@ -1,3 +1,7 @@
+import type { components } from './generated/schema';
+
+export type ProductCard = components['schemas']['ProductCardOut'];
+export type ProductCardsPage = components['schemas']['Page_ProductCardOut_'];
 export type RiskBand = 'low' | 'moderate' | 'high' | 'unknown';
 export type Product = {
   id: string;
@@ -112,6 +116,15 @@ export type Routine = {
   conflicts: Conflict[];
 };
 export type Recommendations = { skin_type: string; morning: RoutineStep[]; evening: RoutineStep[] };
+export type SavedProductStatus = components['schemas']['SavedProductStatusOut'];
+export type RoutineShare = components['schemas']['RoutineShareOut'];
+export type RoutineShareLink = components['schemas']['RoutineShareLinkSummaryOut'];
+export type RoutineShareLinks = components['schemas']['RoutineShareLinksOut'];
+export type CopySharedRoutineRequest = components['schemas']['CopySharedRoutineIn'];
+export type SharedRoutineStep = components['schemas']['SharedRoutineStepOut'];
+export type SharedRoutine = components['schemas']['SharedRoutineOut'];
+export type DermatologistRecommendation = components['schemas']['DermatologistRecommendationOut'];
+export type DermatologistGuidance = components['schemas']['RecommendationsOut'];
 export type Filters = {
   q?: string;
   category?: string;

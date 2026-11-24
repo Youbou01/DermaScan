@@ -1,6 +1,7 @@
 """Export the OpenAPI schema with sorted keys to docs/openapi.json and mobile/openapi.json."""
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -14,7 +15,8 @@ from app.main import create_app
 
 
 def export_openapi() -> str:
-    app = create_app(Settings())
+    database_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db")
+    app = create_app(Settings(database_url=database_url))
     schema = app.openapi()
     content = json.dumps(schema, indent=2, sort_keys=True) + "\n"
 
