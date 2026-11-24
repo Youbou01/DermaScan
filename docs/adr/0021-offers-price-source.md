@@ -63,6 +63,11 @@ chosen per run by `PRICE_SOURCE`. Options considered:
   similar product (for example another size or texture of the same brand).
 - Real-call evidence is small: a handful of products, mostly from one session. It is not a
   measured success rate.
+- Query variants were compared with 4 uncached searches each: the plain "brand name" query was
+  the best (12, 12, 17, 12 matching rows); adding "crème hydratante", reordering the words or
+  quoting them was worse. One run of the final adapter (3 calls) returned offers once (10 offers,
+  56.79 to 61.99 EUR) and nothing twice, even after 3 attempts. Tiny samples, not a success rate.
+  An empty result is safe: existing offers are kept, so the product page never breaks.
 - The SerpApi key must never be committed or logged; the adapter never puts it in error messages.
 - If the leader wants dependable prices, the next step is a source with GTIN lookup, or written
   permission to scrape a Tunisian shop.
