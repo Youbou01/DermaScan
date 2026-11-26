@@ -179,3 +179,28 @@ export type UserReviewsPage = {
   items: UserReviewHistoryItem[];
   next_cursor: string | null;
 };
+export type StockState = 'in_stock' | 'out_of_stock' | 'unknown';
+export type Retailer = {
+  name: string;
+  domain: string;
+  logo_url: string | null;
+  is_affiliate: boolean;
+  affiliate_label: string | null;
+};
+export type Offer = {
+  id: string;
+  retailer: Retailer;
+  price: string;
+  currency: string;
+  url: string;
+  stock_state: StockState;
+  freshness: 'fresh' | 'stale';
+  last_checked_at: string;
+  is_cheapest: boolean;
+};
+export type OfferList = {
+  product_id: string;
+  cheapest_offer_id: string | null;
+  mixed_currencies: boolean;
+  offers: Offer[];
+};

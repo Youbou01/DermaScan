@@ -13,6 +13,7 @@ import { AnalysisScore, Formula } from '@/components/Formula';
 import { RatingSummary } from '@/components/RatingSummary';
 import { ReviewCard } from '@/components/ReviewCard';
 import { DataState, LoadingState, SignInGate } from '@/components/DataState';
+import { WhereToBuy } from '@/components/WhereToBuy';
 import {
   useBlacklist,
   useProduct,
@@ -361,6 +362,7 @@ export default function ProductDetailScreen() {
                 </View>
               </Tabs.Content>
             </Tabs>
+            <WhereToBuy productId={id} />
             {selected && (
               <View
                 style={{ backgroundColor: colors.white, padding: 18, borderRadius: 18, gap: 12 }}
