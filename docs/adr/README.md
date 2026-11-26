@@ -29,6 +29,7 @@ Write one when a choice is hard to reverse, surprising to a newcomer, or took a 
 | [0017](0017-image-pipeline.md) | Self-Hosted Image Pipeline and Asset Standardization | Accepted |
 | [0018](0018-scraping-and-admin.md) | Admin Review Surface, Authentication, and Scraping Boundaries | Accepted |
 | [0019](0019-observability-caching-and-hardening.md) | Observability, HTTP Caching, and API Hardening | Accepted |
+| [0021](0021-offers-price-source.md) | Offers price source: SerpApi Google Shopping, approximate matching | Accepted |
 
 ## Template
 ```markdown
