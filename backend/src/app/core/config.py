@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     jwt_access_token_minutes: int = 30
     jwt_refresh_token_days: int = 14
 
+    # --- Offers / price source ---
+    price_source: Literal["fixture", "serpapi"] = "fixture"
+    serpapi_api_key: str | None = None
+    offer_stale_after_days: int = 7
+
     # --- Scraping ---
     scraper_respect_robots: bool = False
     scraper_proxy_list: str | None = None
